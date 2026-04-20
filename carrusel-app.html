@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carrusel App</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://apis.google.com/js/api.js"></script>
+<style>
+  :root {
+    --fucsia: #ba0d66;
+    --fucsia-dark: #8f0a4e;
+    --fucsia-light: #e74a9a;
+    --salmon: #f79f6f;
+    --petroleo: #176b87;
+    --petroleo-dark: #0f4d61;
+    --crema: #fdf4e3;
+    --gris-bg: #f7f7f5;
+    --gris-card: #ffffff;
+    --gris-border: #e5e5e0;
+    --gris-text: #2a2a2a;
+    --gris-text-soft: #6b6b6b;
+    --gris-text-muted: #9a9a9a;
+    --verde: #2d9d78;
+    --rojo: #c43c3c;
+    --amarillo: #e0a430;
+    --sombra: 0 1px 2px rgba(0,0,0,0.04), 0 2px 8px rgba(0,0,0,0.04);
+    --sombra-lg: 0 4px 12px rgba(0,0,0,0.08), 0 12px 32px rgba(0,0,0,0.06);
+    --radio: 10px;
+    --radio-sm: 6px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--gris-bg);
+    color: var(--gris-text);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4 { font-family: 'Fraunces', serif; font-weight: 600; letter-spacing: -0.01em; }
+  h1 { font-size: 24px; }
+  h2 { font-size: 20px; }
+  h3 { font-size: 17px; }
+
+  button {
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+    border: none;
+    background: none;
+    color: inherit;
+  }
+  input, select, textarea {
+    font-family: inherit;
+    font-size: 14px;
+  }
+
+  /* ===== PANTALLA DE LOGIN ===== */
+  .login-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--crema) 0%, #fff 60%, var(--gris-bg) 100%);
+    padding: 20px;
+  }
+  .login-box {
+    background: #fff;
+    padding: 44px 40px 40px;
+    border-radius: 14px;
+    box-shadow: var(--sombra-lg);
+    max-width: 420px;
+    width: 100%;
+    text-align: center;
+    border: 1px solid var(--gris-border);
+  }
+  .login-logo {
+    font-family: 'Fraunces', serif;
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--fucsia);
+    letter-spacing: -0.02em;
+    margin-bottom: 4px;
+  }
+  .login-subtitle {
+    color: var(--gris-text-soft);
+    font-size: 13px;
+    margin-bottom: 32px;
+    font-style: italic;
+  }
+  .login-text {
+    color: var(--gris-text);
+    margin-bottom: 28px;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .google-btn {
+    background: #fff;
+    border: 1.5px solid var(--gris-border);
+    padding: 12px 20px;
+    border-radius: var(--radio);
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 500;
+    color: var(--gris-text);
+    transition: all 0.15s;
+    width: 100%;
+    justify-content: center;
+  }
+  .google-btn:hover {
+    border-color: var(--fucsia);
+    background: #fafafa;
+  }
+  .google-g {
+    width: 18px; height: 18px;
+    background: conic-gradient(from 0deg, #ea4335, #fbbc04, #34a853, #4285f4, #ea4335);
+    border-radius: 50%;
+  }
+  .login-footer {
+    margin-top: 28px;
+    font-size: 12px;
+    color: var(--gris-text-muted);
+    line-height: 1.5;
+  }
+
+  /* ===== LAYOUT PRINCIPAL ===== */
+  .app { display: none; min-height: 100vh; }
+  .app.active { display: grid; grid-template-columns: 240px 1fr; }
+
+  /* Sidebar */
+  .sidebar {
+    background: #fff;
+    border-right: 1px solid var(--gris-border);
+    padding: 20px 14px;
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+  .sidebar-logo {
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--fucsia);
+    padding: 4px 10px 18px;
+    border-bottom: 1px solid var(--gris-border);
+    margin-bottom: 14px;
+    letter-spacing: -0.02em;
+  }
+  .sidebar-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: var(--radio-sm);
+    color: var(--gris-text-soft);
+    font-weight: 500;
+    font-size: 13.5px;
+    transition: all 0.12s;
+    text-align: left;
+    width: 100%;
+  }
+  .nav-item:hover { background: var(--gris-bg); color: var(--gris-text); }
+  .nav-item.active { background: var(--fucsia); color: #fff; }
+  .nav-item.disabled { color: var(--gris-text-muted); cursor: not-allowed; }
+  .nav-item.disabled:hover { background: transparent; }
+  .nav-icon { font-size: 16px; width: 18px; text-align: center; }
+  .nav-badge {
+    font-size: 9px;
+    background: var(--gris-border);
+    color: var(--gris-text-muted);
+    padding: 2px 6px;
+    border-radius: 20px;
+    margin-left: auto;
+    font-weight: 600;
+  }
+
+  .sidebar-user {
+    padding-top: 14px;
+    border-top: 1px solid var(--gris-border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+  }
+  .user-avatar {
+    width: 32px; height: 32px;
+    background: var(--fucsia);
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 13px;
+  }
+  .user-info { flex: 1; min-width: 0; overflow: hidden; }
+  .user-name { font-weight: 600; color: var(--gris-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .user-email { color: var(--gris-text-muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .logout-btn {
+    color: var(--gris-text-muted);
+    font-size: 11px;
+    padding: 4px;
+  }
+  .logout-btn:hover { color: var(--rojo); }
+
+  /* Main content */
+  .main {
+    padding: 32px 40px;
+    max-width: 1200px;
+    width: 100%;
+  }
+
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 20px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+  }
+  .page-title-area { }
+  .page-title { font-size: 28px; margin-bottom: 4px; }
+  .page-subtitle { color: var(--gris-text-soft); font-size: 13.5px; }
+
+  /* Botones */
+  .btn {
+    padding: 9px 16px;
+    border-radius: var(--radio-sm);
+    font-weight: 500;
+    font-size: 13.5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.12s;
+  }
+  .btn-primary { background: var(--fucsia); color: #fff; }
+  .btn-primary:hover { background: var(--fucsia-dark); }
+  .btn-secondary { background: #fff; color: var(--gris-text); border: 1px solid var(--gris-border); }
+  .btn-secondary:hover { border-color: var(--fucsia); color: var(--fucsia); }
+  .btn-ghost { color: var(--gris-text-soft); padding: 6px 10px; }
+  .btn-ghost:hover { background: var(--gris-bg); color: var(--gris-text); }
+  .btn-danger { color: var(--rojo); }
+  .btn-danger:hover { background: #fef2f2; }
+
+  /* Cards */
+  .card {
+    background: #fff;
+    border: 1px solid var(--gris-border);
+    border-radius: var(--radio);
+    padding: 20px;
+    box-shadow: var(--sombra);
+  }
+  .card-title { font-size: 13px; font-weight: 600; color: var(--gris-text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 14px; }
+
+  /* Tabla de clientes */
+  .table-wrap { background: #fff; border: 1px solid var(--gris-border); border-radius: var(--radio); overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left;
+    padding: 12px 16px;
+    background: var(--gris-bg);
+    font-weight: 600;
+    color: var(--gris-text-soft);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid var(--gris-border);
+  }
+  td {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--gris-border);
+    vertical-align: middle;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr.clickable { cursor: pointer; transition: background 0.1s; }
+  tr.clickable:hover { background: #fafafa; }
+
+  .badge {
+    display: inline-block;
+    padding: 3px 9px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .badge-activo { background: #e6f4ef; color: var(--verde); }
+  .badge-pausado { background: #fff4e0; color: var(--amarillo); }
+  .badge-finalizado { background: var(--gris-bg); color: var(--gris-text-muted); }
+  .badge-practica { background: #fde6f0; color: var(--fucsia); }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--gris-text-muted);
+  }
+  .empty-state h3 { color: var(--gris-text-soft); margin-bottom: 6px; }
+  .empty-state p { margin-bottom: 20px; font-size: 13.5px; }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 100;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal {
+    background: #fff;
+    border-radius: 12px;
+    max-width: 560px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: var(--sombra-lg);
+  }
+  .modal-header {
+    padding: 22px 26px 14px;
+    border-bottom: 1px solid var(--gris-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .modal-body { padding: 22px 26px; }
+  .modal-footer {
+    padding: 16px 26px 22px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    border-top: 1px solid var(--gris-border);
+  }
+
+  /* Formularios */
+  .form-row { margin-bottom: 16px; }
+  .form-label {
+    display: block;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--gris-text-soft);
+    margin-bottom: 6px;
+  }
+  .form-input, .form-select, .form-textarea {
+    width: 100%;
+    padding: 9px 11px;
+    border: 1px solid var(--gris-border);
+    border-radius: var(--radio-sm);
+    background: #fff;
+    color: var(--gris-text);
+    transition: border 0.12s;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+    outline: none;
+    border-color: var(--fucsia);
+  }
+  .form-textarea { min-height: 80px; resize: vertical; font-family: inherit; }
+  .form-help { font-size: 11.5px; color: var(--gris-text-muted); margin-top: 4px; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    background: var(--gris-text);
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: var(--radio);
+    font-size: 13px;
+    font-weight: 500;
+    box-shadow: var(--sombra-lg);
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.2s;
+    z-index: 200;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.success { background: var(--verde); }
+  .toast.error { background: var(--rojo); }
+
+  /* Config screen */
+  .config-item {
+    padding: 16px 0;
+    border-bottom: 1px solid var(--gris-border);
+  }
+  .config-item:last-child { border-bottom: none; }
+  .config-label { font-weight: 600; margin-bottom: 2px; }
+  .config-value { color: var(--gris-text-soft); font-size: 13px; word-break: break-all; font-family: 'Courier New', monospace; }
+  .config-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-top: 6px;
+  }
+  .config-status.ok { background: #e6f4ef; color: var(--verde); }
+  .config-status.error { background: #fde8e8; color: var(--rojo); }
+
+  /* Loading */
+  .loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    color: var(--gris-text-muted);
+  }
+  .spinner {
+    width: 20px; height: 20px;
+    border: 2px solid var(--gris-border);
+    border-top-color: var(--fucsia);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-right: 10px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .app.active { grid-template-columns: 1fr; }
+    .sidebar {
+      position: static;
+      height: auto;
+      flex-direction: row;
+      align-items: center;
+      padding: 10px 14px;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+    .sidebar-logo { border-bottom: none; padding: 4px 10px 4px 0; margin-bottom: 0; margin-right: 10px; border-right: 1px solid var(--gris-border); }
+    .sidebar-nav { flex-direction: row; flex: 1; gap: 2px; overflow-x: auto; }
+    .nav-item { white-space: nowrap; padding: 7px 10px; font-size: 12.5px; }
+    .nav-item span:not(.nav-icon):not(.nav-badge) { display: none; }
+    .sidebar-user { border-top: none; padding-top: 0; padding-left: 10px; border-left: 1px solid var(--gris-border); }
+    .user-info { display: none; }
+    .main { padding: 20px; }
+    .page-title { font-size: 22px; }
+    table { font-size: 13px; }
+    th, td { padding: 10px 12px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== PANTALLA DE LOGIN ===== -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">Carrusel</div>
+    <div class="login-subtitle">Hacemos girar tu marca 🎠</div>
+    <p class="login-text">Iniciá sesión con la cuenta de Google donde está tu planilla de datos.</p>
+    <button class="google-btn" id="loginBtn">
+      <span class="google-g"></span>
+      <span>Iniciar sesión con Google</span>
+    </button>
+    <div class="login-footer">
+      Los datos se guardan en tu Google Sheets.<br>
+      Nada queda en esta compu.
+    </div>
+  </div>
+</div>
+
+<!-- ===== APP PRINCIPAL ===== -->
+<div class="app" id="app">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">Carrusel</div>
+    <nav class="sidebar-nav" id="sidebarNav">
+      <button class="nav-item active" data-page="clientes">
+        <span class="nav-icon">👥</span><span>Clientes</span>
+      </button>
+      <button class="nav-item disabled" disabled>
+        <span class="nav-icon">🎯</span><span>Prospectos</span><span class="nav-badge">Fase 3</span>
+      </button>
+      <button class="nav-item disabled" disabled>
+        <span class="nav-icon">📅</span><span>Calendario</span><span class="nav-badge">Pronto</span>
+      </button>
+      <button class="nav-item disabled" disabled>
+        <span class="nav-icon">💡</span><span>Ideas</span><span class="nav-badge">Fase 2</span>
+      </button>
+      <button class="nav-item disabled" disabled>
+        <span class="nav-icon">📊</span><span>Métricas</span><span class="nav-badge">Fase 2</span>
+      </button>
+      <button class="nav-item disabled" disabled>
+        <span class="nav-icon">✨</span><span>Generadores IA</span><span class="nav-badge">Fase 2</span>
+      </button>
+      <button class="nav-item disabled" disabled>
+        <span class="nav-icon">💰</span><span>Finanzas</span><span class="nav-badge">Fase 4</span>
+      </button>
+      <button class="nav-item disabled" disabled>
+        <span class="nav-icon">🚀</span><span>Onboarding</span><span class="nav-badge">Fase 3</span>
+      </button>
+      <button class="nav-item" data-page="config">
+        <span class="nav-icon">⚙️</span><span>Configuración</span>
+      </button>
+    </nav>
+    <div class="sidebar-user">
+      <div class="user-avatar" id="userAvatar">M</div>
+      <div class="user-info">
+        <div class="user-name" id="userName">—</div>
+        <div class="user-email" id="userEmail">—</div>
+      </div>
+      <button class="logout-btn" id="logoutBtn" title="Cerrar sesión">⎋</button>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main class="main" id="mainContent">
+    <!-- Se renderiza dinámicamente -->
+  </main>
+</div>
+
+<!-- ===== MODAL ===== -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modal">
+    <!-- Se renderiza dinámicamente -->
+  </div>
+</div>
+
+<!-- ===== TOAST ===== -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================================
+// CONFIGURACIÓN
+// ============================================================================
+const CONFIG = {
+  CLIENT_ID: '720522210798-hvq1d1c0lkg8mvm524sv1835dul2v26g.apps.googleusercontent.com',
+  SPREADSHEET_ID: '1sbCRUoEh6qshKyAXi7PZDhHYEEKdlbYgq4MUe93AqdI',
+  SCOPES: 'https://www.googleapis.com/auth/spreadsheets',
+  DISCOVERY_DOC: 'https://sheets.googleapis.com/$discovery/rest?version=v4',
+};
+
+// Estado global
+let state = {
+  user: null,
+  accessToken: null,
+  currentPage: 'clientes',
+  clientes: [],
+  loading: false,
+};
+
+let tokenClient = null;
+
+// ============================================================================
+// HELPERS GENERALES
+// ============================================================================
+function $(id) { return document.getElementById(id); }
+
+function showToast(msg, type = '') {
+  const t = $('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+function formatDateEs(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d)) return dateStr;
+  return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function todayISO() {
+  return new Date().toISOString().split('T')[0];
+}
+
+function genId(prefix = 'c') {
+  return prefix + '_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+}
+
+// ============================================================================
+// AUTENTICACIÓN GOOGLE
+// ============================================================================
+function initGoogleAuth() {
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CONFIG.CLIENT_ID,
+    scope: CONFIG.SCOPES,
+    callback: async (tokenResponse) => {
+      if (tokenResponse.error) {
+        showToast('Error de autenticación', 'error');
+        return;
+      }
+      state.accessToken = tokenResponse.access_token;
+      await gapi.client.init({ discoveryDocs: [CONFIG.DISCOVERY_DOC] });
+      gapi.client.setToken({ access_token: tokenResponse.access_token });
+      await loadUserInfo();
+      enterApp();
+    },
+  });
+}
+
+async function loadUserInfo() {
+  try {
+    const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: 'Bearer ' + state.accessToken }
+    });
+    const data = await res.json();
+    state.user = { name: data.name, email: data.email, picture: data.picture };
+    $('userName').textContent = data.name || data.email;
+    $('userEmail').textContent = data.email;
+    $('userAvatar').textContent = (data.name || data.email)[0].toUpperCase();
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+function handleLogin() {
+  if (!tokenClient) {
+    showToast('Esperá unos segundos y reintentá', 'error');
+    return;
+  }
+  tokenClient.requestAccessToken({ prompt: 'consent' });
+}
+
+function handleLogout() {
+  google.accounts.oauth2.revoke(state.accessToken, () => {});
+  state.user = null;
+  state.accessToken = null;
+  state.clientes = [];
+  $('loginScreen').style.display = 'flex';
+  $('app').classList.remove('active');
+}
+
+function enterApp() {
+  $('loginScreen').style.display = 'none';
+  $('app').classList.add('active');
+  navigateTo(state.currentPage);
+}
+
+// Cargar APIs de Google
+function initGapi() {
+  gapi.load('client', () => {
+    // Listo para usar cuando tengamos el token
+  });
+}
+
+// ============================================================================
+// GOOGLE SHEETS - CAPA DE DATOS
+// ============================================================================
+
+// Lee una hoja completa y devuelve array de objetos {header: valor}
+async function sheetRead(sheetName) {
+  try {
+    const res = await gapi.client.sheets.spreadsheets.values.get({
+      spreadsheetId: CONFIG.SPREADSHEET_ID,
+      range: sheetName,
+    });
+    const rows = res.result.values || [];
+    if (rows.length < 2) return { headers: rows[0] || [], data: [] };
+    const headers = rows[0];
+    const data = rows.slice(1).map(row => {
+      const obj = {};
+      headers.forEach((h, i) => { obj[h] = row[i] || ''; });
+      return obj;
+    });
+    return { headers, data };
+  } catch (e) {
+    console.error('sheetRead error:', e);
+    throw new Error('No pude leer la hoja ' + sheetName + '. Verificá que existe y el nombre está exacto.');
+  }
+}
+
+// Agrega una fila al final
+async function sheetAppend(sheetName, rowObj) {
+  const { headers } = await sheetRead(sheetName);
+  const row = headers.map(h => rowObj[h] || '');
+  await gapi.client.sheets.spreadsheets.values.append({
+    spreadsheetId: CONFIG.SPREADSHEET_ID,
+    range: sheetName,
+    valueInputOption: 'USER_ENTERED',
+    insertDataOption: 'INSERT_ROWS',
+    resource: { values: [row] },
+  });
+}
+
+// Actualiza una fila buscando por ID
+async function sheetUpdate(sheetName, idValue, rowObj, idCol = 'id') {
+  const { headers, data } = await sheetRead(sheetName);
+  const idx = data.findIndex(r => r[idCol] === idValue);
+  if (idx === -1) throw new Error('No encontré el registro');
+  const rowNum = idx + 2; // +1 header, +1 base-1
+  const newRow = headers.map(h => rowObj[h] !== undefined ? rowObj[h] : (data[idx][h] || ''));
+  await gapi.client.sheets.spreadsheets.values.update({
+    spreadsheetId: CONFIG.SPREADSHEET_ID,
+    range: `${sheetName}!A${rowNum}`,
+    valueInputOption: 'USER_ENTERED',
+    resource: { values: [newRow] },
+  });
+}
+
+// Elimina una fila buscando por ID (la deja en blanco y después compacta)
+async function sheetDelete(sheetName, idValue, idCol = 'id') {
+  const { data } = await sheetRead(sheetName);
+  const idx = data.findIndex(r => r[idCol] === idValue);
+  if (idx === -1) throw new Error('No encontré el registro');
+  const rowNum = idx + 2;
+
+  // Obtenemos el sheetId interno
+  const meta = await gapi.client.sheets.spreadsheets.get({ spreadsheetId: CONFIG.SPREADSHEET_ID });
+  const sheet = meta.result.sheets.find(s => s.properties.title === sheetName);
+  if (!sheet) throw new Error('No encontré la hoja ' + sheetName);
+
+  await gapi.client.sheets.spreadsheets.batchUpdate({
+    spreadsheetId: CONFIG.SPREADSHEET_ID,
+    resource: {
+      requests: [{
+        deleteDimension: {
+          range: {
+            sheetId: sheet.properties.sheetId,
+            dimension: 'ROWS',
+            startIndex: rowNum - 1,
+            endIndex: rowNum,
+          }
+        }
+      }]
+    }
+  });
+}
+
+// ============================================================================
+// NAVEGACIÓN
+// ============================================================================
+function navigateTo(page) {
+  state.currentPage = page;
+  document.querySelectorAll('.nav-item').forEach(b => {
+    b.classList.toggle('active', b.dataset.page === page);
+  });
+  if (page === 'clientes') renderClientes();
+  else if (page === 'config') renderConfig();
+}
+
+// ============================================================================
+// MÓDULO: CLIENTES
+// ============================================================================
+async function renderClientes() {
+  const main = $('mainContent');
+  main.innerHTML = `
+    <div class="page-header">
+      <div class="page-title-area">
+        <h1 class="page-title">Clientes</h1>
+        <div class="page-subtitle">Tus clientes activos, pausados y de práctica.</div>
+      </div>
+      <button class="btn btn-primary" onclick="openClienteModal()">+ Nuevo cliente</button>
+    </div>
+    <div id="clientesContent">
+      <div class="loading"><div class="spinner"></div>Cargando clientes...</div>
+    </div>
+  `;
+
+  try {
+    const { data } = await sheetRead('Clientes');
+    state.clientes = data;
+    renderClientesList();
+  } catch (e) {
+    $('clientesContent').innerHTML = `
+      <div class="card" style="border-color: var(--rojo); background: #fef8f8;">
+        <strong style="color: var(--rojo);">Error al cargar</strong>
+        <p style="margin-top: 6px; font-size: 13px;">${e.message}</p>
+        <p style="margin-top: 10px; font-size: 12px; color: var(--gris-text-muted);">Revisá que la planilla tenga la hoja "Clientes" y que hayas dado permiso a la app para acceder a Sheets.</p>
+      </div>
+    `;
+  }
+}
+
+function renderClientesList() {
+  const container = $('clientesContent');
+  if (state.clientes.length === 0) {
+    container.innerHTML = `
+      <div class="card">
+        <div class="empty-state">
+          <h3>Aún no hay clientes cargados</h3>
+          <p>Arrancá dando de alta a tus primeros clientes de práctica: tu papá, tu esposo, Colmena, Origen Odontología.</p>
+          <button class="btn btn-primary" onclick="openClienteModal()">+ Cargar primer cliente</button>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  const rows = state.clientes.map(c => `
+    <tr class="clickable" onclick="openClienteModal('${c.id}')">
+      <td><strong>${c.nombre || '—'}</strong></td>
+      <td>${c.rubro || '—'}</td>
+      <td><span class="badge badge-${(c.tipo_cliente || 'practica').toLowerCase()}">${c.tipo_cliente || 'Práctica'}</span></td>
+      <td>${c.servicio_contratado || '—'}</td>
+      <td>${c.frecuencia_posts ? c.frecuencia_posts + ' posts/mes' : '—'}</td>
+      <td>${formatDateEs(c.fecha_inicio_servicio)}</td>
+      <td><span class="badge badge-${(c.estado || 'activo').toLowerCase()}">${c.estado || 'Activo'}</span></td>
+      <td style="text-align: right;">
+        <button class="btn-ghost" onclick="event.stopPropagation(); openClienteModal('${c.id}')" title="Editar">✏️</button>
+        <button class="btn-ghost btn-danger" onclick="event.stopPropagation(); confirmDeleteCliente('${c.id}', '${(c.nombre || '').replace(/'/g, "\\'")}')" title="Eliminar">🗑</button>
+      </td>
+    </tr>
+  `).join('');
+
+  container.innerHTML = `
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Rubro</th>
+            <th>Tipo</th>
+            <th>Servicio</th>
+            <th>Frecuencia</th>
+            <th>Inicio</th>
+            <th>Estado</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function openClienteModal(id = null) {
+  const c = id ? state.clientes.find(x => x.id === id) : {};
+  const esNuevo = !id;
+
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>${esNuevo ? 'Nuevo cliente' : 'Editar cliente'}</h2>
+      <button class="btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label class="form-label">Nombre *</label>
+        <input type="text" class="form-input" id="f_nombre" value="${c.nombre || ''}" required>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Rubro</label>
+        <input type="text" class="form-input" id="f_rubro" value="${c.rubro || ''}" placeholder="Ej: Odontología, Gastronomía, Ventas">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Tipo de cliente</label>
+        <select class="form-select" id="f_tipo_cliente">
+          <option value="Practica" ${c.tipo_cliente === 'Practica' ? 'selected' : ''}>Práctica (no paga)</option>
+          <option value="Activo" ${c.tipo_cliente === 'Activo' ? 'selected' : ''}>Activo (paga)</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Estado</label>
+        <select class="form-select" id="f_estado">
+          <option value="Activo" ${(c.estado || 'Activo') === 'Activo' ? 'selected' : ''}>Activo</option>
+          <option value="Pausado" ${c.estado === 'Pausado' ? 'selected' : ''}>Pausado</option>
+          <option value="Finalizado" ${c.estado === 'Finalizado' ? 'selected' : ''}>Finalizado</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Servicio contratado</label>
+        <input type="text" class="form-input" id="f_servicio_contratado" value="${c.servicio_contratado || ''}" placeholder="Ej: Gestión mensual completa, Asesoría 1:1">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Frecuencia de posts por mes</label>
+        <select class="form-select" id="f_frecuencia_posts">
+          <option value="">—</option>
+          <option value="6" ${c.frecuencia_posts === '6' ? 'selected' : ''}>6 posts/mes</option>
+          <option value="8" ${c.frecuencia_posts === '8' ? 'selected' : ''}>8 posts/mes</option>
+          <option value="12" ${c.frecuencia_posts === '12' ? 'selected' : ''}>12 posts/mes</option>
+          <option value="otro" ${c.frecuencia_posts && !['6','8','12'].includes(c.frecuencia_posts) ? 'selected' : ''}>Otro</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Fecha de inicio</label>
+        <input type="date" class="form-input" id="f_fecha_inicio_servicio" value="${c.fecha_inicio_servicio || ''}">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Canal de comunicación principal</label>
+        <input type="text" class="form-input" id="f_canal_comunicacion" value="${c.canal_comunicacion || ''}" placeholder="Ej: WhatsApp, Mail, Instagram">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Rondas de revisión incluidas</label>
+        <input type="number" class="form-input" id="f_rondas_revision" value="${c.rondas_revision || '2'}" min="0" max="10">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Notas</label>
+        <textarea class="form-textarea" id="f_notas" placeholder="Lo que quieras tener presente sobre este cliente...">${c.notas || ''}</textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveCliente('${id || ''}')">${esNuevo ? 'Crear cliente' : 'Guardar cambios'}</button>
+    </div>
+  `;
+  $('modalOverlay').classList.add('active');
+  setTimeout(() => $('f_nombre').focus(), 100);
+}
+
+async function saveCliente(id) {
+  const nombre = $('f_nombre').value.trim();
+  if (!nombre) {
+    showToast('El nombre es obligatorio', 'error');
+    return;
+  }
+
+  const data = {
+    nombre,
+    tipo_cliente: $('f_tipo_cliente').value,
+    rubro: $('f_rubro').value.trim(),
+    estado: $('f_estado').value,
+    servicio_contratado: $('f_servicio_contratado').value.trim(),
+    frecuencia_posts: $('f_frecuencia_posts').value,
+    fecha_inicio_servicio: $('f_fecha_inicio_servicio').value,
+    canal_comunicacion: $('f_canal_comunicacion').value.trim(),
+    rondas_revision: $('f_rondas_revision').value,
+    notas: $('f_notas').value.trim(),
+  };
+
+  try {
+    if (id) {
+      await sheetUpdate('Clientes', id, data);
+      showToast('Cliente actualizado', 'success');
+    } else {
+      data.id = genId('cli');
+      data.fecha_alta = todayISO();
+      await sheetAppend('Clientes', data);
+      showToast('Cliente creado', 'success');
+    }
+    closeModal();
+    renderClientes();
+  } catch (e) {
+    showToast('Error al guardar: ' + e.message, 'error');
+  }
+}
+
+function confirmDeleteCliente(id, nombre) {
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>Eliminar cliente</h2>
+      <button class="btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p>¿Estás segura de que querés eliminar a <strong>${nombre}</strong>?</p>
+      <p style="color: var(--gris-text-muted); font-size: 13px; margin-top: 10px;">Esta acción no se puede deshacer. Los datos se borran de la planilla.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" style="background: var(--rojo);" onclick="deleteCliente('${id}')">Eliminar</button>
+    </div>
+  `;
+  $('modalOverlay').classList.add('active');
+}
+
+async function deleteCliente(id) {
+  try {
+    await sheetDelete('Clientes', id);
+    closeModal();
+    showToast('Cliente eliminado', 'success');
+    renderClientes();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+function closeModal() {
+  $('modalOverlay').classList.remove('active');
+}
+
+// ============================================================================
+// MÓDULO: CONFIGURACIÓN
+// ============================================================================
+async function renderConfig() {
+  const main = $('mainContent');
+  main.innerHTML = `
+    <div class="page-header">
+      <div class="page-title-area">
+        <h1 class="page-title">Configuración</h1>
+        <div class="page-subtitle">Conexión con tu planilla y datos de la app.</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Conexión Google Sheets</div>
+      <div class="config-item">
+        <div class="config-label">Cuenta conectada</div>
+        <div class="config-value">${state.user ? state.user.email : '—'}</div>
+        <div class="config-status ok">● Conectada</div>
+      </div>
+      <div class="config-item">
+        <div class="config-label">ID de planilla</div>
+        <div class="config-value">${CONFIG.SPREADSHEET_ID}</div>
+      </div>
+      <div class="config-item">
+        <div class="config-label">Link directo a la planilla</div>
+        <a href="https://docs.google.com/spreadsheets/d/${CONFIG.SPREADSHEET_ID}/edit" target="_blank" class="btn btn-secondary" style="margin-top: 6px;">Abrir planilla en Sheets →</a>
+      </div>
+      <div class="config-item" id="verifyRow">
+        <div class="config-label">Verificación de hojas</div>
+        <button class="btn btn-secondary" onclick="verificarHojas()" style="margin-top: 6px;">Verificar que todas las hojas existan</button>
+        <div id="verifyResult" style="margin-top: 10px;"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top: 20px;">
+      <div class="card-title">Versión de la app</div>
+      <div class="config-item">
+        <div class="config-label">Fase 1 — parte 1</div>
+        <div style="font-size: 13px; color: var(--gris-text-soft); margin-top: 4px;">
+          Módulo activo: Clientes<br>
+          Próximo: Brief + Accesos + Calendario
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+async function verificarHojas() {
+  const hojas = ['Clientes','Prospectos','Briefs','Accesos','Estrategias','Calendario','Ideas','Servicios','Metricas','Onboarding','Finanzas_Ingresos','Finanzas_Egresos','Config'];
+  const result = $('verifyResult');
+  result.innerHTML = '<div class="loading"><div class="spinner"></div>Verificando...</div>';
+
+  try {
+    const meta = await gapi.client.sheets.spreadsheets.get({ spreadsheetId: CONFIG.SPREADSHEET_ID });
+    const hojasExistentes = meta.result.sheets.map(s => s.properties.title);
+
+    const status = hojas.map(h => {
+      const existe = hojasExistentes.includes(h);
+      return `<div style="display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 13px;">
+        <span style="color: ${existe ? 'var(--verde)' : 'var(--rojo)'}; font-weight: 700;">${existe ? '✓' : '✗'}</span>
+        <span style="font-family: monospace;">${h}</span>
+      </div>`;
+    }).join('');
+
+    const faltantes = hojas.filter(h => !hojasExistentes.includes(h));
+    const ok = faltantes.length === 0;
+
+    result.innerHTML = `
+      <div style="padding: 12px; background: ${ok ? '#e6f4ef' : '#fef2f2'}; border-radius: 6px; margin-bottom: 10px;">
+        <strong style="color: ${ok ? 'var(--verde)' : 'var(--rojo)'};">
+          ${ok ? '✓ Todas las hojas están correctas' : `⚠ Faltan ${faltantes.length} hojas`}
+        </strong>
+        ${!ok ? `<div style="font-size: 12px; margin-top: 4px;">Creá estas hojas en la planilla: ${faltantes.join(', ')}</div>` : ''}
+      </div>
+      ${status}
+    `;
+  } catch (e) {
+    result.innerHTML = `<div style="color: var(--rojo);">Error: ${e.message}</div>`;
+  }
+}
+
+// ============================================================================
+// EVENT LISTENERS
+// ============================================================================
+document.addEventListener('DOMContentLoaded', () => {
+  $('loginBtn').addEventListener('click', handleLogin);
+  $('logoutBtn').addEventListener('click', handleLogout);
+
+  // Navegación sidebar
+  document.querySelectorAll('.nav-item[data-page]').forEach(btn => {
+    btn.addEventListener('click', () => navigateTo(btn.dataset.page));
+  });
+
+  // Cerrar modal al hacer click fuera
+  $('modalOverlay').addEventListener('click', (e) => {
+    if (e.target.id === 'modalOverlay') closeModal();
+  });
+
+  // ESC cierra modal
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeModal();
+  });
+});
+
+// Esperar a que Google APIs carguen
+function waitForGoogle() {
+  if (typeof google !== 'undefined' && typeof gapi !== 'undefined') {
+    initGapi();
+    initGoogleAuth();
+  } else {
+    setTimeout(waitForGoogle, 100);
+  }
+}
+waitForGoogle();
+</script>
+</body>
+</html>
