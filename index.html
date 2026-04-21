@@ -383,6 +383,72 @@
   .acceso-meta { font-size: 12px; color: var(--gris-text-muted); margin-top: 2px; }
   .acceso-actions { display: flex; gap: 6px; }
 
+  /* ===== ESTRATEGIA ===== */
+  .estrategia-card {
+    background: #fff; border: 1px solid var(--gris-border);
+    border-radius: var(--radio); margin-bottom: 12px; overflow: hidden;
+    transition: border-color 0.15s;
+  }
+  .estrategia-card.activa { border-left: 4px solid var(--fucsia); }
+  .estrategia-card.principal.activa { border-left-color: var(--fucsia); }
+  .estrategia-card.campana.activa { border-left-color: var(--salmon); }
+  .estrategia-card.prueba.activa { border-left-color: var(--petroleo); }
+  .estrategia-card.cerrada { opacity: 0.75; border-left: 4px solid var(--gris-border); }
+
+  .estrategia-header {
+    padding: 16px 20px; display: flex; justify-content: space-between;
+    align-items: center; gap: 12px; cursor: pointer; transition: background 0.1s;
+  }
+  .estrategia-header:hover { background: #fafafa; }
+  .estrategia-title-area { flex: 1; min-width: 0; }
+  .estrategia-title { font-weight: 600; font-size: 15px; margin-bottom: 3px; }
+  .estrategia-meta {
+    font-size: 12px; color: var(--gris-text-muted);
+    display: flex; gap: 10px; flex-wrap: wrap;
+  }
+  .estrategia-badge-tipo {
+    display: inline-block; padding: 2px 8px; border-radius: 10px;
+    font-size: 10.5px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .estrategia-badge-tipo.principal { background: #fde6f0; color: var(--fucsia); }
+  .estrategia-badge-tipo.campana { background: #fef0e5; color: #c06a3d; }
+  .estrategia-badge-tipo.prueba { background: #e6f0fb; color: var(--petroleo); }
+  .estrategia-caret { color: var(--gris-text-muted); transition: transform 0.15s; font-size: 18px; }
+  .estrategia-card.open .estrategia-caret { transform: rotate(90deg); }
+  .estrategia-body { display: none; padding: 0 20px 20px; border-top: 1px solid var(--gris-border); padding-top: 18px; }
+  .estrategia-card.open .estrategia-body { display: block; }
+
+  .estrategia-section {
+    background: var(--gris-bg); padding: 14px 16px;
+    border-radius: var(--radio-sm); margin-bottom: 12px;
+  }
+  .estrategia-section-title {
+    font-size: 12px; font-weight: 600; color: var(--gris-text-muted);
+    text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .estrategia-section-content { font-size: 13.5px; color: var(--gris-text); line-height: 1.55; }
+  .estrategia-section-content.empty { color: var(--gris-text-muted); font-style: italic; }
+  .estrategia-ai-placeholder {
+    background: #fff; border: 1px dashed var(--gris-border);
+    padding: 16px; border-radius: var(--radio-sm); text-align: center;
+    font-size: 13px; color: var(--gris-text-muted); margin-top: 8px;
+  }
+
+  .estrategia-historial-label {
+    font-size: 11.5px; font-weight: 600; color: var(--gris-text-muted);
+    text-transform: uppercase; letter-spacing: 0.05em;
+    margin: 24px 0 10px; padding-bottom: 6px;
+    border-bottom: 1px solid var(--gris-border);
+  }
+
+  .estrategia-empty-card {
+    background: #fff; border: 2px dashed var(--gris-border);
+    border-radius: var(--radio); padding: 30px;
+    text-align: center; color: var(--gris-text-muted);
+  }
+
   /* ===== RESPONSIVE ===== */
   @media (max-width: 900px) {
     .app.active { grid-template-columns: 1fr; }
@@ -497,6 +563,7 @@ let state = {
   calendarDate: new Date(),
   clientes: [],
   briefs: [],
+  estrategias: [],
   accesos: [],
   calendario: [],
 };
@@ -573,7 +640,7 @@ function handleLogin() {
 
 function handleLogout() {
   google.accounts.oauth2.revoke(state.accessToken, () => {});
-  state = { ...state, user: null, accessToken: null, clientes: [], briefs: [], accesos: [], calendario: [] };
+  state = { ...state, user: null, accessToken: null, clientes: [], briefs: [], estrategias: [], accesos: [], calendario: [] };
   $('loginScreen').style.display = 'flex';
   $('app').classList.remove('active');
 }
@@ -945,6 +1012,7 @@ async function renderClienteDetalle() {
       <div class="tabs-nav">
         <button class="tab-btn ${state.currentClienteTab === 'ficha' ? 'active' : ''}" onclick="switchTab('ficha')">📋 Ficha</button>
         <button class="tab-btn ${state.currentClienteTab === 'brief' ? 'active' : ''}" onclick="switchTab('brief')">🎯 Brief</button>
+        <button class="tab-btn ${state.currentClienteTab === 'estrategia' ? 'active' : ''}" onclick="switchTab('estrategia')">🧭 Estrategia</button>
         <button class="tab-btn ${state.currentClienteTab === 'accesos' ? 'active' : ''}" onclick="switchTab('accesos')">🔐 Accesos</button>
         <button class="tab-btn ${state.currentClienteTab === 'calendario' ? 'active' : ''}" onclick="switchTab('calendario')">📅 Calendario</button>
       </div>
@@ -967,6 +1035,7 @@ function renderCurrentTab() {
   const t = state.currentClienteTab;
   if (t === 'ficha') renderTabFicha();
   else if (t === 'brief') renderTabBrief();
+  else if (t === 'estrategia') renderTabEstrategia();
   else if (t === 'accesos') renderTabAccesos();
   else if (t === 'calendario') renderTabCalendario();
 }
@@ -1199,6 +1268,392 @@ function updateBriefProgress(clienteId, field, value) {
     const countEl = pctEl.nextElementSibling;
     if (countEl) countEl.textContent = `${completedAll} de ${totalAll} campos`;
   }
+}
+
+// ===== TAB: ESTRATEGIA =====
+const FASES_MOMENTO = [
+  { v: 'pre-lanzamiento', label: 'Pre-lanzamiento (aún no abierto)' },
+  { v: 'lanzamiento', label: 'Lanzamiento (recién abrió)' },
+  { v: 'crecimiento', label: 'Crecimiento (ampliando audiencia)' },
+  { v: 'consolidacion', label: 'Consolidación (audiencia estable)' },
+  { v: 'reposicionamiento', label: 'Reposicionamiento (cambio de rumbo)' },
+  { v: 'relanzamiento', label: 'Relanzamiento (volver después de pausa)' },
+];
+
+async function renderTabEstrategia() {
+  const cliente = state.clientes.find(c => c.id === state.currentClienteId);
+  $('tabContent').innerHTML = `<div class="loading"><div class="spinner"></div>Cargando estrategias...</div>`;
+
+  try {
+    const { data } = await sheetRead('Estrategias');
+    const estrategias = data.filter(e => e.cliente_id === cliente.id);
+    state.estrategias = estrategias;
+
+    const activas = estrategias.filter(e => (e.estado || 'Activa') === 'Activa');
+    const cerradas = estrategias.filter(e => e.estado && e.estado !== 'Activa');
+
+    // Ordenar: principal primero, después por fecha
+    activas.sort((a, b) => {
+      if (a.tipo === 'Principal' && b.tipo !== 'Principal') return -1;
+      if (a.tipo !== 'Principal' && b.tipo === 'Principal') return 1;
+      return (b.fecha_inicio || '').localeCompare(a.fecha_inicio || '');
+    });
+    cerradas.sort((a, b) => (b.fecha_cierre || '').localeCompare(a.fecha_cierre || ''));
+
+    const activasHtml = activas.length === 0 ? `
+      <div class="estrategia-empty-card">
+        <p style="margin-bottom: 14px;">Aún no hay estrategias activas para ${esc(cliente.nombre)}.</p>
+        <p style="font-size: 12.5px; margin-bottom: 16px;">Creá una estrategia <strong>Principal</strong> para arrancar. Luego podrás agregar campañas o pruebas en paralelo.</p>
+        <button class="btn btn-primary" onclick="openEstrategiaModal()">+ Crear primera estrategia</button>
+      </div>
+    ` : activas.map(e => renderEstrategiaCard(e)).join('');
+
+    const cerradasHtml = cerradas.length === 0 ? '' : `
+      <div class="estrategia-historial-label">📜 Historial (${cerradas.length})</div>
+      ${cerradas.map(e => renderEstrategiaCard(e)).join('')}
+    `;
+
+    $('tabContent').innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 18px; flex-wrap: wrap; gap: 10px;">
+        <div>
+          <h3>Estrategias del cliente</h3>
+          <p style="color: var(--gris-text-soft); font-size: 13px; margin-top: 2px;">
+            Estrategias activas y cerradas. Pueden convivir varias activas (una Principal + campañas/pruebas).
+          </p>
+        </div>
+        ${activas.length > 0 ? '<button class="btn btn-primary btn-sm" onclick="openEstrategiaModal()">+ Nueva estrategia</button>' : ''}
+      </div>
+      <div style="font-size: 11.5px; font-weight: 600; color: var(--gris-text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">
+        🟢 Activas (${activas.length})
+      </div>
+      ${activasHtml}
+      ${cerradasHtml}
+    `;
+  } catch (e) {
+    $('tabContent').innerHTML = `<div class="card" style="border-color: var(--rojo);"><strong style="color: var(--rojo);">Error</strong><p>${esc(e.message)}</p></div>`;
+  }
+}
+
+function renderEstrategiaCard(e) {
+  const tipoLower = (e.tipo || 'principal').toLowerCase();
+  const esActiva = (e.estado || 'Activa') === 'Activa';
+  const estadoClase = esActiva ? 'activa' : 'cerrada';
+  const fase = FASES_MOMENTO.find(f => f.v === e.momento_fase);
+  const faseLabel = fase ? fase.label : (e.momento_fase || '—');
+
+  // Parsear campos JSON (seguro aunque estén vacíos)
+  const buyerPersonas = parseJsonSafe(e.buyer_personas_json);
+  const pilares = parseJsonSafe(e.pilares_json);
+  const tonoVoz = parseJsonSafe(e.tono_voz_json);
+  const kpisSugeridos = parseJsonSafe(e.kpis_sugeridos_json);
+
+  return `
+    <div class="estrategia-card ${tipoLower} ${estadoClase}" data-estrategia-id="${esc(e.id)}">
+      <div class="estrategia-header" onclick="toggleEstrategia('${esc(e.id)}')">
+        <div class="estrategia-title-area">
+          <div class="estrategia-title">${esc(e.nombre || 'Sin nombre')}</div>
+          <div class="estrategia-meta">
+            <span class="estrategia-badge-tipo ${tipoLower}">${esc(e.tipo || 'Principal')}</span>
+            ${esActiva ? '' : `<span class="badge badge-finalizado">${esc(e.estado)}</span>`}
+            ${e.fecha_inicio ? `<span>📅 ${formatDateEs(e.fecha_inicio)}${e.fecha_fin ? ' → ' + formatDateEs(e.fecha_fin) : ''}</span>` : ''}
+          </div>
+        </div>
+        <span class="estrategia-caret">▸</span>
+      </div>
+      <div class="estrategia-body">
+        <div class="estrategia-section">
+          <div class="estrategia-section-title">🧭 Momento / Fase</div>
+          <div class="estrategia-section-content ${!e.momento_fase ? 'empty' : ''}">
+            ${esc(faseLabel)}
+            ${e.momento_descripcion ? `<div style="margin-top: 6px; color: var(--gris-text-soft); font-size: 13px;">${esc(e.momento_descripcion)}</div>` : ''}
+          </div>
+        </div>
+        <div class="estrategia-section">
+          <div class="estrategia-section-title">🎯 Objetivo principal</div>
+          <div class="estrategia-section-content ${!e.objetivo_principal ? 'empty' : ''}">
+            ${esc(e.objetivo_principal || '— Sin objetivo cargado —')}
+          </div>
+        </div>
+        <div class="estrategia-section">
+          <div class="estrategia-section-title">📊 Métricas / metas</div>
+          <div class="estrategia-section-content ${!e.metricas_meta ? 'empty' : ''}">
+            ${e.metricas_meta ? esc(e.metricas_meta).replace(/\n/g, '<br>') : '— Sin metas cargadas —'}
+          </div>
+        </div>
+
+        <div class="estrategia-section">
+          <div class="estrategia-section-title">👥 Buyer Personas ${buyerPersonas.length > 0 ? `(${buyerPersonas.length})` : ''}</div>
+          ${buyerPersonas.length === 0 ? `
+            <div class="estrategia-ai-placeholder">
+              ✨ La IA va a generar los buyer personas a partir del brief (próxima fase).
+            </div>
+          ` : buyerPersonas.map(bp => `
+            <div style="background: #fff; padding: 10px 12px; border-radius: 6px; margin-bottom: 6px; font-size: 13px;">
+              <strong>${esc(bp.nombre || 'Perfil')}</strong>
+              ${bp.descripcion ? `<div style="color: var(--gris-text-soft); margin-top: 2px;">${esc(bp.descripcion)}</div>` : ''}
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="estrategia-section">
+          <div class="estrategia-section-title">🪶 Pilares de contenido ${pilares.length > 0 ? `(${pilares.length})` : ''}</div>
+          ${pilares.length === 0 ? `
+            <div class="estrategia-ai-placeholder">
+              ✨ La IA va a proponer los pilares a partir del brief + objetivos (próxima fase).
+            </div>
+          ` : pilares.map(p => `
+            <div style="background: #fff; padding: 10px 12px; border-radius: 6px; margin-bottom: 6px; font-size: 13px;">
+              <div style="display: flex; justify-content: space-between;">
+                <strong>${esc(p.nombre || 'Pilar')}</strong>
+                ${p.porcentaje ? `<span style="color: var(--fucsia); font-weight: 600;">${esc(p.porcentaje)}%</span>` : ''}
+              </div>
+              ${p.descripcion ? `<div style="color: var(--gris-text-soft); margin-top: 2px;">${esc(p.descripcion)}</div>` : ''}
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="estrategia-section">
+          <div class="estrategia-section-title">🗣️ Tono de voz</div>
+          ${!tonoVoz || Object.keys(tonoVoz).length === 0 ? `
+            <div class="estrategia-ai-placeholder">
+              ✨ La IA va a proponer el tono de voz a partir del brief (próxima fase).
+            </div>
+          ` : `
+            <div style="font-size: 13px;">
+              ${tonoVoz.tono ? `<div><strong>Tono:</strong> ${esc(tonoVoz.tono)}</div>` : ''}
+              ${tonoVoz.si ? `<div style="margin-top: 4px;"><strong>Palabras SÍ:</strong> ${esc(tonoVoz.si)}</div>` : ''}
+              ${tonoVoz.no ? `<div style="margin-top: 4px;"><strong>Palabras NO:</strong> ${esc(tonoVoz.no)}</div>` : ''}
+            </div>
+          `}
+        </div>
+
+        <div class="estrategia-section">
+          <div class="estrategia-section-title">📈 KPIs sugeridos</div>
+          ${!kpisSugeridos || kpisSugeridos.length === 0 ? `
+            <div class="estrategia-ai-placeholder">
+              ✨ La IA va a sugerir KPIs según el momento y los objetivos (próxima fase).
+            </div>
+          ` : `
+            <ul style="font-size: 13px; padding-left: 20px;">
+              ${kpisSugeridos.map(k => `<li>${esc(k)}</li>`).join('')}
+            </ul>
+          `}
+        </div>
+
+        ${e.notas ? `
+          <div class="estrategia-section">
+            <div class="estrategia-section-title">📝 Notas y ajustes</div>
+            <div class="estrategia-section-content">${esc(e.notas).replace(/\n/g, '<br>')}</div>
+          </div>
+        ` : ''}
+
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px;">
+          <button class="btn btn-secondary btn-sm" onclick="openEstrategiaModal('${esc(e.id)}')">✏️ Editar</button>
+          ${esActiva ? `
+            <button class="btn btn-secondary btn-sm" onclick="cerrarEstrategia('${esc(e.id)}', 'cumplida')">✅ Cerrar como cumplida</button>
+            <button class="btn btn-secondary btn-sm" onclick="cerrarEstrategia('${esc(e.id)}', 'descartada')">⊘ Cerrar como descartada</button>
+          ` : `
+            <button class="btn btn-secondary btn-sm" onclick="reactivarEstrategia('${esc(e.id)}')">↻ Reactivar</button>
+          `}
+          <button class="btn-ghost btn-danger btn-sm" onclick="confirmDeleteEstrategia('${esc(e.id)}', '${esc((e.nombre || '').replace(/'/g, "\\'"))}')">🗑</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function parseJsonSafe(str) {
+  if (!str || str === '') return [];
+  try { return JSON.parse(str); } catch (e) { return []; }
+}
+
+function toggleEstrategia(id) {
+  const card = document.querySelector(`[data-estrategia-id="${id}"]`);
+  if (card) card.classList.toggle('open');
+}
+
+function openEstrategiaModal(id = null) {
+  const e = id ? state.estrategias.find(x => x.id === id) : {};
+  const esNueva = !id;
+
+  $('modal').className = 'modal modal-lg';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>${esNueva ? 'Nueva estrategia' : 'Editar estrategia'}</h2>
+      <button class="btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label class="form-label">Nombre de la estrategia *</label>
+        <input type="text" class="form-input" id="f_nombre" value="${esc(e.nombre || '')}" placeholder="Ej: Lanzamiento del consultorio">
+      </div>
+      <div class="form-row-grid">
+        <div>
+          <label class="form-label">Tipo *</label>
+          <select class="form-select" id="f_tipo">
+            <option value="Principal" ${(e.tipo || 'Principal') === 'Principal' ? 'selected' : ''}>🧭 Principal (estrategia de fondo)</option>
+            <option value="Campana" ${e.tipo === 'Campana' ? 'selected' : ''}>🎯 Campaña (acción puntual)</option>
+            <option value="Prueba" ${e.tipo === 'Prueba' ? 'selected' : ''}>🧪 Prueba (experimento)</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Momento / Fase</label>
+          <select class="form-select" id="f_momento_fase">
+            <option value="">—</option>
+            ${FASES_MOMENTO.map(f => `<option value="${f.v}" ${e.momento_fase === f.v ? 'selected' : ''}>${f.label}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="form-row-grid">
+        <div>
+          <label class="form-label">Fecha inicio</label>
+          <input type="date" class="form-input" id="f_fecha_inicio" value="${esc(e.fecha_inicio || todayISO())}">
+        </div>
+        <div>
+          <label class="form-label">Fecha fin estimada</label>
+          <input type="date" class="form-input" id="f_fecha_fin" value="${esc(e.fecha_fin || '')}">
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Descripción del momento</label>
+        <textarea class="form-textarea" id="f_momento_descripcion" placeholder="Contexto: en qué situación está el cliente, qué motiva esta estrategia...">${esc(e.momento_descripcion || '')}</textarea>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Objetivo principal *</label>
+        <textarea class="form-textarea" id="f_objetivo_principal" placeholder="¿Qué querés lograr con esta estrategia?">${esc(e.objetivo_principal || '')}</textarea>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Métricas / metas concretas</label>
+        <textarea class="form-textarea" id="f_metricas_meta" placeholder="Ej:\n- Llegar a 500 seguidores\n- 10 turnos agendados\n- 30% de interacción promedio">${esc(e.metricas_meta || '')}</textarea>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Notas y ajustes</label>
+        <textarea class="form-textarea" id="f_notas" placeholder="Espacio para anotar cambios, imprevistos, eventos que surgen durante la vigencia...">${esc(e.notas || '')}</textarea>
+      </div>
+      <div style="padding: 14px; background: var(--crema); border-radius: var(--radio-sm); margin-top: 8px; font-size: 12.5px; color: var(--gris-text-soft);">
+        <strong>✨ Lo que falta (Fase 2):</strong> Buyer personas, pilares de contenido, tono de voz y KPIs los va a generar la IA automáticamente a partir del brief + estos objetivos. Por ahora dejá la estrategia con estos datos, y después la completamos.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveEstrategia('${id || ''}')">${esNueva ? 'Crear estrategia' : 'Guardar'}</button>
+    </div>`;
+  $('modalOverlay').classList.add('active');
+  setTimeout(() => $('f_nombre').focus(), 100);
+}
+
+async function saveEstrategia(id) {
+  const nombre = $('f_nombre').value.trim();
+  if (!nombre) { showToast('El nombre es obligatorio', 'error'); return; }
+  const objetivo = $('f_objetivo_principal').value.trim();
+  if (!objetivo) { showToast('El objetivo principal es obligatorio', 'error'); return; }
+
+  const data = {
+    cliente_id: state.currentClienteId,
+    nombre,
+    tipo: $('f_tipo').value,
+    estado: 'Activa',
+    fecha_inicio: $('f_fecha_inicio').value,
+    fecha_fin: $('f_fecha_fin').value,
+    momento_fase: $('f_momento_fase').value,
+    momento_descripcion: $('f_momento_descripcion').value.trim(),
+    objetivo_principal: objetivo,
+    metricas_meta: $('f_metricas_meta').value.trim(),
+    notas: $('f_notas').value.trim(),
+  };
+
+  try {
+    if (id) {
+      await sheetUpdate('Estrategias', id, data);
+      showToast('Estrategia actualizada', 'success');
+    } else {
+      data.id = genId('est');
+      data.fecha_creacion = todayISO();
+      data.buyer_personas_json = '';
+      data.pilares_json = '';
+      data.tono_voz_json = '';
+      data.kpis_sugeridos_json = '';
+      await sheetAppend('Estrategias', data);
+      showToast('Estrategia creada', 'success');
+    }
+    closeModal();
+    renderTabEstrategia();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+async function cerrarEstrategia(id, motivo) {
+  const est = state.estrategias.find(e => e.id === id);
+  if (!est) return;
+  const esCumplida = motivo === 'cumplida';
+  $('modal').className = 'modal';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>${esCumplida ? 'Cerrar como cumplida' : 'Cerrar como descartada'}</h2>
+      <button class="btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p>Vas a cerrar la estrategia <strong>${esc(est.nombre)}</strong>.</p>
+      <p style="margin-top: 10px; color: var(--gris-text-soft); font-size: 13px;">
+        ${esCumplida ? 'Se marcará como cumplida y pasará al historial. Podés reactivarla en cualquier momento.' : 'Se marcará como descartada y pasará al historial.'}
+      </p>
+      <div class="form-row" style="margin-top: 14px;">
+        <label class="form-label">Notas de cierre (opcional)</label>
+        <textarea class="form-textarea" id="f_nota_cierre" placeholder="¿Cómo resultó? ¿Qué aprendiste?"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarCierreEstrategia('${id}', '${motivo}')">Confirmar</button>
+    </div>`;
+  $('modalOverlay').classList.add('active');
+}
+
+async function confirmarCierreEstrategia(id, motivo) {
+  const est = state.estrategias.find(e => e.id === id);
+  if (!est) return;
+  const notaCierre = $('f_nota_cierre').value.trim();
+  const nuevasNotas = notaCierre
+    ? (est.notas ? est.notas + '\n\n--- Cierre ---\n' + notaCierre : 'Cierre: ' + notaCierre)
+    : est.notas;
+  const estado = motivo === 'cumplida' ? 'Cumplida' : 'Descartada';
+  try {
+    await sheetUpdate('Estrategias', id, {
+      estado,
+      fecha_cierre: todayISO(),
+      notas: nuevasNotas,
+    });
+    closeModal();
+    showToast('Estrategia cerrada', 'success');
+    renderTabEstrategia();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+async function reactivarEstrategia(id) {
+  try {
+    await sheetUpdate('Estrategias', id, { estado: 'Activa', fecha_cierre: '' });
+    showToast('Estrategia reactivada', 'success');
+    renderTabEstrategia();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+function confirmDeleteEstrategia(id, nombre) {
+  $('modal').className = 'modal';
+  $('modal').innerHTML = `
+    <div class="modal-header"><h2>Eliminar estrategia</h2><button class="btn-ghost" onclick="closeModal()">✕</button></div>
+    <div class="modal-body"><p>¿Eliminar la estrategia <strong>${esc(nombre)}</strong>? Esta acción no se puede deshacer.</p></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" style="background: var(--rojo);" onclick="deleteEstrategia('${id}')">Eliminar</button>
+    </div>`;
+  $('modalOverlay').classList.add('active');
+}
+
+async function deleteEstrategia(id) {
+  try {
+    await sheetDelete('Estrategias', id);
+    closeModal();
+    showToast('Eliminada', 'success');
+    renderTabEstrategia();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
 }
 
 // ===== TAB: ACCESOS =====
@@ -1671,10 +2126,10 @@ async function renderConfig() {
     <div class="card" style="margin-top: 20px;">
       <div class="card-title">Versión de la app</div>
       <div class="config-item">
-        <div class="config-label">Fase 1 — completa</div>
+        <div class="config-label">Fase 1 completa + inicio Fase 2</div>
         <div style="font-size: 13px; color: var(--gris-text-soft); margin-top: 4px;">
-          Módulos activos: Clientes · Brief · Accesos · Calendario<br>
-          Próxima entrega (Fase 2): Estrategia · Banco de ideas · Métricas · Generadores con IA
+          Módulos activos: Clientes · Brief · <strong>Estrategia</strong> · Accesos · Calendario<br>
+          Próxima entrega: conexión con IA (generadores de buyer personas, pilares, tono, KPIs) · Banco de ideas · Métricas
         </div>
       </div>
     </div>`;
