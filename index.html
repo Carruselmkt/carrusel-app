@@ -558,6 +558,78 @@
     border-left: 3px solid var(--fucsia);
   }
 
+  /* ===== IDEAS (banco de ideas) ===== */
+  .idea-card {
+    background: #fff; border: 1px solid var(--gris-border);
+    border-radius: var(--radio); padding: 14px 16px;
+    margin-bottom: 10px; transition: all 0.12s;
+    border-left: 4px solid var(--gris-border);
+  }
+  .idea-card:hover { box-shadow: var(--sombra); }
+  .idea-card.estado-sin-usar { border-left-color: var(--gris-text-muted); }
+  .idea-card.estado-agendada { border-left-color: var(--petroleo); background: #f8fbfd; }
+  .idea-card.estado-publicada { border-left-color: var(--verde); background: #f6faf8; opacity: 0.85; }
+
+  .idea-header {
+    display: flex; justify-content: space-between;
+    align-items: flex-start; gap: 10px; margin-bottom: 8px;
+  }
+  .idea-title { font-weight: 600; font-size: 14.5px; line-height: 1.3; flex: 1; }
+  .idea-meta {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    margin: 6px 0 10px; font-size: 11.5px;
+  }
+  .idea-chip {
+    padding: 2px 8px; border-radius: 10px;
+    font-weight: 600; font-size: 10.5px;
+    background: var(--gris-bg); color: var(--gris-text-soft);
+    display: inline-flex; align-items: center; gap: 3px;
+  }
+  .idea-chip.pilar { background: #fde6f0; color: var(--fucsia); }
+  .idea-chip.formato { background: #e6f0fb; color: var(--petroleo); }
+  .idea-chip.origen-ia { background: #fef0e5; color: #c06a3d; }
+  .idea-chip.origen-manual { background: var(--gris-bg); color: var(--gris-text-soft); }
+  .idea-hook {
+    font-size: 13px; color: var(--gris-text);
+    padding: 8px 12px; background: #fef8fb;
+    border-left: 3px solid var(--fucsia-light);
+    border-radius: 4px; margin-bottom: 10px;
+    font-style: italic;
+  }
+  .idea-descripcion {
+    font-size: 13px; color: var(--gris-text-soft);
+    margin-bottom: 10px;
+  }
+  .idea-actions {
+    display: flex; gap: 6px; flex-wrap: wrap;
+    padding-top: 8px; border-top: 1px solid var(--gris-border);
+  }
+
+  .idea-filters {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;
+    padding: 12px; background: var(--gris-bg);
+    border-radius: var(--radio-sm);
+  }
+  .idea-filter {
+    padding: 4px 10px; border-radius: 14px; font-size: 12px;
+    background: #fff; color: var(--gris-text-soft);
+    border: 1px solid var(--gris-border); cursor: pointer;
+    transition: all 0.12s;
+  }
+  .idea-filter:hover { border-color: var(--fucsia); color: var(--fucsia); }
+  .idea-filter.active { background: var(--fucsia); color: #fff; border-color: var(--fucsia); }
+
+  .idea-preview-list {
+    max-height: 400px; overflow-y: auto;
+    padding: 4px; margin-top: 8px;
+  }
+  .idea-preview-item {
+    background: #fff; padding: 10px 12px; margin-bottom: 6px;
+    border-radius: 6px; border: 1px solid var(--gris-border);
+    display: flex; align-items: flex-start; gap: 10px;
+  }
+  .idea-preview-item input[type="checkbox"] { margin-top: 3px; }
+
   /* ===== RESPONSIVE ===== */
   @media (max-width: 900px) {
     .app.active { grid-template-columns: 1fr; }
@@ -613,7 +685,7 @@
         <span class="nav-icon">🎯</span><span>Prospectos</span><span class="nav-badge">Fase 3</span>
       </button>
       <button class="nav-item disabled" disabled>
-        <span class="nav-icon">💡</span><span>Ideas</span><span class="nav-badge">Fase 2</span>
+        <span class="nav-icon">💡</span><span>Ideas</span><span class="nav-badge">x cliente</span>
       </button>
       <button class="nav-item disabled" disabled>
         <span class="nav-icon">📊</span><span>Métricas</span><span class="nav-badge">Fase 2</span>
@@ -676,6 +748,7 @@ let state = {
   estrategias: [],
   accesos: [],
   calendario: [],
+  ideas: [],
 };
 
 let tokenClient = null;
@@ -750,7 +823,7 @@ function handleLogin() {
 
 function handleLogout() {
   google.accounts.oauth2.revoke(state.accessToken, () => {});
-  state = { ...state, user: null, accessToken: null, clientes: [], briefs: [], estrategias: [], accesos: [], calendario: [] };
+  state = { ...state, user: null, accessToken: null, clientes: [], briefs: [], estrategias: [], accesos: [], calendario: [], ideas: [] };
   $('loginScreen').style.display = 'flex';
   $('app').classList.remove('active');
 }
@@ -1139,6 +1212,7 @@ async function renderClienteDetalle() {
         <button class="tab-btn ${state.currentClienteTab === 'ficha' ? 'active' : ''}" onclick="switchTab('ficha')">📋 Ficha</button>
         <button class="tab-btn ${state.currentClienteTab === 'brief' ? 'active' : ''}" onclick="switchTab('brief')">🎯 Brief</button>
         <button class="tab-btn ${state.currentClienteTab === 'estrategia' ? 'active' : ''}" onclick="switchTab('estrategia')">🧭 Estrategia</button>
+        <button class="tab-btn ${state.currentClienteTab === 'ideas' ? 'active' : ''}" onclick="switchTab('ideas')">💡 Ideas</button>
         <button class="tab-btn ${state.currentClienteTab === 'accesos' ? 'active' : ''}" onclick="switchTab('accesos')">🔐 Accesos</button>
         <button class="tab-btn ${state.currentClienteTab === 'calendario' ? 'active' : ''}" onclick="switchTab('calendario')">📅 Calendario</button>
       </div>
@@ -1162,6 +1236,7 @@ function renderCurrentTab() {
   if (t === 'ficha') renderTabFicha();
   else if (t === 'brief') renderTabBrief();
   else if (t === 'estrategia') renderTabEstrategia();
+  else if (t === 'ideas') renderTabIdeas();
   else if (t === 'accesos') renderTabAccesos();
   else if (t === 'calendario') renderTabCalendario();
 }
@@ -2734,6 +2809,875 @@ function editarKpis(estrategiaId) {
 // parseJsonSafe ajustado: para tono de voz (objeto) también lo devuelve correctamente
 // (la original devolvía [] si fallaba, pero ahora mantenemos retrocompatibilidad)
 
+// ============================================================================
+// TAB: IDEAS (banco de ideas del cliente)
+// ============================================================================
+const FORMATOS_CONTENIDO = ['Post', 'Carrusel', 'Reel', 'Story', 'Video'];
+
+let ideaFilters = { pilar: 'todos', formato: 'todos', estado: 'todos' };
+
+async function renderTabIdeas() {
+  const cliente = state.clientes.find(c => c.id === state.currentClienteId);
+  $('tabContent').innerHTML = `<div class="loading"><div class="spinner"></div>Cargando banco de ideas...</div>`;
+
+  try {
+    // Cargar ideas + briefs + estrategias en paralelo (los necesito para generar)
+    const [ideasRes, briefsRes, estrategiasRes] = await Promise.all([
+      sheetRead('Ideas'),
+      sheetRead('Briefs'),
+      sheetRead('Estrategias'),
+    ]);
+    const ideas = ideasRes.data.filter(i => i.cliente_id === cliente.id);
+    state.ideas = ideas;
+    state.briefs = briefsRes.data;
+    state.estrategias = estrategiasRes.data.filter(e => e.cliente_id === cliente.id);
+
+    renderIdeasList();
+  } catch (e) {
+    $('tabContent').innerHTML = `<div class="card" style="border-color: var(--rojo);"><strong style="color: var(--rojo);">Error</strong><p>${esc(e.message)}</p></div>`;
+  }
+}
+
+function renderIdeasList() {
+  const cliente = state.clientes.find(c => c.id === state.currentClienteId);
+  const estrategiaActiva = state.estrategias.find(e => (e.estado || 'Activa') === 'Activa' && e.tipo === 'Principal');
+  const pilares = estrategiaActiva ? parseJsonSafe(estrategiaActiva.pilares_json) : [];
+
+  // Aplicar filtros
+  let ideasFiltradas = [...state.ideas];
+  if (ideaFilters.pilar !== 'todos') ideasFiltradas = ideasFiltradas.filter(i => i.pilar === ideaFilters.pilar);
+  if (ideaFilters.formato !== 'todos') ideasFiltradas = ideasFiltradas.filter(i => i.formato === ideaFilters.formato);
+  if (ideaFilters.estado !== 'todos') ideasFiltradas = ideasFiltradas.filter(i => (i.estado || 'Sin usar') === ideaFilters.estado);
+
+  // Ordenar: sin usar primero, después por fecha
+  ideasFiltradas.sort((a, b) => {
+    const orden = { 'Sin usar': 0, 'Agendada': 1, 'Publicada': 2 };
+    const oA = orden[a.estado || 'Sin usar'] ?? 3;
+    const oB = orden[b.estado || 'Sin usar'] ?? 3;
+    if (oA !== oB) return oA - oB;
+    return (b.fecha_creada || '').localeCompare(a.fecha_creada || '');
+  });
+
+  // Stats
+  const stats = {
+    total: state.ideas.length,
+    sinUsar: state.ideas.filter(i => (i.estado || 'Sin usar') === 'Sin usar').length,
+    agendadas: state.ideas.filter(i => i.estado === 'Agendada').length,
+    publicadas: state.ideas.filter(i => i.estado === 'Publicada').length,
+  };
+
+  // Filtros de pilar dinámicos
+  const pilarFilters = ['todos', ...new Set(state.ideas.map(i => i.pilar).filter(Boolean))];
+
+  const ideasHtml = ideasFiltradas.length === 0 ? `
+    <div class="empty-state">
+      <p>${state.ideas.length === 0 ? 'Aún no hay ideas cargadas.' : 'No hay ideas con esos filtros.'}</p>
+      ${state.ideas.length === 0 ? `
+        <p style="font-size: 12px; margin-top: 8px;">Generá un lote de ideas con IA, o agregá manualmente las primeras.</p>
+        <div style="display: flex; gap: 8px; justify-content: center; margin-top: 16px;">
+          <button class="btn btn-secondary" onclick="openIdeaModal()">+ Agregar manualmente</button>
+          ${estrategiaActiva ? `<button class="gen-btn" onclick="abrirGeneradorIdeas()">✨ Generar lote con IA</button>` : ''}
+        </div>
+      ` : ''}
+    </div>
+  ` : ideasFiltradas.map(idea => renderIdeaCard(idea)).join('');
+
+  $('tabContent').innerHTML = `
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+      <div>
+        <h3>Banco de ideas</h3>
+        <p style="color: var(--gris-text-soft); font-size: 13px; margin-top: 2px;">
+          ${stats.total} ideas · ${stats.sinUsar} sin usar · ${stats.agendadas} agendadas · ${stats.publicadas} publicadas
+        </p>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn btn-secondary btn-sm" onclick="openIdeaModal()">+ Manual</button>
+        ${estrategiaActiva ? `<button class="gen-btn gen-btn-small" onclick="abrirGeneradorIdeas()">✨ Generar ideas con IA</button>` : ''}
+      </div>
+    </div>
+
+    ${!estrategiaActiva ? `
+      <div style="padding: 12px 14px; background: #fff4e0; border-radius: var(--radio-sm); margin-bottom: 14px; font-size: 13px; color: #8a6a20;">
+        ⚠️ Para generar ideas con IA necesitás tener una estrategia <strong>Principal</strong> activa (con pilares definidos) para este cliente.
+      </div>
+    ` : ''}
+
+    ${state.ideas.length > 0 ? `
+      <div class="idea-filters">
+        <div style="width: 100%; font-size: 11.5px; font-weight: 600; color: var(--gris-text-muted); text-transform: uppercase; letter-spacing: 0.04em;">Pilar</div>
+        ${pilarFilters.map(p => `
+          <button class="idea-filter ${ideaFilters.pilar === p ? 'active' : ''}" onclick="setIdeaFilter('pilar', '${esc(p)}')">${p === 'todos' ? 'Todos' : esc(p)}</button>
+        `).join('')}
+        <div style="width: 100%; font-size: 11.5px; font-weight: 600; color: var(--gris-text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 6px;">Formato</div>
+        <button class="idea-filter ${ideaFilters.formato === 'todos' ? 'active' : ''}" onclick="setIdeaFilter('formato', 'todos')">Todos</button>
+        ${FORMATOS_CONTENIDO.map(f => `
+          <button class="idea-filter ${ideaFilters.formato === f ? 'active' : ''}" onclick="setIdeaFilter('formato', '${f}')">${f}</button>
+        `).join('')}
+        <div style="width: 100%; font-size: 11.5px; font-weight: 600; color: var(--gris-text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 6px;">Estado</div>
+        <button class="idea-filter ${ideaFilters.estado === 'todos' ? 'active' : ''}" onclick="setIdeaFilter('estado', 'todos')">Todos</button>
+        <button class="idea-filter ${ideaFilters.estado === 'Sin usar' ? 'active' : ''}" onclick="setIdeaFilter('estado', 'Sin usar')">Sin usar</button>
+        <button class="idea-filter ${ideaFilters.estado === 'Agendada' ? 'active' : ''}" onclick="setIdeaFilter('estado', 'Agendada')">Agendadas</button>
+        <button class="idea-filter ${ideaFilters.estado === 'Publicada' ? 'active' : ''}" onclick="setIdeaFilter('estado', 'Publicada')">Publicadas</button>
+      </div>
+    ` : ''}
+
+    <div id="ideasList">${ideasHtml}</div>
+  `;
+}
+
+function setIdeaFilter(tipo, valor) {
+  ideaFilters[tipo] = valor;
+  renderIdeasList();
+}
+
+function renderIdeaCard(idea) {
+  const estado = idea.estado || 'Sin usar';
+  const estadoClase = estado.toLowerCase().replace(/ /g, '-');
+  const tieneCopyDesarrollado = idea.copy && idea.copy.trim();
+
+  return `
+    <div class="idea-card estado-${estadoClase}">
+      <div class="idea-header">
+        <div class="idea-title">${esc(idea.titulo || '(sin título)')}</div>
+        <span class="badge badge-${estado === 'Sin usar' ? 'idea' : estado === 'Agendada' ? 'revision' : 'publicada'}">${esc(estado)}</span>
+      </div>
+
+      <div class="idea-meta">
+        ${idea.pilar ? `<span class="idea-chip pilar">🪶 ${esc(idea.pilar)}</span>` : ''}
+        ${idea.formato ? `<span class="idea-chip formato">${esc(idea.formato)}</span>` : ''}
+        ${idea.origen === 'IA' ? `<span class="idea-chip origen-ia">🤖 IA</span>` : `<span class="idea-chip origen-manual">✏️ Manual</span>`}
+        ${tieneCopyDesarrollado ? `<span class="idea-chip" style="background: #e6f4ef; color: var(--verde);">✓ Copy desarrollado</span>` : ''}
+      </div>
+
+      ${idea.hook ? `<div class="idea-hook">"${esc(idea.hook)}"</div>` : ''}
+      ${idea.idea && idea.idea !== idea.titulo ? `<div class="idea-descripcion">${esc(idea.idea)}</div>` : ''}
+
+      ${tieneCopyDesarrollado ? `
+        <details style="margin-bottom: 10px;">
+          <summary style="cursor: pointer; color: var(--petroleo); font-size: 12.5px; font-weight: 600;">Ver copy completo</summary>
+          <div style="padding: 10px 12px; background: #f8fbfd; border-radius: 6px; margin-top: 6px; font-size: 13px; white-space: pre-wrap;">${esc(idea.copy)}</div>
+          ${idea.hashtags ? `<div style="margin-top: 6px; font-size: 12px; color: var(--gris-text-soft);">${esc(idea.hashtags)}</div>` : ''}
+          ${idea.cta ? `<div style="margin-top: 4px; font-size: 12px;"><strong>CTA:</strong> ${esc(idea.cta)}</div>` : ''}
+        </details>
+      ` : ''}
+
+      <div class="idea-actions">
+        ${estado !== 'Publicada' ? `
+          ${!tieneCopyDesarrollado ? `<button class="gen-btn gen-btn-small" onclick="desarrollarIdea('${esc(idea.id)}')">✨ Desarrollar copy</button>` : ''}
+          ${estado !== 'Agendada' ? `<button class="btn btn-primary btn-sm" onclick="agendarIdea('${esc(idea.id)}')">📅 Agendar</button>` : ''}
+        ` : ''}
+        <button class="btn btn-secondary btn-sm" onclick="openIdeaModal('${esc(idea.id)}')">✏️ Editar</button>
+        <button class="btn-ghost btn-danger btn-sm" onclick="confirmDeleteIdea('${esc(idea.id)}', '${esc((idea.titulo || '').replace(/'/g, "\\'"))}')">🗑</button>
+      </div>
+    </div>`;
+}
+
+// ============================================================================
+// MODAL DE IDEA (crear/editar manual)
+// ============================================================================
+function openIdeaModal(id = null) {
+  const idea = id ? state.ideas.find(x => x.id === id) : {};
+  const esNueva = !id;
+  const cliente = state.clientes.find(c => c.id === state.currentClienteId);
+  const estrategiaActiva = state.estrategias.find(e => (e.estado || 'Activa') === 'Activa' && e.tipo === 'Principal');
+  const pilares = estrategiaActiva ? parseJsonSafe(estrategiaActiva.pilares_json) : [];
+
+  const pilaresOptions = pilares.length > 0
+    ? pilares.map(p => `<option value="${esc(p.nombre)}" ${idea.pilar === p.nombre ? 'selected' : ''}>${esc(p.nombre)}</option>`).join('')
+    : '<option value="" disabled>No hay pilares definidos</option>';
+
+  $('modal').className = 'modal modal-lg';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>${esNueva ? '+ Nueva idea' : '✏️ Editar idea'}</h2>
+      <button class="btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label class="form-label">Título *</label>
+        <input type="text" class="form-input" id="f_titulo" value="${esc(idea.titulo || '')}" placeholder="Nombre corto y descriptivo de la idea">
+      </div>
+      <div class="form-row-grid">
+        <div>
+          <label class="form-label">Pilar</label>
+          <select class="form-select" id="f_pilar">
+            <option value="">—</option>
+            ${pilaresOptions}
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Formato</label>
+          <select class="form-select" id="f_formato">
+            <option value="">—</option>
+            ${FORMATOS_CONTENIDO.map(f => `<option value="${f}" ${idea.formato === f ? 'selected' : ''}>${f}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Hook / Gancho</label>
+        <input type="text" class="form-input" id="f_hook" value="${esc(idea.hook || '')}" placeholder="Primera línea que capta la atención">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Descripción / Idea</label>
+        <textarea class="form-textarea" id="f_idea" placeholder="Desarrollo de la idea, qué contar, ángulo...">${esc(idea.idea || '')}</textarea>
+      </div>
+      ${idea.copy ? `
+        <div class="form-row">
+          <label class="form-label">Copy desarrollado</label>
+          <textarea class="form-textarea" id="f_copy" style="min-height: 120px;">${esc(idea.copy || '')}</textarea>
+        </div>
+        <div class="form-row-grid">
+          <div>
+            <label class="form-label">Hashtags</label>
+            <textarea class="form-textarea" id="f_hashtags" style="min-height: 60px;">${esc(idea.hashtags || '')}</textarea>
+          </div>
+          <div>
+            <label class="form-label">CTA</label>
+            <input type="text" class="form-input" id="f_cta" value="${esc(idea.cta || '')}">
+          </div>
+        </div>
+      ` : ''}
+      <div class="form-row">
+        <label class="form-label">Estado</label>
+        <select class="form-select" id="f_estado">
+          <option value="Sin usar" ${(idea.estado || 'Sin usar') === 'Sin usar' ? 'selected' : ''}>Sin usar</option>
+          <option value="Agendada" ${idea.estado === 'Agendada' ? 'selected' : ''}>Agendada</option>
+          <option value="Publicada" ${idea.estado === 'Publicada' ? 'selected' : ''}>Publicada</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Notas</label>
+        <textarea class="form-textarea" id="f_notas">${esc(idea.notas || '')}</textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveIdea('${id || ''}')">${esNueva ? 'Crear idea' : 'Guardar'}</button>
+    </div>`;
+  $('modalOverlay').classList.add('active');
+  setTimeout(() => $('f_titulo').focus(), 100);
+}
+
+async function saveIdea(id) {
+  const titulo = $('f_titulo').value.trim();
+  if (!titulo) { showToast('El título es obligatorio', 'error'); return; }
+  const idea = id ? state.ideas.find(i => i.id === id) : {};
+
+  const data = {
+    cliente_id: state.currentClienteId,
+    titulo,
+    pilar: $('f_pilar').value,
+    formato: $('f_formato').value,
+    hook: $('f_hook').value.trim(),
+    idea: $('f_idea').value.trim(),
+    estado: $('f_estado').value,
+    notas: $('f_notas').value.trim(),
+  };
+
+  // Si existe copy y el modal lo mostró, también guardarlo
+  if ($('f_copy')) data.copy = $('f_copy').value.trim();
+  if ($('f_hashtags')) data.hashtags = $('f_hashtags').value.trim();
+  if ($('f_cta')) data.cta = $('f_cta').value.trim();
+
+  try {
+    if (id) {
+      await sheetUpdate('Ideas', id, data);
+      showToast('Idea actualizada', 'success');
+    } else {
+      data.id = genId('idea');
+      data.fecha_creada = todayISO();
+      data.origen = 'Manual';
+      await sheetAppend('Ideas', data);
+      showToast('Idea creada', 'success');
+    }
+    closeModal();
+    renderTabIdeas();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+function confirmDeleteIdea(id, titulo) {
+  $('modal').className = 'modal';
+  $('modal').innerHTML = `
+    <div class="modal-header"><h2>Eliminar idea</h2><button class="btn-ghost" onclick="closeModal()">✕</button></div>
+    <div class="modal-body"><p>¿Eliminar la idea <strong>${esc(titulo)}</strong>?</p></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" style="background: var(--rojo);" onclick="deleteIdea('${id}')">Eliminar</button>
+    </div>`;
+  $('modalOverlay').classList.add('active');
+}
+
+async function deleteIdea(id) {
+  try {
+    await sheetDelete('Ideas', id);
+    closeModal();
+    showToast('Idea eliminada', 'success');
+    renderTabIdeas();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+// ============================================================================
+// GENERADOR: LOTE DE IDEAS CON IA
+// ============================================================================
+function abrirGeneradorIdeas() {
+  if (!checkApiKey()) return;
+  const cliente = state.clientes.find(c => c.id === state.currentClienteId);
+  const estrategiaActiva = state.estrategias.find(e => (e.estado || 'Activa') === 'Activa' && e.tipo === 'Principal');
+  if (!estrategiaActiva) {
+    showToast('Necesitás una estrategia Principal activa', 'error');
+    return;
+  }
+  const pilares = parseJsonSafe(estrategiaActiva.pilares_json);
+  if (pilares.length === 0) {
+    showToast('La estrategia no tiene pilares definidos. Generalos primero.', 'error');
+    return;
+  }
+
+  $('modal').className = 'modal modal-lg';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>✨ Generar lote de ideas</h2>
+      <button class="btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="color: var(--gris-text-soft); font-size: 13px; margin-bottom: 16px;">
+        La IA va a proponer ideas de contenido para ${esc(cliente.nombre)} usando el brief, estrategia, buyer personas y pilares definidos.
+      </p>
+      <div class="form-row">
+        <label class="form-label">Pilar</label>
+        <select class="form-select" id="gen_pilar">
+          <option value="todos">Todos los pilares (distribución balanceada)</option>
+          ${pilares.map(p => `<option value="${esc(p.nombre)}">${esc(p.nombre)}${p.porcentaje ? ' (' + p.porcentaje + '%)' : ''}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-row-grid">
+        <div>
+          <label class="form-label">Cantidad de ideas</label>
+          <select class="form-select" id="gen_cantidad">
+            <option value="10">10 ideas</option>
+            <option value="15" selected>15 ideas</option>
+            <option value="20">20 ideas</option>
+            <option value="30">30 ideas</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Formato</label>
+          <select class="form-select" id="gen_formato">
+            <option value="variado">Variado (mezcla de formatos)</option>
+            ${FORMATOS_CONTENIDO.map(f => `<option value="${f}">Solo ${f}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Instrucciones adicionales (opcional)</label>
+        <textarea class="form-textarea" id="gen_instrucciones" placeholder="Ej: 'Enfocarse en el lanzamiento de mayo', 'Ideas más educativas que de venta', 'Usar muchos ejemplos de casos reales'..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="ejecutarGeneradorIdeas('${estrategiaActiva.id}')">✨ Generar</button>
+    </div>`;
+  $('modalOverlay').classList.add('active');
+}
+
+async function ejecutarGeneradorIdeas(estrategiaId) {
+  const estrategia = state.estrategias.find(e => e.id === estrategiaId);
+  const pilarElegido = $('gen_pilar').value;
+  const cantidad = parseInt($('gen_cantidad').value);
+  const formato = $('gen_formato').value;
+  const instrucciones = $('gen_instrucciones').value.trim();
+
+  abrirModalGeneracion(
+    'Generando ideas',
+    '✨',
+    `Generando ${cantidad} ideas ${pilarElegido === 'todos' ? 'distribuidas en todos los pilares' : 'del pilar "' + pilarElegido + '"'}.`
+  );
+
+  const buyerPersonas = parseJsonSafe(estrategia.buyer_personas_json);
+  const pilares = parseJsonSafe(estrategia.pilares_json);
+  const tonoVoz = parseJsonSafe(estrategia.tono_voz_json);
+
+  const pilaresContext = pilarElegido === 'todos'
+    ? pilares.map(p => `- ${p.nombre} (${p.porcentaje || 0}%): ${p.descripcion || ''}. Aborda: ${p.aborda || ''}`).join('\n')
+    : (() => {
+        const p = pilares.find(x => x.nombre === pilarElegido);
+        return p ? `PILAR: ${p.nombre}\nDescripción: ${p.descripcion || ''}\nAborda: ${p.aborda || ''}\nTemas ejemplo: ${Array.isArray(p.temas) ? p.temas.join(', ') : (p.temas || '')}` : '';
+      })();
+
+  const buyerContext = buyerPersonas.length > 0
+    ? '\n\nBUYER PERSONAS:\n' + buyerPersonas.map(bp => `- ${bp.nombre}: dolores: ${bp.dolores || '-'}; deseos: ${bp.deseos || '-'}`).join('\n')
+    : '';
+
+  const tonoContext = (tonoVoz && Object.keys(tonoVoz).length > 0)
+    ? `\n\nTONO DE VOZ:\n${tonoVoz.tono || ''}\nPalabras SÍ: ${tonoVoz.si || ''}\nPalabras NO: ${tonoVoz.no || ''}`
+    : '';
+
+  const formatoContext = formato === 'variado'
+    ? 'Mezclá formatos: mayoritariamente carruseles y reels (son lo que mejor funciona), algunos posts simples y stories.'
+    : `TODAS las ideas deben ser en formato: ${formato}.`;
+
+  const instruccionesContext = instrucciones ? `\n\nINSTRUCCIONES ADICIONALES DE LA ESTRATEGA:\n${instrucciones}` : '';
+
+  const systemPrompt = `Sos una estratega de contenido de Carrusel MKT, agencia argentina. Generás ideas de contenido para redes sociales que son ACCIONABLES, ESPECÍFICAS y conectan con el público.
+
+REGLAS:
+- Cada idea debe ser DIFERENTE a las otras (distintos ángulos, distintos temas).
+- NUNCA generes ideas genéricas tipo "Hablemos de X" o "5 tips sobre Y". Sé específica: en vez de "5 tips para el cuidado bucal", andá con "Por qué tu cepillo eléctrico te está cepillando mal (y cómo arreglarlo en 30 segundos)".
+- El hook es CRÍTICO: tiene que detener el scroll. Usá curiosidad, polémica, pregunta inesperada, dato sorprendente, confesión, historia.
+- Las ideas deben conectar con los dolores/deseos de los buyer personas, no ser autorreferenciales del cliente.
+- Usá español rioplatense (vos, no tú).
+- No repitas temas similares en el mismo lote.
+${formatoContext}
+
+FORMATO DE SALIDA: devolvés SOLO un JSON válido (sin markdown, sin texto adicional). Array de ideas:
+
+[
+  {
+    "titulo": "Título corto descriptivo de la idea (para identificarla)",
+    "pilar": "Nombre exacto del pilar al que pertenece",
+    "formato": "Post | Carrusel | Reel | Story | Video",
+    "hook": "Primera frase o línea que captura la atención (máximo 15 palabras)",
+    "idea": "Desarrollo: qué se cuenta en esa publicación, el ángulo, qué mensaje da, si es carrusel qué va en cada slide, si es reel qué pasa en escena"
+  }
+]`;
+
+  const userPrompt = `Cliente: ${state.clientes.find(c => c.id === state.currentClienteId).nombre}
+
+${buildBriefContext(state.currentClienteId)}
+
+ESTRATEGIA ACTIVA: ${estrategia.nombre}
+Momento: ${estrategia.momento_fase || ''}
+Objetivo: ${estrategia.objetivo_principal}
+${estrategia.momento_descripcion ? 'Contexto: ' + estrategia.momento_descripcion : ''}
+
+PILARES:
+${pilaresContext}${buyerContext}${tonoContext}${instruccionesContext}
+
+Generá EXACTAMENTE ${cantidad} ideas ${pilarElegido === 'todos' ? 'distribuidas proporcionalmente según los porcentajes de los pilares' : 'del pilar "' + pilarElegido + '"'}.`;
+
+  try {
+    const raw = await callClaude(systemPrompt, userPrompt, { maxTokens: 4000 });
+    const ideas = extractJson(raw);
+    if (!Array.isArray(ideas) || ideas.length === 0) throw new Error('La IA no devolvió ideas válidas');
+    mostrarPreviewIdeas(ideas);
+  } catch (e) {
+    mostrarErrorGeneracion(e.message);
+  }
+}
+
+function mostrarPreviewIdeas(ideas) {
+  const itemsHtml = ideas.map((idea, i) => `
+    <div class="idea-preview-item" data-idea-idx="${i}">
+      <input type="checkbox" checked data-idea-check="${i}">
+      <div style="flex: 1;">
+        <div style="font-weight: 600; font-size: 13.5px; margin-bottom: 4px;">${esc(idea.titulo || 'Idea ' + (i+1))}</div>
+        <div style="display: flex; gap: 6px; margin-bottom: 4px; flex-wrap: wrap;">
+          ${idea.pilar ? `<span class="idea-chip pilar">🪶 ${esc(idea.pilar)}</span>` : ''}
+          ${idea.formato ? `<span class="idea-chip formato">${esc(idea.formato)}</span>` : ''}
+        </div>
+        ${idea.hook ? `<div style="font-size: 12.5px; font-style: italic; color: var(--fucsia); margin-bottom: 4px;">"${esc(idea.hook)}"</div>` : ''}
+        ${idea.idea ? `<div style="font-size: 12.5px; color: var(--gris-text-soft);">${esc(idea.idea)}</div>` : ''}
+      </div>
+    </div>
+  `).join('');
+
+  $('genModalBody').innerHTML = `
+    <div class="gen-preview">
+      <div class="gen-preview-header">✨ ${ideas.length} ideas generadas — destildá las que no te gusten</div>
+      <div class="editable-hint">
+        💡 Por defecto todas están seleccionadas. Destildá las que no quieras guardar. Después podés editar cada idea individualmente desde el banco.
+      </div>
+      <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+        <button class="btn btn-secondary btn-sm" onclick="toggleAllIdeas(true)">Seleccionar todas</button>
+        <button class="btn btn-secondary btn-sm" onclick="toggleAllIdeas(false)">Ninguna</button>
+      </div>
+      <div class="idea-preview-list">${itemsHtml}</div>
+    </div>
+  `;
+  window._pendingIdeas = ideas;
+
+  $('genModalFooter').innerHTML = `
+    <button class="btn btn-secondary" onclick="closeModal()">Descartar todas</button>
+    <button class="btn btn-primary" onclick="aceptarIdeasGeneradas()">✓ Guardar seleccionadas</button>
+  `;
+}
+
+function toggleAllIdeas(value) {
+  document.querySelectorAll('[data-idea-check]').forEach(cb => { cb.checked = value; });
+}
+
+async function aceptarIdeasGeneradas() {
+  const ideas = window._pendingIdeas;
+  const checked = Array.from(document.querySelectorAll('[data-idea-check]'))
+    .filter(cb => cb.checked)
+    .map(cb => parseInt(cb.dataset.ideaCheck));
+  const seleccionadas = checked.map(i => ideas[i]);
+
+  if (seleccionadas.length === 0) {
+    showToast('No seleccionaste ninguna idea', 'error');
+    return;
+  }
+
+  showAutosave('saving', `Guardando ${seleccionadas.length} ideas...`);
+
+  try {
+    for (const idea of seleccionadas) {
+      await sheetAppend('Ideas', {
+        id: genId('idea'),
+        cliente_id: state.currentClienteId,
+        fecha_creada: todayISO(),
+        titulo: idea.titulo || '',
+        pilar: idea.pilar || '',
+        formato: idea.formato || '',
+        hook: idea.hook || '',
+        idea: idea.idea || '',
+        estado: 'Sin usar',
+        origen: 'IA',
+      });
+    }
+    closeModal();
+    showToast(`${seleccionadas.length} ideas guardadas en el banco`, 'success');
+    renderTabIdeas();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+// ============================================================================
+// DESARROLLAR IDEA: generar copy completo a partir de una idea
+// ============================================================================
+async function desarrollarIdea(ideaId) {
+  if (!checkApiKey()) return;
+  const idea = state.ideas.find(i => i.id === ideaId);
+  if (!idea) return;
+  const estrategia = state.estrategias.find(e => (e.estado || 'Activa') === 'Activa' && e.tipo === 'Principal');
+
+  abrirModalGeneracion(
+    'Desarrollar copy completo',
+    '✨',
+    `La IA va a desarrollar el copy completo para la idea "${idea.titulo}".`
+  );
+
+  await generarCopyIA({
+    titulo: idea.titulo,
+    pilar: idea.pilar,
+    formato: idea.formato,
+    hook: idea.hook,
+    idea: idea.idea,
+    estrategia: estrategia,
+    onAccept: async (copyData) => {
+      // Actualizar la idea existente con el copy
+      try {
+        await sheetUpdate('Ideas', ideaId, {
+          copy: copyData.copy || '',
+          hashtags: copyData.hashtags || '',
+          cta: copyData.cta || '',
+          hook: copyData.hook || idea.hook || '',
+        });
+        closeModal();
+        showToast('Copy desarrollado y guardado', 'success');
+        renderTabIdeas();
+      } catch (e) { showToast('Error: ' + e.message, 'error'); }
+    }
+  });
+}
+
+// ============================================================================
+// GENERADOR DE COPY (reutilizable: desde calendario o desde idea)
+// ============================================================================
+async function generarCopyIA({ titulo, pilar, formato, hook, idea, estrategia, onAccept, instrucciones }) {
+  const buyerPersonas = estrategia ? parseJsonSafe(estrategia.buyer_personas_json) : [];
+  const tonoVoz = estrategia ? parseJsonSafe(estrategia.tono_voz_json) : {};
+  const pilares = estrategia ? parseJsonSafe(estrategia.pilares_json) : [];
+  const pilarInfo = pilares.find(p => p.nombre === pilar);
+
+  const buyerContext = buyerPersonas.length > 0
+    ? '\n\nBUYER PERSONAS:\n' + buyerPersonas.map(bp => `- ${bp.nombre}: dolores: ${bp.dolores || '-'}; deseos: ${bp.deseos || '-'}`).join('\n')
+    : '';
+
+  const tonoContext = (tonoVoz && Object.keys(tonoVoz).length > 0)
+    ? `\n\nTONO DE VOZ:\n${tonoVoz.tono || ''}\nPalabras SÍ: ${tonoVoz.si || ''}\nPalabras NO: ${tonoVoz.no || ''}\nEmojis: ${tonoVoz.emojis || 'sin restricciones'}\nEjemplos de frases de la marca:\n${tonoVoz.ejemplos || ''}`
+    : '';
+
+  const pilarContext = pilarInfo ? `\nPILAR DE CONTENIDO: ${pilarInfo.nombre}\nDescripción: ${pilarInfo.descripcion || ''}\nAborda: ${pilarInfo.aborda || ''}` : (pilar ? '\nPILAR: ' + pilar : '');
+
+  const formatoReglas = {
+    'Post': 'Un post simple de feed. Copy conciso de 3-6 líneas.',
+    'Carrusel': 'Carrusel de 5-8 slides. En el copy NO reemplazás al carrusel; el copy del pie debe complementar, despertar curiosidad y cerrar con CTA. Dejá las slides para el generador de carrusel.',
+    'Reel': 'Reel de video corto. En el copy NO escribís el guión (eso es otro generador); escribís solo el caption que acompaña al reel.',
+    'Story': 'Story de 24h. Texto más breve, directo.',
+    'Video': 'Video largo. Caption descriptivo con contexto.',
+  };
+  const formatoReglaEspecifica = formatoReglas[formato] || 'Caption general.';
+
+  const systemPrompt = `Sos una copywriter de Carrusel MKT, agencia argentina. Especialista en contenido para redes sociales que genera engagement real.
+
+REGLAS DE COPYWRITING:
+- El hook DEBE parar el scroll. Usá recursos: pregunta inesperada, dato sorprendente, confesión, historia personal, contradicción, número específico, promesa concreta.
+- El copy debe tener VOZ. Nada de textos genéricos que podrían aplicarse a cualquier marca.
+- Usá oraciones CORTAS mezcladas con algunas más largas. Ritmo.
+- Espacios en blanco: hacé saltos de línea. No bloques densos.
+- Siempre hay un CTA claro al final, adaptado al momento del cliente.
+- Hashtags: entre 8 y 15, mezclá de alta y baja cantidad de publicaciones para maximizar alcance. Prioritariamente en español, locales si aplica.
+- Usá español rioplatense (vos, no tú).
+- Respetá RIGUROSAMENTE el tono de voz definido.
+
+FORMATO ESPECÍFICO: ${formatoReglaEspecifica}
+
+FORMATO DE SALIDA: devolvés SOLO un JSON válido (sin markdown, sin texto extra):
+
+{
+  "hook": "Primera línea que para el scroll",
+  "copy": "Copy completo del post, con saltos de línea reales \\n entre párrafos",
+  "hashtags": "#hashtag1 #hashtag2 #hashtag3 ...",
+  "cta": "Llamado a la acción específico (ej: 'Agendá tu turno en el link de la bio')"
+}`;
+
+  const userPrompt = `Cliente: ${state.clientes.find(c => c.id === state.currentClienteId).nombre}
+
+${buildBriefContext(state.currentClienteId)}
+
+${estrategia ? buildEstrategiaContext(estrategia) : ''}
+
+${pilarContext}${buyerContext}${tonoContext}
+
+IDEA A DESARROLLAR:
+Título: ${titulo}
+Formato: ${formato || 'Post'}
+${hook ? 'Hook base: ' + hook : ''}
+${idea ? 'Desarrollo: ' + idea : ''}
+${instrucciones ? '\nINSTRUCCIONES ADICIONALES: ' + instrucciones : ''}
+
+Desarrollá el copy completo.`;
+
+  try {
+    const raw = await callClaude(systemPrompt, userPrompt, { maxTokens: 2000 });
+    const copyData = extractJson(raw);
+    if (!copyData || typeof copyData !== 'object') throw new Error('La IA no devolvió copy válido');
+    mostrarPreviewCopy(copyData, onAccept, { titulo, pilar, formato, estrategia });
+  } catch (e) {
+    mostrarErrorGeneracion(e.message);
+  }
+}
+
+function mostrarPreviewCopy(copyData, onAccept, context) {
+  $('genModalBody').innerHTML = `
+    <div class="gen-preview">
+      <div class="gen-preview-header">✨ Copy generado — click en cualquier campo para editarlo</div>
+      <div class="editable-hint">
+        💡 Editá lo que necesites. El copy se guarda con los campos tal como los dejes.
+      </div>
+      <div id="copyPreview" style="background: #fff; padding: 14px; border-radius: 6px; border: 1px solid var(--gris-border);">
+        <span class="editable-label">Hook</span>
+        <div class="editable-field" contenteditable="true" data-field="hook" data-placeholder="Primera línea que para el scroll">${esc(copyData.hook || '')}</div>
+        <span class="editable-label">Copy</span>
+        <div class="editable-field" contenteditable="true" data-field="copy" data-placeholder="Cuerpo del post" style="min-height: 140px; white-space: pre-wrap;">${esc(copyData.copy || '')}</div>
+        <span class="editable-label">Hashtags</span>
+        <div class="editable-field" contenteditable="true" data-field="hashtags" data-placeholder="#hashtag1 #hashtag2">${esc(copyData.hashtags || '')}</div>
+        <span class="editable-label">CTA</span>
+        <div class="editable-field" contenteditable="true" data-field="cta" data-placeholder="Llamado a la acción">${esc(copyData.cta || '')}</div>
+      </div>
+    </div>
+  `;
+
+  window._pendingCopyOnAccept = onAccept;
+  window._pendingCopyContext = context;
+
+  $('genModalFooter').innerHTML = `
+    <button class="btn btn-secondary" onclick="closeModal()">Descartar</button>
+    <button class="btn btn-secondary" onclick="regenerarCopy()">🔄 Regenerar</button>
+    <button class="btn btn-primary" onclick="aceptarCopyGenerado()">✓ Aceptar y guardar</button>
+  `;
+}
+
+function extractCopyFromDOM() {
+  const data = {};
+  document.querySelectorAll('#copyPreview [data-field]').forEach(field => {
+    const val = field.innerText.trim();
+    if (val) data[field.dataset.field] = val;
+  });
+  return data;
+}
+
+async function aceptarCopyGenerado() {
+  const copyData = extractCopyFromDOM();
+  const onAccept = window._pendingCopyOnAccept;
+  if (onAccept) await onAccept(copyData);
+}
+
+async function regenerarCopy() {
+  const ctx = window._pendingCopyContext;
+  if (!ctx) return;
+  abrirModalGeneracion('Regenerando copy', '✨', 'Generando otra propuesta...');
+  await generarCopyIA({
+    ...ctx,
+    hook: '',
+    idea: '',
+    onAccept: window._pendingCopyOnAccept,
+  });
+}
+
+// ============================================================================
+// AGENDAR IDEA: la manda al calendario
+// ============================================================================
+function agendarIdea(ideaId) {
+  const idea = state.ideas.find(i => i.id === ideaId);
+  if (!idea) return;
+  const tieneCopy = idea.copy && idea.copy.trim();
+
+  $('modal').className = 'modal';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>📅 Agendar idea en el calendario</h2>
+      <button class="btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="margin-bottom: 14px;"><strong>${esc(idea.titulo)}</strong></p>
+      ${!tieneCopy ? `
+        <div style="padding: 10px 12px; background: #fff4e0; border-radius: 6px; margin-bottom: 14px; font-size: 12.5px; color: #8a6a20;">
+          ⚠️ Esta idea aún no tiene el copy desarrollado. Se va a agendar solo con título y hook. Podés desarrollarla después desde la publicación.
+        </div>
+      ` : ''}
+      <div class="form-row-grid">
+        <div>
+          <label class="form-label">Fecha de publicación *</label>
+          <input type="date" class="form-input" id="f_agendar_fecha" value="${todayISO()}">
+        </div>
+        <div>
+          <label class="form-label">Hora (opcional)</label>
+          <input type="time" class="form-input" id="f_agendar_hora">
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Red social</label>
+        <select class="form-select" id="f_agendar_red">
+          <option value="Instagram">Instagram</option>
+          <option value="Facebook">Facebook</option>
+          <option value="TikTok">TikTok</option>
+          <option value="LinkedIn">LinkedIn</option>
+          <option value="YouTube">YouTube</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarAgendarIdea('${ideaId}')">📅 Agendar</button>
+    </div>`;
+  $('modalOverlay').classList.add('active');
+}
+
+async function confirmarAgendarIdea(ideaId) {
+  const idea = state.ideas.find(i => i.id === ideaId);
+  const fecha = $('f_agendar_fecha').value;
+  if (!fecha) { showToast('Elegí una fecha', 'error'); return; }
+
+  const publicacion = {
+    id: genId('pub'),
+    cliente_id: state.currentClienteId,
+    fecha_publicacion: fecha,
+    hora: $('f_agendar_hora').value,
+    red_social: $('f_agendar_red').value,
+    formato: idea.formato || 'Post',
+    pilar: idea.pilar || '',
+    titulo: idea.titulo || '',
+    hook: idea.hook || '',
+    copy: idea.copy || '',
+    hashtags: idea.hashtags || '',
+    cta: idea.cta || '',
+    estado: 'Borrador',
+    idea_id: ideaId,
+  };
+
+  try {
+    await Promise.all([
+      sheetAppend('Calendario', publicacion),
+      sheetUpdate('Ideas', ideaId, { estado: 'Agendada' }),
+    ]);
+    closeModal();
+    showToast(`Agendada para ${formatDateEs(fecha)}`, 'success');
+    renderTabIdeas();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+// ============================================================================
+// GENERAR COPY DESDE EL EDITOR DE PUBLICACIÓN
+// ============================================================================
+async function generarCopyDesdeEditorPost() {
+  if (!checkApiKey()) return;
+
+  // Leer datos actuales del editor de publicación
+  const titulo = $('f_titulo') ? $('f_titulo').value.trim() : '';
+  const pilar = $('f_pilar') ? $('f_pilar').value.trim() : '';
+  const formato = $('f_formato') ? $('f_formato').value : 'Post';
+  const hook = $('f_hook') ? $('f_hook').value.trim() : '';
+
+  if (!titulo && !pilar && !hook) {
+    showToast('Completá al menos el título, pilar o hook para que la IA tenga contexto', 'error');
+    return;
+  }
+
+  // Cargar estrategia activa si no está
+  if (!state.estrategias || state.estrategias.length === 0) {
+    try {
+      const { data } = await sheetRead('Estrategias');
+      state.estrategias = data.filter(e => e.cliente_id === state.currentClienteId);
+    } catch (e) {}
+  }
+  const estrategia = state.estrategias.find(e => (e.estado || 'Activa') === 'Activa' && e.tipo === 'Principal');
+
+  // Guardar el modal actual para reabrirlo después
+  window._postModalEditorData = {
+    fecha_publicacion: $('f_fecha_publicacion').value,
+    hora: $('f_hora').value,
+    red_social: $('f_red_social').value,
+    formato, pilar, titulo, hook,
+    copy: $('f_copy').value,
+    hashtags: $('f_hashtags').value,
+    cta: $('f_cta').value,
+    link_diseno: $('f_link_diseno').value,
+    link_multimedia: $('f_link_multimedia').value,
+    estado: $('f_estado').value,
+    notas: $('f_notas').value,
+    postId: window._postModalEditingId || null,
+  };
+
+  abrirModalGeneracion(
+    'Generando copy',
+    '✨',
+    `Generando copy para "${titulo || pilar || hook}"...`
+  );
+
+  await generarCopyIA({
+    titulo, pilar, formato, hook,
+    idea: '',
+    estrategia,
+    onAccept: async (copyData) => {
+      // Volver al editor con los datos generados
+      closeModal();
+      const saved = window._postModalEditorData;
+      setTimeout(() => {
+        openPostModal(saved.postId, saved.fecha_publicacion);
+        setTimeout(() => {
+          // Llenar campos generados
+          if ($('f_hook') && copyData.hook) $('f_hook').value = copyData.hook;
+          if ($('f_copy') && copyData.copy) $('f_copy').value = copyData.copy;
+          if ($('f_hashtags') && copyData.hashtags) $('f_hashtags').value = copyData.hashtags;
+          if ($('f_cta') && copyData.cta) $('f_cta').value = copyData.cta;
+          // Restaurar los otros campos
+          if ($('f_hora') && saved.hora) $('f_hora').value = saved.hora;
+          if ($('f_red_social') && saved.red_social) $('f_red_social').value = saved.red_social;
+          if ($('f_formato') && saved.formato) $('f_formato').value = saved.formato;
+          if ($('f_pilar') && saved.pilar) $('f_pilar').value = saved.pilar;
+          if ($('f_titulo') && saved.titulo) $('f_titulo').value = saved.titulo;
+          if ($('f_estado') && saved.estado) $('f_estado').value = saved.estado;
+          if ($('f_link_diseno') && saved.link_diseno) $('f_link_diseno').value = saved.link_diseno;
+          if ($('f_link_multimedia') && saved.link_multimedia) $('f_link_multimedia').value = saved.link_multimedia;
+          if ($('f_notas') && saved.notas) $('f_notas').value = saved.notas;
+          showToast('Copy generado — revisá y guardá', 'success');
+        }, 150);
+      }, 100);
+    }
+  });
+}
+
 // ===== TAB: ACCESOS =====
 async function renderTabAccesos() {
   const cliente = state.clientes.find(c => c.id === state.currentClienteId);
@@ -3004,6 +3948,7 @@ function openPostModal(id = null, defaultDate = null) {
   const p = id ? state.calendario.find(x => x.id === id) : {};
   const esNuevo = !id;
   const fecha = p.fecha_publicacion || defaultDate || todayISO();
+  window._postModalEditingId = id;
 
   $('modal').className = 'modal modal-lg';
   $('modal').innerHTML = `
@@ -3064,6 +4009,12 @@ function openPostModal(id = null, defaultDate = null) {
       <div class="form-row">
         <label class="form-label">Título interno</label>
         <input type="text" class="form-input" id="f_titulo" value="${esc(p.titulo || '')}" placeholder="Nombre corto para identificar el post">
+      </div>
+      <div style="padding: 10px 14px; background: linear-gradient(135deg, #fef8fb 0%, #fefbf7 100%); border: 1px solid var(--fucsia-light); border-radius: var(--radio-sm); margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <div style="font-size: 12.5px; color: var(--gris-text-soft);">
+          ✨ <strong>Generar copy con IA</strong> completando los campos de abajo automáticamente
+        </div>
+        <button type="button" class="gen-btn gen-btn-small" onclick="generarCopyDesdeEditorPost()">✨ Generar</button>
       </div>
       <div class="form-row">
         <label class="form-label">Hook / Gancho</label>
@@ -3230,10 +4181,10 @@ async function renderConfig() {
     <div class="card" style="margin-top: 20px;">
       <div class="card-title">Versión de la app</div>
       <div class="config-item">
-        <div class="config-label">Fase 2 — Generadores con IA activos</div>
+        <div class="config-label">Fase 2 — Sub-entrega A</div>
         <div style="font-size: 13px; color: var(--gris-text-soft); margin-top: 4px;">
-          Módulos activos: Clientes · Brief · Estrategia con <strong>IA</strong> · Accesos · Calendario<br>
-          Próxima entrega: Banco de ideas · Métricas · Generadores de copy y carruseles
+          Módulos activos: Clientes · Brief · Estrategia con IA · <strong>Ideas con IA</strong> · Calendario con <strong>generador de copy</strong> · Accesos<br>
+          Próxima entrega (Sub-B): Generador de carrusel · Reel · Calendario mensual completo · Módulo Generadores en el menú
         </div>
       </div>
     </div>`;
