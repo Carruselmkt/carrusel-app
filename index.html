@@ -795,25 +795,63 @@ function initGoogleAuth() {
     callback: async (tokenResponse) => {
       if (tokenResponse.error) { showToast('Error de autenticación', 'error'); return; }
       state.accessToken = tokenResponse.access_token;
+      // Guardar token con tiempo de expiración para mantener sesión al refrescar
+      const expiresAt = Date.now() + (tokenResponse.expires_in || 3600) * 1000;
+      try {
+        localStorage.setItem('carrusel_token', tokenResponse.access_token);
+        localStorage.setItem('carrusel_token_expires', String(expiresAt));
+      } catch (e) { console.warn('localStorage no disponible'); }
       await gapi.client.init({ discoveryDocs: [CONFIG.DISCOVERY_DOC] });
       gapi.client.setToken({ access_token: tokenResponse.access_token });
       await loadUserInfo();
       enterApp();
     },
   });
+
+  // Intentar restaurar sesión anterior si el token sigue vigente
+  tryRestoreSession();
+}
+
+async function tryRestoreSession() {
+  try {
+    const token = localStorage.getItem('carrusel_token');
+    const expiresAt = parseInt(localStorage.getItem('carrusel_token_expires') || '0');
+    if (!token || !expiresAt) return;
+    // Si quedan menos de 2 minutos, mejor pedir login nuevo
+    if (Date.now() > expiresAt - 120000) {
+      localStorage.removeItem('carrusel_token');
+      localStorage.removeItem('carrusel_token_expires');
+      return;
+    }
+    // Validar que el token aún funcione
+    state.accessToken = token;
+    await gapi.client.init({ discoveryDocs: [CONFIG.DISCOVERY_DOC] });
+    gapi.client.setToken({ access_token: token });
+    try {
+      await loadUserInfo();
+      // Si pude cargar la info del usuario, el token es válido
+      enterApp();
+    } catch (e) {
+      // Token inválido o expirado: limpiar y mostrar login
+      localStorage.removeItem('carrusel_token');
+      localStorage.removeItem('carrusel_token_expires');
+      state.accessToken = null;
+    }
+  } catch (e) {
+    console.warn('Error restaurando sesión:', e);
+  }
 }
 
 async function loadUserInfo() {
-  try {
-    const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-      headers: { Authorization: 'Bearer ' + state.accessToken }
-    });
-    const data = await res.json();
-    state.user = { name: data.name, email: data.email, picture: data.picture };
-    $('userName').textContent = data.name || data.email;
-    $('userEmail').textContent = data.email;
-    $('userAvatar').textContent = (data.name || data.email)[0].toUpperCase();
-  } catch (e) { console.error(e); }
+  const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+    headers: { Authorization: 'Bearer ' + state.accessToken }
+  });
+  if (!res.ok) throw new Error('Token inválido');
+  const data = await res.json();
+  state.user = { name: data.name, email: data.email, picture: data.picture };
+  $('userName').textContent = data.name || data.email;
+  $('userEmail').textContent = data.email;
+  $('userAvatar').textContent = (data.name || data.email)[0].toUpperCase();
 }
 
 function handleLogin() {
@@ -823,6 +861,10 @@ function handleLogin() {
 
 function handleLogout() {
   google.accounts.oauth2.revoke(state.accessToken, () => {});
+  try {
+    localStorage.removeItem('carrusel_token');
+    localStorage.removeItem('carrusel_token_expires');
+  } catch (e) {}
   state = { ...state, user: null, accessToken: null, clientes: [], briefs: [], estrategias: [], accesos: [], calendario: [], ideas: [] };
   $('loginScreen').style.display = 'flex';
   $('app').classList.remove('active');
@@ -3133,6 +3175,13 @@ function abrirGeneradorIdeas() {
     return;
   }
 
+  // Detectar campañas activas para auto-completar opciones
+  const campanasActivas = state.estrategias.filter(e =>
+    (e.estado || 'Activa') === 'Activa' && e.tipo === 'Campana'
+  );
+  const faseLabel = FASES_MOMENTO.find(f => f.v === estrategiaActiva.momento_fase);
+  const faseNombre = faseLabel ? faseLabel.label : estrategiaActiva.momento_fase;
+
   $('modal').className = 'modal modal-lg';
   $('modal').innerHTML = `
     <div class="modal-header">
@@ -3141,18 +3190,19 @@ function abrirGeneradorIdeas() {
     </div>
     <div class="modal-body">
       <p style="color: var(--gris-text-soft); font-size: 13px; margin-bottom: 16px;">
-        La IA va a proponer ideas de contenido para ${esc(cliente.nombre)} usando el brief, estrategia, buyer personas y pilares definidos.
+        La IA va a proponer ideas para ${esc(cliente.nombre)} usando el brief, estrategia, buyer personas y pilares definidos.
       </p>
-      <div class="form-row">
-        <label class="form-label">Pilar</label>
-        <select class="form-select" id="gen_pilar">
-          <option value="todos">Todos los pilares (distribución balanceada)</option>
-          ${pilares.map(p => `<option value="${esc(p.nombre)}">${esc(p.nombre)}${p.porcentaje ? ' (' + p.porcentaje + '%)' : ''}</option>`).join('')}
-        </select>
-      </div>
+
       <div class="form-row-grid">
         <div>
-          <label class="form-label">Cantidad de ideas</label>
+          <label class="form-label">Pilar</label>
+          <select class="form-select" id="gen_pilar">
+            <option value="todos">Todos los pilares (distribución balanceada)</option>
+            ${pilares.map(p => `<option value="${esc(p.nombre)}">${esc(p.nombre)}${p.porcentaje ? ' (' + p.porcentaje + '%)' : ''}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Cantidad</label>
           <select class="form-select" id="gen_cantidad">
             <option value="10">10 ideas</option>
             <option value="15" selected>15 ideas</option>
@@ -3160,17 +3210,51 @@ function abrirGeneradorIdeas() {
             <option value="30">30 ideas</option>
           </select>
         </div>
-        <div>
-          <label class="form-label">Formato</label>
-          <select class="form-select" id="gen_formato">
-            <option value="variado">Variado (mezcla de formatos)</option>
-            ${FORMATOS_CONTENIDO.map(f => `<option value="${f}">Solo ${f}</option>`).join('')}
-          </select>
-        </div>
       </div>
       <div class="form-row">
-        <label class="form-label">Instrucciones adicionales (opcional)</label>
-        <textarea class="form-textarea" id="gen_instrucciones" placeholder="Ej: 'Enfocarse en el lanzamiento de mayo', 'Ideas más educativas que de venta', 'Usar muchos ejemplos de casos reales'..."></textarea>
+        <label class="form-label">Formato</label>
+        <select class="form-select" id="gen_formato">
+          <option value="variado">Variado (mezcla de formatos)</option>
+          ${FORMATOS_CONTENIDO.map(f => `<option value="${f}">Solo ${f}</option>`).join('')}
+        </select>
+      </div>
+
+      <div style="margin: 18px 0 8px; padding-top: 14px; border-top: 1px solid var(--gris-border);">
+        <h3 style="font-size: 15px; margin-bottom: 4px;">🎯 Enfoque principal del lote</h3>
+        <p style="color: var(--gris-text-soft); font-size: 12.5px; margin-bottom: 10px;">
+          Condiciona TODAS las ideas al ángulo que elijas. Si elegís un enfoque fuerte, cada idea va a girar alrededor de ese tema.
+        </p>
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">Tipo de enfoque</label>
+        <select class="form-select" id="gen_tipo_enfoque" onchange="cambiarTipoEnfoque()">
+          <option value="ninguno">Sin enfoque específico (ideas generales según la estrategia)</option>
+          <option value="fase">Fase actual del cliente${faseNombre ? ' (' + faseNombre + ')' : ''}</option>
+          ${campanasActivas.length > 0 ? `<option value="campana">Campaña activa (${campanasActivas.length} disponible${campanasActivas.length > 1 ? 's' : ''})</option>` : ''}
+          <option value="tema">Tema o ángulo específico</option>
+        </select>
+      </div>
+
+      <div class="form-row" id="enfoque_campana_container" style="display:none;">
+        <label class="form-label">Campaña</label>
+        <select class="form-select" id="gen_campana_id">
+          ${campanasActivas.map(c => `<option value="${esc(c.id)}">${esc(c.nombre)} (${formatDateEs(c.fecha_inicio)}${c.fecha_fin ? ' → ' + formatDateEs(c.fecha_fin) : ''})</option>`).join('')}
+        </select>
+      </div>
+
+      <div class="form-row" id="enfoque_tema_container" style="display:none;">
+        <label class="form-label">Describí el enfoque</label>
+        <textarea class="form-textarea" id="gen_tema_libre" placeholder="Ej: 'Todas deben hablar del equipo humano detrás de Origen, mostrando su lado personal'. Sé específica: mientras más claro, mejor salen las ideas."></textarea>
+      </div>
+
+      <div class="form-row" id="enfoque_detalles_container" style="display:none;">
+        <label class="form-label">Detalles adicionales (opcional)</label>
+        <textarea class="form-textarea" id="gen_detalles" placeholder="Cualquier especificación extra: eventos, fechas clave, tono preferido para este lote, cosas a evitar..."></textarea>
+      </div>
+
+      <div style="padding: 10px 14px; background: var(--crema); border-radius: 6px; margin-top: 10px; font-size: 12px; color: var(--gris-text-soft);">
+        💡 <strong>Tip:</strong> cuantas más ideas pidas con un enfoque fuerte, más va a costarle a la IA variar los ángulos. Si querés todo sobre lanzamiento, 15 ideas es ideal. Si pedís 30 con enfoque único, es posible que algunas se repitan en idea.
       </div>
     </div>
     <div class="modal-footer">
@@ -3180,17 +3264,64 @@ function abrirGeneradorIdeas() {
   $('modalOverlay').classList.add('active');
 }
 
+function cambiarTipoEnfoque() {
+  const tipo = $('gen_tipo_enfoque').value;
+  $('enfoque_campana_container').style.display = tipo === 'campana' ? 'block' : 'none';
+  $('enfoque_tema_container').style.display = tipo === 'tema' ? 'block' : 'none';
+  $('enfoque_detalles_container').style.display = tipo !== 'ninguno' ? 'block' : 'none';
+}
+
 async function ejecutarGeneradorIdeas(estrategiaId) {
   const estrategia = state.estrategias.find(e => e.id === estrategiaId);
   const pilarElegido = $('gen_pilar').value;
   const cantidad = parseInt($('gen_cantidad').value);
   const formato = $('gen_formato').value;
-  const instrucciones = $('gen_instrucciones').value.trim();
+  const tipoEnfoque = $('gen_tipo_enfoque').value;
+
+  // Construir el enfoque principal según el tipo elegido
+  let enfoquePrincipal = null;
+  let enfoqueLabel = '';
+
+  if (tipoEnfoque === 'fase') {
+    const fase = FASES_MOMENTO.find(f => f.v === estrategia.momento_fase);
+    const faseNombre = fase ? fase.label : estrategia.momento_fase;
+    enfoqueLabel = 'Fase: ' + faseNombre;
+    enfoquePrincipal = {
+      tipo: 'fase',
+      descripcion: faseNombre,
+      contexto: estrategia.momento_descripcion || '',
+      fase: estrategia.momento_fase,
+    };
+  } else if (tipoEnfoque === 'campana') {
+    const campanaId = $('gen_campana_id').value;
+    const campana = state.estrategias.find(e => e.id === campanaId);
+    if (campana) {
+      enfoqueLabel = 'Campaña: ' + campana.nombre;
+      enfoquePrincipal = {
+        tipo: 'campana',
+        descripcion: campana.nombre,
+        objetivo: campana.objetivo_principal || '',
+        contexto: campana.momento_descripcion || '',
+        fechas: `${campana.fecha_inicio || ''}${campana.fecha_fin ? ' a ' + campana.fecha_fin : ''}`,
+      };
+    }
+  } else if (tipoEnfoque === 'tema') {
+    const tema = $('gen_tema_libre').value.trim();
+    if (tema) {
+      enfoqueLabel = 'Tema: ' + tema.substring(0, 40) + (tema.length > 40 ? '...' : '');
+      enfoquePrincipal = {
+        tipo: 'tema',
+        descripcion: tema,
+      };
+    }
+  }
+
+  const detalles = $('gen_detalles') ? $('gen_detalles').value.trim() : '';
 
   abrirModalGeneracion(
     'Generando ideas',
     '✨',
-    `Generando ${cantidad} ideas ${pilarElegido === 'todos' ? 'distribuidas en todos los pilares' : 'del pilar "' + pilarElegido + '"'}.`
+    `Generando ${cantidad} ideas${enfoqueLabel ? ' — ' + enfoqueLabel : ''}.`
   );
 
   const buyerPersonas = parseJsonSafe(estrategia.buyer_personas_json);
@@ -3216,28 +3347,79 @@ async function ejecutarGeneradorIdeas(estrategiaId) {
     ? 'Mezclá formatos: mayoritariamente carruseles y reels (son lo que mejor funciona), algunos posts simples y stories.'
     : `TODAS las ideas deben ser en formato: ${formato}.`;
 
-  const instruccionesContext = instrucciones ? `\n\nINSTRUCCIONES ADICIONALES DE LA ESTRATEGA:\n${instrucciones}` : '';
+  // Construir el bloque de ENFOQUE PRINCIPAL — el cambio más importante
+  let enfoqueBloque = '';
+  let reglaEnfoquePrompt = '';
+  if (enfoquePrincipal) {
+    if (enfoquePrincipal.tipo === 'fase') {
+      enfoqueBloque = `
+========================================
+🎯 ENFOQUE PRINCIPAL OBLIGATORIO DEL LOTE
+========================================
+TODAS las ${cantidad} ideas deben servir a este momento: ${enfoquePrincipal.descripcion}
+${enfoquePrincipal.contexto ? 'Contexto específico: ' + enfoquePrincipal.contexto : ''}
+
+Esto significa:
+- Cada idea debe estar pensada PARA este momento, no para cualquier momento.
+- Si es pre-lanzamiento: todas apuntan a generar expectativa, presentar a la marca/equipo, construir comunidad antes de abrir, hablar de lo que viene, mostrar preparación.
+- Si es lanzamiento: todas refuerzan la apertura, invitan a conocer, generan urgencia de los primeros días.
+- Si es crecimiento: todas aportan valor educativo/aspiracional para sumar audiencia nueva.
+- Si es consolidación: todas apuntan a conversión, casos de éxito, diferenciación vs competencia.
+- Si es reposicionamiento: todas refuerzan el nuevo mensaje.
+- Si es relanzamiento: todas hablan del regreso, qué hay de nuevo, por qué ahora.
+
+NO mezcles ideas "genéricas del rubro" que servirían en cualquier momento. TODAS tienen que estar pensadas para ${enfoquePrincipal.descripcion}.
+`;
+      reglaEnfoquePrompt = `OBLIGATORIO: Las ${cantidad} ideas deben estar CADA UNA conectada al momento "${enfoquePrincipal.descripcion}". No ideas genéricas. Si la idea también funcionaría fuera de este momento, repensala.`;
+    } else if (enfoquePrincipal.tipo === 'campana') {
+      enfoqueBloque = `
+========================================
+🎯 ENFOQUE PRINCIPAL OBLIGATORIO DEL LOTE
+========================================
+TODAS las ${cantidad} ideas deben servir a la campaña: "${enfoquePrincipal.descripcion}"
+Objetivo de la campaña: ${enfoquePrincipal.objetivo}
+${enfoquePrincipal.contexto ? 'Contexto: ' + enfoquePrincipal.contexto : ''}
+Fechas: ${enfoquePrincipal.fechas}
+
+Cada idea debe estar pensada para esta campaña específica. No ideas del rubro en general.
+`;
+      reglaEnfoquePrompt = `OBLIGATORIO: Las ${cantidad} ideas deben estar CADA UNA conectada a la campaña "${enfoquePrincipal.descripcion}".`;
+    } else if (enfoquePrincipal.tipo === 'tema') {
+      enfoqueBloque = `
+========================================
+🎯 ENFOQUE PRINCIPAL OBLIGATORIO DEL LOTE
+========================================
+Directiva específica de la estratega: "${enfoquePrincipal.descripcion}"
+
+TODAS las ${cantidad} ideas deben cumplir esta directiva. Si una idea no encaja, no la incluyas.
+`;
+      reglaEnfoquePrompt = `OBLIGATORIO: Las ${cantidad} ideas deben cumplir la directiva: "${enfoquePrincipal.descripcion}".`;
+    }
+  }
+
+  const detallesContext = detalles ? `\n\nDETALLES ADICIONALES DE LA ESTRATEGA:\n${detalles}` : '';
 
   const systemPrompt = `Sos una estratega de contenido de Carrusel MKT, agencia argentina. Generás ideas de contenido para redes sociales que son ACCIONABLES, ESPECÍFICAS y conectan con el público.
 
-REGLAS:
-- Cada idea debe ser DIFERENTE a las otras (distintos ángulos, distintos temas).
-- NUNCA generes ideas genéricas tipo "Hablemos de X" o "5 tips sobre Y". Sé específica: en vez de "5 tips para el cuidado bucal", andá con "Por qué tu cepillo eléctrico te está cepillando mal (y cómo arreglarlo en 30 segundos)".
-- El hook es CRÍTICO: tiene que detener el scroll. Usá curiosidad, polémica, pregunta inesperada, dato sorprendente, confesión, historia.
-- Las ideas deben conectar con los dolores/deseos de los buyer personas, no ser autorreferenciales del cliente.
+REGLAS FUNDAMENTALES:
+${enfoquePrincipal ? `\n⚠️ REGLA #1 — ENFOQUE OBLIGATORIO ⚠️\n${reglaEnfoquePrompt}\nEsta regla es inviolable. Antes de proponer cada idea, preguntate: "¿esta idea está 100% alineada con el enfoque principal?". Si no, descartala y proponé otra.\n` : ''}
+- VARIEDAD DE TEMAS: cada idea del lote debe tocar un tema DIFERENTE dentro del enfoque. No generes 3 ideas distintas sobre el mismo tema (ej: no 3 ideas sobre implantes).
+- ESPECIFICIDAD: nada genérico. Nada de "5 tips sobre X" o "Hablemos de Y". Ir directo al ángulo concreto.
+- HOOK CRÍTICO: tiene que parar el scroll. Curiosidad, polémica, pregunta inesperada, dato sorprendente, confesión, historia.
+- CONEXIÓN CON DOLORES/DESEOS de los buyer personas. No contenido autorreferencial del cliente.
+- COMPACTAS: el campo "idea" debe ser un desarrollo de 2-3 líneas máximo (no slide por slide, eso es para el generador de carrusel). Explicar el ángulo y qué mensaje da.
 - Usá español rioplatense (vos, no tú).
-- No repitas temas similares en el mismo lote.
 ${formatoContext}
 
-FORMATO DE SALIDA: devolvés SOLO un JSON válido (sin markdown, sin texto adicional). Array de ideas:
+FORMATO DE SALIDA: devolvés SOLO un JSON válido (sin markdown, sin texto adicional):
 
 [
   {
-    "titulo": "Título corto descriptivo de la idea (para identificarla)",
-    "pilar": "Nombre exacto del pilar al que pertenece",
+    "titulo": "Título corto descriptivo (para identificar la idea rápido)",
+    "pilar": "Nombre exacto del pilar",
     "formato": "Post | Carrusel | Reel | Story | Video",
-    "hook": "Primera frase o línea que captura la atención (máximo 15 palabras)",
-    "idea": "Desarrollo: qué se cuenta en esa publicación, el ángulo, qué mensaje da, si es carrusel qué va en cada slide, si es reel qué pasa en escena"
+    "hook": "Primera frase del post (máximo 15 palabras)",
+    "idea": "Desarrollo compacto: qué ángulo toma, qué mensaje da, por qué funciona. 2-3 líneas máximo."
   }
 ]`;
 
@@ -3251,9 +3433,11 @@ Objetivo: ${estrategia.objetivo_principal}
 ${estrategia.momento_descripcion ? 'Contexto: ' + estrategia.momento_descripcion : ''}
 
 PILARES:
-${pilaresContext}${buyerContext}${tonoContext}${instruccionesContext}
+${pilaresContext}${buyerContext}${tonoContext}${enfoqueBloque}${detallesContext}
 
-Generá EXACTAMENTE ${cantidad} ideas ${pilarElegido === 'todos' ? 'distribuidas proporcionalmente según los porcentajes de los pilares' : 'del pilar "' + pilarElegido + '"'}.`;
+Generá EXACTAMENTE ${cantidad} ideas ${pilarElegido === 'todos' ? 'distribuidas proporcionalmente según los porcentajes de los pilares' : 'del pilar "' + pilarElegido + '"'}.
+
+${enfoquePrincipal ? `\n⚠️ ANTES DE ENTREGAR: revisá cada una de las ${cantidad} ideas. ¿Todas están 100% conectadas al enfoque principal? Si alguna no lo está, reemplazala.` : ''}`;
 
   try {
     const raw = await callClaude(systemPrompt, userPrompt, { maxTokens: 4000 });
@@ -3335,10 +3519,14 @@ async function aceptarIdeasGeneradas() {
         origen: 'IA',
       });
     }
+    showAutosave('saved', `${seleccionadas.length} ideas guardadas`);
     closeModal();
     showToast(`${seleccionadas.length} ideas guardadas en el banco`, 'success');
     renderTabIdeas();
-  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+  } catch (e) {
+    showAutosave('error', 'Error al guardar');
+    showToast('Error: ' + e.message, 'error');
+  }
 }
 
 // ============================================================================
