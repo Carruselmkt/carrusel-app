@@ -449,6 +449,87 @@
     text-align: center; color: var(--gris-text-muted);
   }
 
+  /* ===== GENERADORES IA ===== */
+  .gen-btn {
+    background: linear-gradient(135deg, var(--fucsia) 0%, var(--salmon) 100%);
+    color: #fff; border: none; padding: 10px 18px;
+    border-radius: var(--radio-sm); font-weight: 600; font-size: 13px;
+    display: inline-flex; align-items: center; gap: 8px;
+    cursor: pointer; transition: transform 0.1s;
+    box-shadow: 0 2px 8px rgba(186, 13, 102, 0.2);
+  }
+  .gen-btn:hover:not(:disabled) { transform: translateY(-1px); }
+  .gen-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .gen-btn-small { padding: 6px 12px; font-size: 12px; }
+
+  .gen-loading {
+    padding: 24px; text-align: center;
+    background: linear-gradient(135deg, #fde6f0 0%, #fef0e5 100%);
+    border-radius: var(--radio-sm);
+    font-size: 13.5px; color: var(--gris-text);
+  }
+  .gen-loading-dots::after {
+    content: '...';
+    display: inline-block;
+    animation: dots 1.5s infinite;
+  }
+  @keyframes dots {
+    0%, 20% { content: '.'; }
+    40% { content: '..'; }
+    60%, 100% { content: '...'; }
+  }
+
+  .gen-preview {
+    background: linear-gradient(135deg, #fef8fb 0%, #fefbf7 100%);
+    border: 1px solid var(--fucsia-light);
+    border-radius: var(--radio-sm);
+    padding: 16px; margin-top: 8px;
+  }
+  .gen-preview-header {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 11.5px; font-weight: 600; color: var(--fucsia);
+    text-transform: uppercase; letter-spacing: 0.04em;
+    margin-bottom: 10px;
+  }
+  .gen-preview-actions {
+    display: flex; gap: 6px; margin-top: 14px;
+    padding-top: 12px; border-top: 1px solid var(--fucsia-light);
+    flex-wrap: wrap;
+  }
+
+  .buyer-persona-card {
+    background: #fff; padding: 12px 14px; border-radius: 6px;
+    margin-bottom: 8px; border: 1px solid var(--gris-border);
+  }
+  .buyer-persona-card h4 { font-size: 14px; margin-bottom: 6px; color: var(--fucsia); }
+  .buyer-persona-card .bp-section { margin-top: 6px; font-size: 12.5px; }
+  .buyer-persona-card .bp-label { font-weight: 600; color: var(--gris-text-soft); }
+
+  .pilar-card {
+    background: #fff; padding: 12px 14px; border-radius: 6px;
+    margin-bottom: 8px; border: 1px solid var(--gris-border);
+    border-left: 4px solid var(--fucsia);
+  }
+  .pilar-card-header {
+    display: flex; justify-content: space-between;
+    align-items: center; margin-bottom: 4px;
+  }
+  .pilar-card h4 { font-size: 14px; }
+  .pilar-porcentaje {
+    background: var(--fucsia); color: #fff;
+    padding: 2px 10px; border-radius: 10px;
+    font-size: 11.5px; font-weight: 700;
+  }
+
+  .origen-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 10.5px; padding: 2px 6px; border-radius: 10px;
+    font-weight: 600;
+  }
+  .origen-badge.ia { background: #fef0e5; color: #c06a3d; }
+  .origen-badge.editado { background: #e6f0fb; color: var(--petroleo); }
+  .origen-badge.aprobado { background: #e6f4ef; color: var(--verde); }
+
   /* ===== RESPONSIVE ===== */
   @media (max-width: 900px) {
     .app.active { grid-template-columns: 1fr; }
@@ -557,6 +638,7 @@ const CONFIG = {
 let state = {
   user: null,
   accessToken: null,
+  apiKey: null,
   currentPage: 'clientes',
   currentClienteId: null,
   currentClienteTab: 'ficha',
@@ -648,7 +730,23 @@ function handleLogout() {
 function enterApp() {
   $('loginScreen').style.display = 'none';
   $('app').classList.add('active');
+  loadApiKey(); // cargar key desde Config
   navigateTo(state.currentPage);
+}
+
+async function loadApiKey() {
+  try {
+    const { data } = await sheetRead('Config');
+    const row = data.find(r => r.clave === 'anthropic_api_key');
+    if (row && row.valor && row.valor.startsWith('sk-ant-')) {
+      state.apiKey = row.valor.trim();
+    } else {
+      state.apiKey = null;
+    }
+  } catch (e) {
+    console.error('Error cargando API key:', e);
+    state.apiKey = null;
+  }
 }
 
 function initGapi() { gapi.load('client', () => {}); }
@@ -1270,6 +1368,134 @@ function updateBriefProgress(clienteId, field, value) {
   }
 }
 
+// ============================================================================
+// API DE CLAUDE (Anthropic)
+// ============================================================================
+async function callClaude(systemPrompt, userPrompt, options = {}) {
+  if (!state.apiKey) {
+    throw new Error('No hay API key configurada. Cargala en la hoja "Config" de tu planilla (fila con clave "anthropic_api_key").');
+  }
+
+  const model = options.model || 'claude-sonnet-4-5';
+  const maxTokens = options.maxTokens || 2048;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': state.apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: maxTokens,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+      }),
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      const msg = errorData?.error?.message || `Error ${res.status}`;
+      if (res.status === 401) throw new Error('API key inválida. Verificala en la hoja Config de tu planilla.');
+      if (res.status === 429) throw new Error('Límite de velocidad alcanzado. Esperá unos segundos y reintentá.');
+      if (res.status === 400 && msg.includes('credit')) throw new Error('Sin crédito disponible en Anthropic. Cargá más en console.anthropic.com');
+      throw new Error(msg);
+    }
+
+    const data = await res.json();
+    const text = data.content?.[0]?.text || '';
+    return text;
+  } catch (e) {
+    if (e.message.includes('Failed to fetch')) {
+      throw new Error('Error de red. Verificá tu conexión a internet.');
+    }
+    throw e;
+  }
+}
+
+// Extrae el primer bloque JSON válido de una respuesta de texto
+function extractJson(text) {
+  // Intento 1: parsear directo
+  try { return JSON.parse(text); } catch (e) {}
+  // Intento 2: buscar entre ```json ... ```
+  const match1 = text.match(/```json\s*([\s\S]*?)\s*```/);
+  if (match1) { try { return JSON.parse(match1[1]); } catch (e) {} }
+  // Intento 3: buscar entre ``` ... ```
+  const match2 = text.match(/```\s*([\s\S]*?)\s*```/);
+  if (match2) { try { return JSON.parse(match2[1]); } catch (e) {} }
+  // Intento 4: buscar primer { o [ hasta el último } o ]
+  const first = Math.min(
+    text.indexOf('{') === -1 ? Infinity : text.indexOf('{'),
+    text.indexOf('[') === -1 ? Infinity : text.indexOf('[')
+  );
+  const last = Math.max(text.lastIndexOf('}'), text.lastIndexOf(']'));
+  if (first !== Infinity && last !== -1 && last > first) {
+    try { return JSON.parse(text.substring(first, last + 1)); } catch (e) {}
+  }
+  throw new Error('La IA no devolvió un JSON válido. Intentá regenerar.');
+}
+
+// Arma un resumen del brief del cliente para incluir en prompts
+function buildBriefContext(clienteId) {
+  const cliente = state.clientes.find(c => c.id === clienteId);
+  const brief = (state.briefs || []).find(b => b.cliente_id === clienteId);
+  if (!cliente) return '';
+
+  let ctx = `NOMBRE DE LA MARCA: ${cliente.nombre}\n`;
+  if (cliente.rubro) ctx += `RUBRO: ${cliente.rubro}\n`;
+
+  if (!brief) {
+    ctx += '\n(No hay brief cargado todavía. Información muy limitada.)\n';
+    return ctx;
+  }
+
+  const agregarSiExiste = (label, valor) => {
+    if (valor && valor.trim()) ctx += `\n${label}:\n${valor.trim()}\n`;
+  };
+
+  agregarSiExiste('PRODUCTOS/SERVICIOS', brief.productos_servicios);
+  agregarSiExiste('MÁS RENTABLE', brief.mas_rentable);
+  agregarSiExiste('MÁS VENDIDO', brief.mas_vendido);
+  agregarSiExiste('HISTORIA', brief.historia);
+  agregarSiExiste('MISIÓN/VISIÓN/VALORES', brief.mision_vision_valores);
+  agregarSiExiste('PÚBLICO OBJETIVO (según cliente)', brief.publico_objetivo);
+  agregarSiExiste('FUNCIONAMIENTO', brief.funcionamiento);
+  agregarSiExiste('PROMOCIONES VIGENTES', brief.promociones);
+  agregarSiExiste('OBJETIVO GENERAL DE LA EMPRESA', brief.objetivo_general);
+  agregarSiExiste('OBJETIVO EN REDES SOCIALES', brief.objetivo_redes);
+  agregarSiExiste('REDES ACTUALES', brief.redes_actuales);
+  agregarSiExiste('OBJETIVOS MEDIANO/LARGO PLAZO', brief.objetivos_mediano_largo);
+  agregarSiExiste('QUÉ QUIEREN TRANSMITIR', brief.que_transmitir);
+  agregarSiExiste('RED SOCIAL PRIORITARIA', brief.red_prioritaria);
+  agregarSiExiste('COLORES DE MARCA', brief.colores);
+  agregarSiExiste('TIPOGRAFÍAS', brief.tipografias);
+  agregarSiExiste('REFERENCIAS QUE LES GUSTAN', brief.referencias_si);
+  agregarSiExiste('REFERENCIAS QUE NO LES GUSTAN', brief.referencias_no);
+  agregarSiExiste('LIMITACIONES / QUÉ NO HACER', brief.limitaciones);
+  agregarSiExiste('COMPETENCIA LOCAL', brief.competencia_local);
+  agregarSiExiste('COMPETENCIA NACIONAL/INTERNACIONAL', brief.competencia_nacional);
+  agregarSiExiste('REFERENTES', brief.referentes);
+
+  return ctx;
+}
+
+function buildEstrategiaContext(estrategia) {
+  let ctx = `NOMBRE DE LA ESTRATEGIA: ${estrategia.nombre}\n`;
+  ctx += `TIPO: ${estrategia.tipo}\n`;
+  if (estrategia.momento_fase) {
+    const fase = FASES_MOMENTO.find(f => f.v === estrategia.momento_fase);
+    ctx += `MOMENTO/FASE: ${fase ? fase.label : estrategia.momento_fase}\n`;
+  }
+  if (estrategia.momento_descripcion) ctx += `CONTEXTO DEL MOMENTO: ${estrategia.momento_descripcion}\n`;
+  ctx += `OBJETIVO PRINCIPAL: ${estrategia.objetivo_principal}\n`;
+  if (estrategia.metricas_meta) ctx += `METAS CONCRETAS: ${estrategia.metricas_meta}\n`;
+  if (estrategia.fecha_inicio) ctx += `FECHAS: ${estrategia.fecha_inicio}${estrategia.fecha_fin ? ' a ' + estrategia.fecha_fin : ''}\n`;
+  return ctx;
+}
+
 // ===== TAB: ESTRATEGIA =====
 const FASES_MOMENTO = [
   { v: 'pre-lanzamiento', label: 'Pre-lanzamiento (aún no abierto)' },
@@ -1285,9 +1511,14 @@ async function renderTabEstrategia() {
   $('tabContent').innerHTML = `<div class="loading"><div class="spinner"></div>Cargando estrategias...</div>`;
 
   try {
-    const { data } = await sheetRead('Estrategias');
-    const estrategias = data.filter(e => e.cliente_id === cliente.id);
+    // Cargar estrategias y briefs en paralelo (briefs se necesitan para generadores IA)
+    const [estrategiasRes, briefsRes] = await Promise.all([
+      sheetRead('Estrategias'),
+      sheetRead('Briefs'),
+    ]);
+    const estrategias = estrategiasRes.data.filter(e => e.cliente_id === cliente.id);
     state.estrategias = estrategias;
+    state.briefs = briefsRes.data;
 
     const activas = estrategias.filter(e => (e.estado || 'Activa') === 'Activa');
     const cerradas = estrategias.filter(e => e.estado && e.estado !== 'Activa');
@@ -1382,61 +1613,91 @@ function renderEstrategiaCard(e) {
         </div>
 
         <div class="estrategia-section">
-          <div class="estrategia-section-title">👥 Buyer Personas ${buyerPersonas.length > 0 ? `(${buyerPersonas.length})` : ''}</div>
+          <div class="estrategia-section-title" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>👥 Buyer Personas ${buyerPersonas.length > 0 ? `(${buyerPersonas.length})` : ''}</span>
+            ${esActiva ? `<button class="gen-btn gen-btn-small" onclick="generarBuyerPersonas('${esc(e.id)}')">✨ ${buyerPersonas.length > 0 ? 'Regenerar' : 'Generar con IA'}</button>` : ''}
+          </div>
           ${buyerPersonas.length === 0 ? `
             <div class="estrategia-ai-placeholder">
-              ✨ La IA va a generar los buyer personas a partir del brief (próxima fase).
-            </div>
-          ` : buyerPersonas.map(bp => `
-            <div style="background: #fff; padding: 10px 12px; border-radius: 6px; margin-bottom: 6px; font-size: 13px;">
-              <strong>${esc(bp.nombre || 'Perfil')}</strong>
-              ${bp.descripcion ? `<div style="color: var(--gris-text-soft); margin-top: 2px;">${esc(bp.descripcion)}</div>` : ''}
-            </div>
-          `).join('')}
-        </div>
-
-        <div class="estrategia-section">
-          <div class="estrategia-section-title">🪶 Pilares de contenido ${pilares.length > 0 ? `(${pilares.length})` : ''}</div>
-          ${pilares.length === 0 ? `
-            <div class="estrategia-ai-placeholder">
-              ✨ La IA va a proponer los pilares a partir del brief + objetivos (próxima fase).
-            </div>
-          ` : pilares.map(p => `
-            <div style="background: #fff; padding: 10px 12px; border-radius: 6px; margin-bottom: 6px; font-size: 13px;">
-              <div style="display: flex; justify-content: space-between;">
-                <strong>${esc(p.nombre || 'Pilar')}</strong>
-                ${p.porcentaje ? `<span style="color: var(--fucsia); font-weight: 600;">${esc(p.porcentaje)}%</span>` : ''}
-              </div>
-              ${p.descripcion ? `<div style="color: var(--gris-text-soft); margin-top: 2px;">${esc(p.descripcion)}</div>` : ''}
-            </div>
-          `).join('')}
-        </div>
-
-        <div class="estrategia-section">
-          <div class="estrategia-section-title">🗣️ Tono de voz</div>
-          ${!tonoVoz || Object.keys(tonoVoz).length === 0 ? `
-            <div class="estrategia-ai-placeholder">
-              ✨ La IA va a proponer el tono de voz a partir del brief (próxima fase).
+              ${esActiva ? '✨ Click en "Generar con IA" para que la IA proponga buyer personas a partir del brief y los objetivos.' : 'No hay buyer personas cargados.'}
             </div>
           ` : `
-            <div style="font-size: 13px;">
-              ${tonoVoz.tono ? `<div><strong>Tono:</strong> ${esc(tonoVoz.tono)}</div>` : ''}
-              ${tonoVoz.si ? `<div style="margin-top: 4px;"><strong>Palabras SÍ:</strong> ${esc(tonoVoz.si)}</div>` : ''}
-              ${tonoVoz.no ? `<div style="margin-top: 4px;"><strong>Palabras NO:</strong> ${esc(tonoVoz.no)}</div>` : ''}
+            <div id="buyerPersonasList_${esc(e.id)}">
+              ${buyerPersonas.map(bp => `
+                <div class="buyer-persona-card">
+                  <h4>${esc(bp.nombre || 'Perfil sin nombre')}</h4>
+                  ${bp.demografia ? `<div class="bp-section"><span class="bp-label">📊 Demografía:</span> ${esc(bp.demografia)}</div>` : ''}
+                  ${bp.contexto ? `<div class="bp-section"><span class="bp-label">🌱 Contexto:</span> ${esc(bp.contexto)}</div>` : ''}
+                  ${bp.dolores ? `<div class="bp-section"><span class="bp-label">😣 Dolores:</span> ${esc(bp.dolores)}</div>` : ''}
+                  ${bp.deseos ? `<div class="bp-section"><span class="bp-label">🎯 Deseos:</span> ${esc(bp.deseos)}</div>` : ''}
+                  ${bp.objeciones ? `<div class="bp-section"><span class="bp-label">🚫 Objeciones:</span> ${esc(bp.objeciones)}</div>` : ''}
+                  ${bp.canales ? `<div class="bp-section"><span class="bp-label">📱 Consume info en:</span> ${esc(bp.canales)}</div>` : ''}
+                </div>
+              `).join('')}
             </div>
           `}
         </div>
 
         <div class="estrategia-section">
-          <div class="estrategia-section-title">📈 KPIs sugeridos</div>
-          ${!kpisSugeridos || kpisSugeridos.length === 0 ? `
+          <div class="estrategia-section-title" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>🪶 Pilares de contenido ${pilares.length > 0 ? `(${pilares.length})` : ''}</span>
+            ${esActiva ? `<button class="gen-btn gen-btn-small" onclick="generarPilares('${esc(e.id)}')">✨ ${pilares.length > 0 ? 'Regenerar' : 'Generar con IA'}</button>` : ''}
+          </div>
+          ${pilares.length === 0 ? `
             <div class="estrategia-ai-placeholder">
-              ✨ La IA va a sugerir KPIs según el momento y los objetivos (próxima fase).
+              ${esActiva ? '✨ Click en "Generar con IA" para que proponga pilares de contenido con porcentajes sugeridos.' : 'No hay pilares cargados.'}
             </div>
           ` : `
-            <ul style="font-size: 13px; padding-left: 20px;">
-              ${kpisSugeridos.map(k => `<li>${esc(k)}</li>`).join('')}
-            </ul>
+            ${pilares.map(p => `
+              <div class="pilar-card">
+                <div class="pilar-card-header">
+                  <h4>${esc(p.nombre || 'Pilar')}</h4>
+                  ${p.porcentaje ? `<span class="pilar-porcentaje">${esc(p.porcentaje)}%</span>` : ''}
+                </div>
+                ${p.descripcion ? `<div style="color: var(--gris-text-soft); font-size: 12.5px; margin-bottom: 4px;">${esc(p.descripcion)}</div>` : ''}
+                ${p.aborda ? `<div style="font-size: 12px;"><span style="font-weight: 600; color: var(--gris-text-soft);">Aborda:</span> ${esc(p.aborda)}</div>` : ''}
+                ${p.temas && p.temas.length ? `<div style="font-size: 12px; margin-top: 4px;"><span style="font-weight: 600; color: var(--gris-text-soft);">Ejemplos de temas:</span> ${esc((Array.isArray(p.temas) ? p.temas.join(', ') : p.temas))}</div>` : ''}
+              </div>
+            `).join('')}
+          `}
+        </div>
+
+        <div class="estrategia-section">
+          <div class="estrategia-section-title" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>🗣️ Tono de voz</span>
+            ${esActiva ? `<button class="gen-btn gen-btn-small" onclick="generarTonoVoz('${esc(e.id)}')">✨ ${(tonoVoz && Object.keys(tonoVoz).length > 0) ? 'Regenerar' : 'Generar con IA'}</button>` : ''}
+          </div>
+          ${!tonoVoz || Object.keys(tonoVoz).length === 0 ? `
+            <div class="estrategia-ai-placeholder">
+              ${esActiva ? '✨ Click en "Generar con IA" para definir el tono de voz de la marca.' : 'No hay tono de voz cargado.'}
+            </div>
+          ` : `
+            <div style="font-size: 13px; background: #fff; padding: 12px 14px; border-radius: 6px; border: 1px solid var(--gris-border);">
+              ${tonoVoz.tono ? `<div style="margin-bottom: 6px;"><strong>Tono general:</strong> ${esc(tonoVoz.tono)}</div>` : ''}
+              ${tonoVoz.personalidad ? `<div style="margin-bottom: 6px;"><strong>Personalidad de marca:</strong> ${esc(tonoVoz.personalidad)}</div>` : ''}
+              ${tonoVoz.si ? `<div style="margin-bottom: 6px;"><strong style="color: var(--verde);">✓ Palabras/expresiones SÍ:</strong> ${esc(tonoVoz.si)}</div>` : ''}
+              ${tonoVoz.no ? `<div style="margin-bottom: 6px;"><strong style="color: var(--rojo);">✗ Palabras/expresiones NO:</strong> ${esc(tonoVoz.no)}</div>` : ''}
+              ${tonoVoz.emojis ? `<div style="margin-bottom: 6px;"><strong>Emojis:</strong> ${esc(tonoVoz.emojis)}</div>` : ''}
+              ${tonoVoz.ejemplos ? `<div><strong>Ejemplos de frases:</strong><br><em style="color: var(--gris-text-soft);">${esc(tonoVoz.ejemplos).replace(/\n/g, '<br>')}</em></div>` : ''}
+            </div>
+          `}
+        </div>
+
+        <div class="estrategia-section">
+          <div class="estrategia-section-title" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>📈 KPIs sugeridos ${kpisSugeridos.length > 0 ? `(${kpisSugeridos.length})` : ''}</span>
+            ${esActiva ? `<button class="gen-btn gen-btn-small" onclick="generarKpis('${esc(e.id)}')">✨ ${kpisSugeridos.length > 0 ? 'Regenerar' : 'Generar con IA'}</button>` : ''}
+          </div>
+          ${!kpisSugeridos || kpisSugeridos.length === 0 ? `
+            <div class="estrategia-ai-placeholder">
+              ${esActiva ? '✨ Click en "Generar con IA" para que proponga KPIs según el momento y los objetivos.' : 'No hay KPIs cargados.'}
+            </div>
+          ` : `
+            <div style="background: #fff; padding: 12px 14px; border-radius: 6px; border: 1px solid var(--gris-border);">
+              <ul style="font-size: 13px; padding-left: 18px; margin: 0;">
+                ${kpisSugeridos.map(k => `<li style="margin-bottom: 4px;">${esc(k)}</li>`).join('')}
+              </ul>
+            </div>
           `}
         </div>
 
@@ -1652,6 +1913,444 @@ async function deleteEstrategia(id) {
     await sheetDelete('Estrategias', id);
     closeModal();
     showToast('Eliminada', 'success');
+    renderTabEstrategia();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+// ============================================================================
+// GENERADORES CON IA
+// ============================================================================
+
+function checkApiKey() {
+  if (!state.apiKey) {
+    showToast('No hay API key. Cargala en la hoja Config de tu planilla.', 'error');
+    return false;
+  }
+  return true;
+}
+
+function abrirModalGeneracion(titulo, icono, descripcion) {
+  $('modal').className = 'modal modal-lg';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>${icono} ${titulo}</h2>
+      <button class="btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="genModalBody">
+      <p style="color: var(--gris-text-soft); font-size: 13px; margin-bottom: 16px;">${descripcion}</p>
+      <div class="gen-loading">
+        <div style="font-size: 24px; margin-bottom: 8px;">✨</div>
+        <div><strong>Generando con Claude</strong><span class="gen-loading-dots"></span></div>
+        <div style="font-size: 12px; color: var(--gris-text-soft); margin-top: 4px;">Leyendo el brief y estrategia del cliente...</div>
+      </div>
+    </div>
+    <div class="modal-footer" id="genModalFooter">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+    </div>`;
+  $('modalOverlay').classList.add('active');
+}
+
+function mostrarErrorGeneracion(mensaje) {
+  $('genModalBody').innerHTML = `
+    <div class="card" style="border-color: var(--rojo); background: #fef2f2;">
+      <strong style="color: var(--rojo);">Error al generar</strong>
+      <p style="margin-top: 6px; font-size: 13px;">${esc(mensaje)}</p>
+    </div>`;
+}
+
+// ============================================================================
+// GENERADOR 1: BUYER PERSONAS
+// ============================================================================
+async function generarBuyerPersonas(estrategiaId) {
+  if (!checkApiKey()) return;
+  const estrategia = state.estrategias.find(e => e.id === estrategiaId);
+  if (!estrategia) return;
+  const cliente = state.clientes.find(c => c.id === state.currentClienteId);
+
+  abrirModalGeneracion(
+    'Generar Buyer Personas',
+    '👥',
+    `La IA va a analizar el brief de ${cliente.nombre} y la estrategia "${estrategia.nombre}" para proponer 2-3 perfiles detallados de público objetivo.`
+  );
+
+  const systemPrompt = `Sos una estrategista de marketing digital experta en crear buyer personas detallados y útiles. Trabajás para Carrusel MKT, una agencia argentina dirigida por Marianela.
+
+Tu tarea: a partir de la información de un cliente, generás 2 o 3 buyer personas (perfiles de público objetivo) detallados y accionables.
+
+REGLAS:
+- Los buyer personas deben ser específicos y diferenciados entre sí (distinto perfil demográfico, distinto momento de vida, distintos dolores).
+- Los dolores, deseos y objeciones tienen que estar conectados con lo que el cliente ofrece.
+- Usá español rioplatense (vos, no tú).
+- NO inventes datos que no se pueden deducir del brief. Si algo no está claro, usá perfiles razonables para el rubro y momento.
+
+FORMATO DE SALIDA: devolvés SOLO un JSON válido (sin texto extra, sin markdown, sin explicaciones). Formato exacto:
+
+[
+  {
+    "nombre": "Nombre descriptivo del perfil (ej: 'Sofía, 32, profesional con miedo al dentista')",
+    "demografia": "Edad, género, ocupación, zona de residencia, nivel socioeconómico",
+    "contexto": "Cómo vive, qué hace en el día a día, en qué momento de vida está",
+    "dolores": "Qué le duele, qué la frustra, qué problemas quiere resolver. Sé específico.",
+    "deseos": "Qué quiere lograr, cómo se quiere sentir, qué aspira",
+    "objeciones": "Por qué NO le compraría a este cliente (miedos, creencias que la frenan)",
+    "canales": "En qué redes y formatos consume contenido, horarios"
+  }
+]`;
+
+  const userPrompt = `Información del cliente:
+
+${buildBriefContext(state.currentClienteId)}
+
+Información de la estrategia actual:
+
+${buildEstrategiaContext(estrategia)}
+
+Generá 2 o 3 buyer personas para esta estrategia.`;
+
+  try {
+    const raw = await callClaude(systemPrompt, userPrompt, { maxTokens: 2500 });
+    const personas = extractJson(raw);
+
+    if (!Array.isArray(personas) || personas.length === 0) {
+      throw new Error('La IA no devolvió buyer personas válidos');
+    }
+
+    mostrarPreviewBuyerPersonas(estrategiaId, personas);
+  } catch (e) {
+    mostrarErrorGeneracion(e.message);
+  }
+}
+
+function mostrarPreviewBuyerPersonas(estrategiaId, personas) {
+  const cardsHtml = personas.map((bp, i) => `
+    <div class="buyer-persona-card">
+      <h4>${esc(bp.nombre || 'Perfil ' + (i+1))}</h4>
+      ${bp.demografia ? `<div class="bp-section"><span class="bp-label">📊 Demografía:</span> ${esc(bp.demografia)}</div>` : ''}
+      ${bp.contexto ? `<div class="bp-section"><span class="bp-label">🌱 Contexto:</span> ${esc(bp.contexto)}</div>` : ''}
+      ${bp.dolores ? `<div class="bp-section"><span class="bp-label">😣 Dolores:</span> ${esc(bp.dolores)}</div>` : ''}
+      ${bp.deseos ? `<div class="bp-section"><span class="bp-label">🎯 Deseos:</span> ${esc(bp.deseos)}</div>` : ''}
+      ${bp.objeciones ? `<div class="bp-section"><span class="bp-label">🚫 Objeciones:</span> ${esc(bp.objeciones)}</div>` : ''}
+      ${bp.canales ? `<div class="bp-section"><span class="bp-label">📱 Canales:</span> ${esc(bp.canales)}</div>` : ''}
+    </div>
+  `).join('');
+
+  $('genModalBody').innerHTML = `
+    <div class="gen-preview">
+      <div class="gen-preview-header">✨ Propuesta de la IA</div>
+      ${cardsHtml}
+    </div>
+    <p style="font-size: 12.5px; color: var(--gris-text-soft); margin-top: 14px;">
+      Si te gusta, clickeá "Aceptar" y quedarán guardados en la estrategia. Podés editarlos después manualmente en la planilla si querés ajustar algo.
+    </p>
+  `;
+  window._pendingBuyerPersonas = personas;
+  window._pendingEstrategiaId = estrategiaId;
+
+  $('genModalFooter').innerHTML = `
+    <button class="btn btn-secondary" onclick="closeModal()">Descartar</button>
+    <button class="btn btn-secondary" onclick="generarBuyerPersonas('${estrategiaId}')">🔄 Regenerar</button>
+    <button class="btn btn-primary" onclick="aceptarBuyerPersonas()">✓ Aceptar y guardar</button>
+  `;
+}
+
+async function aceptarBuyerPersonas() {
+  const personas = window._pendingBuyerPersonas;
+  const estrategiaId = window._pendingEstrategiaId;
+  try {
+    await sheetUpdate('Estrategias', estrategiaId, { buyer_personas_json: JSON.stringify(personas) });
+    closeModal();
+    showToast('Buyer personas guardados', 'success');
+    renderTabEstrategia();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+// ============================================================================
+// GENERADOR 2: PILARES DE CONTENIDO
+// ============================================================================
+async function generarPilares(estrategiaId) {
+  if (!checkApiKey()) return;
+  const estrategia = state.estrategias.find(e => e.id === estrategiaId);
+  if (!estrategia) return;
+  const cliente = state.clientes.find(c => c.id === state.currentClienteId);
+
+  abrirModalGeneracion(
+    'Generar Pilares de contenido',
+    '🪶',
+    `La IA va a proponer 4-5 pilares de contenido con porcentajes sugeridos para el calendario de ${cliente.nombre}.`
+  );
+
+  // Incluir buyer personas si ya los hay
+  const buyerPersonas = parseJsonSafe(estrategia.buyer_personas_json);
+  const buyerContext = buyerPersonas.length > 0
+    ? '\n\nBUYER PERSONAS DEFINIDOS:\n' + buyerPersonas.map(bp => `- ${bp.nombre}: dolores: ${bp.dolores}; deseos: ${bp.deseos}`).join('\n')
+    : '';
+
+  const systemPrompt = `Sos una estrategista de contenido para redes sociales. Trabajás para Carrusel MKT, una agencia argentina.
+
+Tu tarea: generar pilares de contenido accionables y variados para una estrategia específica.
+
+REGLAS:
+- Los pilares son CATEGORÍAS TEMÁTICAS recurrentes que estructurarán el calendario de contenido.
+- Proponé 4 o 5 pilares, no más.
+- Cada pilar debe conectar con dolores/deseos del público y con los objetivos del cliente.
+- Los porcentajes deben sumar 100%.
+- Típicamente: un pilar educativo, uno aspiracional/inspiracional, uno de venta, uno de marca/detrás de escena. Adaptá según el momento del cliente.
+- Considerá el MOMENTO del cliente: en pre-lanzamiento hay más presentación, en crecimiento más educativo, en consolidación más venta, etc.
+- Usá español rioplatense.
+
+FORMATO DE SALIDA: devolvés SOLO un JSON válido (sin markdown, sin explicaciones). Formato exacto:
+
+[
+  {
+    "nombre": "Nombre corto y evocativo del pilar",
+    "porcentaje": 35,
+    "descripcion": "Qué tipo de contenido entra en este pilar y por qué es importante para esta estrategia",
+    "aborda": "Qué dolor o deseo del público aborda este pilar",
+    "temas": ["Tema concreto 1", "Tema concreto 2", "Tema concreto 3", "Tema concreto 4"]
+  }
+]`;
+
+  const userPrompt = `Información del cliente:
+
+${buildBriefContext(state.currentClienteId)}
+
+Información de la estrategia:
+
+${buildEstrategiaContext(estrategia)}${buyerContext}
+
+Generá 4 o 5 pilares de contenido para esta estrategia, con porcentajes que sumen 100%.`;
+
+  try {
+    const raw = await callClaude(systemPrompt, userPrompt, { maxTokens: 2500 });
+    const pilares = extractJson(raw);
+    if (!Array.isArray(pilares) || pilares.length === 0) throw new Error('La IA no devolvió pilares válidos');
+    mostrarPreviewPilares(estrategiaId, pilares);
+  } catch (e) {
+    mostrarErrorGeneracion(e.message);
+  }
+}
+
+function mostrarPreviewPilares(estrategiaId, pilares) {
+  const total = pilares.reduce((sum, p) => sum + (Number(p.porcentaje) || 0), 0);
+  const cardsHtml = pilares.map(p => `
+    <div class="pilar-card">
+      <div class="pilar-card-header">
+        <h4>${esc(p.nombre || 'Pilar')}</h4>
+        ${p.porcentaje ? `<span class="pilar-porcentaje">${esc(String(p.porcentaje))}%</span>` : ''}
+      </div>
+      ${p.descripcion ? `<div style="color: var(--gris-text-soft); font-size: 12.5px; margin-bottom: 6px;">${esc(p.descripcion)}</div>` : ''}
+      ${p.aborda ? `<div style="font-size: 12px; margin-bottom: 4px;"><span style="font-weight: 600; color: var(--gris-text-soft);">Aborda:</span> ${esc(p.aborda)}</div>` : ''}
+      ${p.temas && p.temas.length ? `<div style="font-size: 12px;"><span style="font-weight: 600; color: var(--gris-text-soft);">Ejemplos de temas:</span> ${esc(Array.isArray(p.temas) ? p.temas.join(' · ') : p.temas)}</div>` : ''}
+    </div>
+  `).join('');
+
+  $('genModalBody').innerHTML = `
+    <div class="gen-preview">
+      <div class="gen-preview-header">✨ Propuesta de pilares (total: ${total}%)</div>
+      ${cardsHtml}
+    </div>
+    <p style="font-size: 12.5px; color: var(--gris-text-soft); margin-top: 14px;">
+      Los porcentajes indican cuánto del calendario mensual dedicar a cada pilar.
+    </p>
+  `;
+  window._pendingPilares = pilares;
+  window._pendingEstrategiaId = estrategiaId;
+
+  $('genModalFooter').innerHTML = `
+    <button class="btn btn-secondary" onclick="closeModal()">Descartar</button>
+    <button class="btn btn-secondary" onclick="generarPilares('${estrategiaId}')">🔄 Regenerar</button>
+    <button class="btn btn-primary" onclick="aceptarPilares()">✓ Aceptar y guardar</button>
+  `;
+}
+
+async function aceptarPilares() {
+  const pilares = window._pendingPilares;
+  const estrategiaId = window._pendingEstrategiaId;
+  try {
+    await sheetUpdate('Estrategias', estrategiaId, { pilares_json: JSON.stringify(pilares) });
+    closeModal();
+    showToast('Pilares guardados', 'success');
+    renderTabEstrategia();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+// ============================================================================
+// GENERADOR 3: TONO DE VOZ
+// ============================================================================
+async function generarTonoVoz(estrategiaId) {
+  if (!checkApiKey()) return;
+  const estrategia = state.estrategias.find(e => e.id === estrategiaId);
+  if (!estrategia) return;
+  const cliente = state.clientes.find(c => c.id === state.currentClienteId);
+
+  abrirModalGeneracion(
+    'Generar Tono de voz',
+    '🗣️',
+    `La IA va a definir cómo debería "sonar" la marca de ${cliente.nombre} en sus redes.`
+  );
+
+  const systemPrompt = `Sos una copywriter especializada en tono de voz de marca. Trabajás para Carrusel MKT, agencia argentina.
+
+Tu tarea: definir el tono de voz y personalidad de una marca para que todas sus publicaciones suenen coherentes.
+
+REGLAS:
+- El tono debe alinear con lo que el cliente quiere transmitir (lee atentamente el brief).
+- Carrusel privilegia marcas que suenan cercanas, humanas, genuinas (nunca corporativas o distantes), pero siempre profesionales.
+- Usá español rioplatense (vos, no tú).
+- Los ejemplos de frases deben sonar a esa marca específica, no genéricos.
+
+FORMATO DE SALIDA: devolvés SOLO un JSON válido (sin markdown). Formato exacto:
+
+{
+  "tono": "Descripción del tono general en 1-2 líneas (ej: 'Cálido, cercano y profesional. Hablamos como una amiga experta.')",
+  "personalidad": "3-4 adjetivos que definen la personalidad de marca",
+  "si": "Lista de palabras, expresiones y formas de hablar que SÍ usamos, separadas por coma",
+  "no": "Palabras, expresiones o tonos que NO usamos (tecnicismos, formalidad excesiva, modismos a evitar)",
+  "emojis": "Política de emojis: si usamos, cuáles, con qué frecuencia",
+  "ejemplos": "3 o 4 ejemplos de frases que suenan como la marca, una por línea"
+}`;
+
+  const userPrompt = `Información del cliente:
+
+${buildBriefContext(state.currentClienteId)}
+
+Información de la estrategia:
+
+${buildEstrategiaContext(estrategia)}
+
+Definí el tono de voz de esta marca.`;
+
+  try {
+    const raw = await callClaude(systemPrompt, userPrompt, { maxTokens: 1500 });
+    const tono = extractJson(raw);
+    if (!tono || typeof tono !== 'object') throw new Error('La IA no devolvió tono válido');
+    mostrarPreviewTonoVoz(estrategiaId, tono);
+  } catch (e) {
+    mostrarErrorGeneracion(e.message);
+  }
+}
+
+function mostrarPreviewTonoVoz(estrategiaId, tono) {
+  $('genModalBody').innerHTML = `
+    <div class="gen-preview">
+      <div class="gen-preview-header">✨ Propuesta de tono de voz</div>
+      <div style="background: #fff; padding: 14px; border-radius: 6px; border: 1px solid var(--gris-border); font-size: 13px;">
+        ${tono.tono ? `<div style="margin-bottom: 8px;"><strong>Tono general:</strong> ${esc(tono.tono)}</div>` : ''}
+        ${tono.personalidad ? `<div style="margin-bottom: 8px;"><strong>Personalidad:</strong> ${esc(tono.personalidad)}</div>` : ''}
+        ${tono.si ? `<div style="margin-bottom: 8px;"><strong style="color: var(--verde);">✓ Palabras/expresiones SÍ:</strong> ${esc(tono.si)}</div>` : ''}
+        ${tono.no ? `<div style="margin-bottom: 8px;"><strong style="color: var(--rojo);">✗ Palabras/expresiones NO:</strong> ${esc(tono.no)}</div>` : ''}
+        ${tono.emojis ? `<div style="margin-bottom: 8px;"><strong>Emojis:</strong> ${esc(tono.emojis)}</div>` : ''}
+        ${tono.ejemplos ? `<div><strong>Ejemplos de frases:</strong><br><em style="color: var(--gris-text-soft); display: block; margin-top: 4px;">${esc(tono.ejemplos).replace(/\n/g, '<br>')}</em></div>` : ''}
+      </div>
+    </div>
+  `;
+  window._pendingTonoVoz = tono;
+  window._pendingEstrategiaId = estrategiaId;
+
+  $('genModalFooter').innerHTML = `
+    <button class="btn btn-secondary" onclick="closeModal()">Descartar</button>
+    <button class="btn btn-secondary" onclick="generarTonoVoz('${estrategiaId}')">🔄 Regenerar</button>
+    <button class="btn btn-primary" onclick="aceptarTonoVoz()">✓ Aceptar y guardar</button>
+  `;
+}
+
+async function aceptarTonoVoz() {
+  const tono = window._pendingTonoVoz;
+  const estrategiaId = window._pendingEstrategiaId;
+  try {
+    await sheetUpdate('Estrategias', estrategiaId, { tono_voz_json: JSON.stringify(tono) });
+    closeModal();
+    showToast('Tono de voz guardado', 'success');
+    renderTabEstrategia();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+// ============================================================================
+// GENERADOR 4: KPIs SUGERIDOS
+// ============================================================================
+async function generarKpis(estrategiaId) {
+  if (!checkApiKey()) return;
+  const estrategia = state.estrategias.find(e => e.id === estrategiaId);
+  if (!estrategia) return;
+  const cliente = state.clientes.find(c => c.id === state.currentClienteId);
+
+  abrirModalGeneracion(
+    'Generar KPIs sugeridos',
+    '📈',
+    `La IA va a sugerir las métricas a seguir según el momento y objetivos de ${cliente.nombre}.`
+  );
+
+  const systemPrompt = `Sos una analista de marketing digital. Trabajás para Carrusel MKT, agencia argentina.
+
+Tu tarea: proponer KPIs (indicadores clave) accionables para una estrategia de redes sociales.
+
+REGLAS:
+- Los KPIs deben ser MEDIBLES en redes sociales (IG, FB, TikTok) sin herramientas pagas.
+- Deben alinear con el momento del cliente:
+  - Pre-lanzamiento / Lanzamiento: foco en alcance, reconocimiento, crecimiento de seguidores.
+  - Crecimiento: alcance + interacción (saves, compartidos, comentarios).
+  - Consolidación: conversión (clicks al link, mensajes directos, turnos/ventas).
+- Incluí entre 5 y 8 KPIs.
+- Cada KPI debe ser específico y accionable (no vago como "buena interacción").
+- Si es posible, sugerí metas numéricas basadas en las metas que ya definió el cliente.
+- Usá español rioplatense.
+
+FORMATO DE SALIDA: devolvés SOLO un JSON válido (un array de strings). Formato exacto:
+
+[
+  "KPI 1 específico con meta si es posible (ej: 'Alcance mensual: llegar a 5.000 cuentas únicas')",
+  "KPI 2",
+  "KPI 3"
+]`;
+
+  const userPrompt = `Información del cliente:
+
+${buildBriefContext(state.currentClienteId)}
+
+Información de la estrategia:
+
+${buildEstrategiaContext(estrategia)}
+
+Proponé KPIs concretos y medibles para esta estrategia.`;
+
+  try {
+    const raw = await callClaude(systemPrompt, userPrompt, { maxTokens: 1500 });
+    const kpis = extractJson(raw);
+    if (!Array.isArray(kpis) || kpis.length === 0) throw new Error('La IA no devolvió KPIs válidos');
+    mostrarPreviewKpis(estrategiaId, kpis);
+  } catch (e) {
+    mostrarErrorGeneracion(e.message);
+  }
+}
+
+function mostrarPreviewKpis(estrategiaId, kpis) {
+  $('genModalBody').innerHTML = `
+    <div class="gen-preview">
+      <div class="gen-preview-header">✨ KPIs sugeridos (${kpis.length})</div>
+      <div style="background: #fff; padding: 14px 14px 14px 30px; border-radius: 6px; border: 1px solid var(--gris-border);">
+        <ul style="font-size: 13px; margin: 0; padding-left: 4px;">
+          ${kpis.map(k => `<li style="margin-bottom: 8px;">${esc(k)}</li>`).join('')}
+        </ul>
+      </div>
+    </div>
+  `;
+  window._pendingKpis = kpis;
+  window._pendingEstrategiaId = estrategiaId;
+
+  $('genModalFooter').innerHTML = `
+    <button class="btn btn-secondary" onclick="closeModal()">Descartar</button>
+    <button class="btn btn-secondary" onclick="generarKpis('${estrategiaId}')">🔄 Regenerar</button>
+    <button class="btn btn-primary" onclick="aceptarKpis()">✓ Aceptar y guardar</button>
+  `;
+}
+
+async function aceptarKpis() {
+  const kpis = window._pendingKpis;
+  const estrategiaId = window._pendingEstrategiaId;
+  try {
+    await sheetUpdate('Estrategias', estrategiaId, { kpis_sugeridos_json: JSON.stringify(kpis) });
+    closeModal();
+    showToast('KPIs guardados', 'success');
     renderTabEstrategia();
   } catch (e) { showToast('Error: ' + e.message, 'error'); }
 }
@@ -2124,12 +2823,38 @@ async function renderConfig() {
       </div>
     </div>
     <div class="card" style="margin-top: 20px;">
+      <div class="card-title">Conexión con Claude (API)</div>
+      <div class="config-item">
+        <div class="config-label">Estado de la API key</div>
+        ${state.apiKey ? `
+          <div class="config-status ok">● API key cargada correctamente</div>
+          <div style="font-size: 12px; color: var(--gris-text-muted); margin-top: 4px;">
+            Los generadores con IA están activos. La key se lee desde la hoja "Config" de tu planilla.
+          </div>
+        ` : `
+          <div class="config-status error">● Sin API key</div>
+          <div style="font-size: 12.5px; color: var(--gris-text-soft); margin-top: 6px;">
+            Para activar los generadores con IA:<br>
+            1. Abrí tu planilla en Sheets<br>
+            2. Andá a la hoja "Config"<br>
+            3. Agregá una fila con clave <code>anthropic_api_key</code> y tu key en la columna "valor"<br>
+            4. Volvé acá y recargá la página (Ctrl+F5)
+          </div>
+        `}
+      </div>
+      <div class="config-item">
+        <div class="config-label">Monitor de uso</div>
+        <a href="https://console.anthropic.com" target="_blank" class="btn btn-secondary" style="margin-top: 6px;">Ver consumo en Anthropic Console →</a>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top: 20px;">
       <div class="card-title">Versión de la app</div>
       <div class="config-item">
-        <div class="config-label">Fase 1 completa + inicio Fase 2</div>
+        <div class="config-label">Fase 2 — Generadores con IA activos</div>
         <div style="font-size: 13px; color: var(--gris-text-soft); margin-top: 4px;">
-          Módulos activos: Clientes · Brief · <strong>Estrategia</strong> · Accesos · Calendario<br>
-          Próxima entrega: conexión con IA (generadores de buyer personas, pilares, tono, KPIs) · Banco de ideas · Métricas
+          Módulos activos: Clientes · Brief · Estrategia con <strong>IA</strong> · Accesos · Calendario<br>
+          Próxima entrega: Banco de ideas · Métricas · Generadores de copy y carruseles
         </div>
       </div>
     </div>`;
