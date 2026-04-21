@@ -530,6 +530,34 @@
   .origen-badge.editado { background: #e6f0fb; color: var(--petroleo); }
   .origen-badge.aprobado { background: #e6f4ef; color: var(--verde); }
 
+  /* ===== EDICIÓN INLINE ===== */
+  .editable-field {
+    background: #fafafa; border: 1px solid transparent;
+    padding: 4px 8px; border-radius: 4px;
+    transition: all 0.12s; cursor: text;
+    min-height: 22px; display: block;
+  }
+  .editable-field:hover { background: #fff; border-color: var(--gris-border); }
+  .editable-field:focus {
+    outline: none; background: #fff;
+    border-color: var(--fucsia); box-shadow: 0 0 0 3px rgba(186, 13, 102, 0.1);
+  }
+  .editable-field[contenteditable="true"]:empty:before {
+    content: attr(data-placeholder);
+    color: var(--gris-text-muted); font-style: italic;
+  }
+  .editable-label {
+    font-size: 11px; font-weight: 600; color: var(--gris-text-muted);
+    text-transform: uppercase; letter-spacing: 0.03em;
+    display: block; margin-bottom: 2px; margin-top: 8px;
+  }
+  .editable-hint {
+    font-size: 11.5px; color: var(--gris-text-muted);
+    padding: 10px 12px; background: #fef8fb;
+    border-radius: 6px; margin-bottom: 12px;
+    border-left: 3px solid var(--fucsia);
+  }
+
   /* ===== RESPONSIVE ===== */
   @media (max-width: 900px) {
     .app.active { grid-template-columns: 1fr; }
@@ -1615,7 +1643,12 @@ function renderEstrategiaCard(e) {
         <div class="estrategia-section">
           <div class="estrategia-section-title" style="display: flex; justify-content: space-between; align-items: center;">
             <span>👥 Buyer Personas ${buyerPersonas.length > 0 ? `(${buyerPersonas.length})` : ''}</span>
-            ${esActiva ? `<button class="gen-btn gen-btn-small" onclick="generarBuyerPersonas('${esc(e.id)}')">✨ ${buyerPersonas.length > 0 ? 'Regenerar' : 'Generar con IA'}</button>` : ''}
+            ${esActiva ? `
+              <div style="display: flex; gap: 6px;">
+                ${buyerPersonas.length > 0 ? `<button class="btn btn-secondary btn-sm" onclick="editarBuyerPersonas('${esc(e.id)}')">✏️ Editar</button>` : ''}
+                <button class="gen-btn gen-btn-small" onclick="generarBuyerPersonas('${esc(e.id)}')">✨ ${buyerPersonas.length > 0 ? 'Regenerar' : 'Generar con IA'}</button>
+              </div>
+            ` : ''}
           </div>
           ${buyerPersonas.length === 0 ? `
             <div class="estrategia-ai-placeholder">
@@ -1641,7 +1674,12 @@ function renderEstrategiaCard(e) {
         <div class="estrategia-section">
           <div class="estrategia-section-title" style="display: flex; justify-content: space-between; align-items: center;">
             <span>🪶 Pilares de contenido ${pilares.length > 0 ? `(${pilares.length})` : ''}</span>
-            ${esActiva ? `<button class="gen-btn gen-btn-small" onclick="generarPilares('${esc(e.id)}')">✨ ${pilares.length > 0 ? 'Regenerar' : 'Generar con IA'}</button>` : ''}
+            ${esActiva ? `
+              <div style="display: flex; gap: 6px;">
+                ${pilares.length > 0 ? `<button class="btn btn-secondary btn-sm" onclick="editarPilares('${esc(e.id)}')">✏️ Editar</button>` : ''}
+                <button class="gen-btn gen-btn-small" onclick="generarPilares('${esc(e.id)}')">✨ ${pilares.length > 0 ? 'Regenerar' : 'Generar con IA'}</button>
+              </div>
+            ` : ''}
           </div>
           ${pilares.length === 0 ? `
             <div class="estrategia-ai-placeholder">
@@ -1665,7 +1703,12 @@ function renderEstrategiaCard(e) {
         <div class="estrategia-section">
           <div class="estrategia-section-title" style="display: flex; justify-content: space-between; align-items: center;">
             <span>🗣️ Tono de voz</span>
-            ${esActiva ? `<button class="gen-btn gen-btn-small" onclick="generarTonoVoz('${esc(e.id)}')">✨ ${(tonoVoz && Object.keys(tonoVoz).length > 0) ? 'Regenerar' : 'Generar con IA'}</button>` : ''}
+            ${esActiva ? `
+              <div style="display: flex; gap: 6px;">
+                ${(tonoVoz && Object.keys(tonoVoz).length > 0) ? `<button class="btn btn-secondary btn-sm" onclick="editarTonoVoz('${esc(e.id)}')">✏️ Editar</button>` : ''}
+                <button class="gen-btn gen-btn-small" onclick="generarTonoVoz('${esc(e.id)}')">✨ ${(tonoVoz && Object.keys(tonoVoz).length > 0) ? 'Regenerar' : 'Generar con IA'}</button>
+              </div>
+            ` : ''}
           </div>
           ${!tonoVoz || Object.keys(tonoVoz).length === 0 ? `
             <div class="estrategia-ai-placeholder">
@@ -1686,7 +1729,12 @@ function renderEstrategiaCard(e) {
         <div class="estrategia-section">
           <div class="estrategia-section-title" style="display: flex; justify-content: space-between; align-items: center;">
             <span>📈 KPIs sugeridos ${kpisSugeridos.length > 0 ? `(${kpisSugeridos.length})` : ''}</span>
-            ${esActiva ? `<button class="gen-btn gen-btn-small" onclick="generarKpis('${esc(e.id)}')">✨ ${kpisSugeridos.length > 0 ? 'Regenerar' : 'Generar con IA'}</button>` : ''}
+            ${esActiva ? `
+              <div style="display: flex; gap: 6px;">
+                ${kpisSugeridos.length > 0 ? `<button class="btn btn-secondary btn-sm" onclick="editarKpis('${esc(e.id)}')">✏️ Editar</button>` : ''}
+                <button class="gen-btn gen-btn-small" onclick="generarKpis('${esc(e.id)}')">✨ ${kpisSugeridos.length > 0 ? 'Regenerar' : 'Generar con IA'}</button>
+              </div>
+            ` : ''}
           </div>
           ${!kpisSugeridos || kpisSugeridos.length === 0 ? `
             <div class="estrategia-ai-placeholder">
@@ -1724,7 +1772,10 @@ function renderEstrategiaCard(e) {
 
 function parseJsonSafe(str) {
   if (!str || str === '') return [];
-  try { return JSON.parse(str); } catch (e) { return []; }
+  try {
+    const parsed = JSON.parse(str);
+    return parsed;
+  } catch (e) { return []; }
 }
 
 function toggleEstrategia(id) {
@@ -2023,27 +2074,36 @@ Generá 2 o 3 buyer personas para esta estrategia.`;
 
 function mostrarPreviewBuyerPersonas(estrategiaId, personas) {
   const cardsHtml = personas.map((bp, i) => `
-    <div class="buyer-persona-card">
-      <h4>${esc(bp.nombre || 'Perfil ' + (i+1))}</h4>
-      ${bp.demografia ? `<div class="bp-section"><span class="bp-label">📊 Demografía:</span> ${esc(bp.demografia)}</div>` : ''}
-      ${bp.contexto ? `<div class="bp-section"><span class="bp-label">🌱 Contexto:</span> ${esc(bp.contexto)}</div>` : ''}
-      ${bp.dolores ? `<div class="bp-section"><span class="bp-label">😣 Dolores:</span> ${esc(bp.dolores)}</div>` : ''}
-      ${bp.deseos ? `<div class="bp-section"><span class="bp-label">🎯 Deseos:</span> ${esc(bp.deseos)}</div>` : ''}
-      ${bp.objeciones ? `<div class="bp-section"><span class="bp-label">🚫 Objeciones:</span> ${esc(bp.objeciones)}</div>` : ''}
-      ${bp.canales ? `<div class="bp-section"><span class="bp-label">📱 Canales:</span> ${esc(bp.canales)}</div>` : ''}
+    <div class="buyer-persona-card" data-bp-idx="${i}">
+      <span class="editable-label">Nombre del perfil</span>
+      <h4 class="editable-field" contenteditable="true" data-field="nombre" data-placeholder="Ej: Sofía, 32, profesional con miedo al dentista">${esc(bp.nombre || '')}</h4>
+      <span class="editable-label">📊 Demografía</span>
+      <div class="editable-field" contenteditable="true" data-field="demografia" data-placeholder="Edad, género, ocupación, zona">${esc(bp.demografia || '')}</div>
+      <span class="editable-label">🌱 Contexto</span>
+      <div class="editable-field" contenteditable="true" data-field="contexto" data-placeholder="Cómo vive, qué hace en el día a día">${esc(bp.contexto || '')}</div>
+      <span class="editable-label">😣 Dolores</span>
+      <div class="editable-field" contenteditable="true" data-field="dolores" data-placeholder="Qué le duele, qué le frustra">${esc(bp.dolores || '')}</div>
+      <span class="editable-label">🎯 Deseos</span>
+      <div class="editable-field" contenteditable="true" data-field="deseos" data-placeholder="Qué quiere lograr, cómo quiere sentirse">${esc(bp.deseos || '')}</div>
+      <span class="editable-label">🚫 Objeciones</span>
+      <div class="editable-field" contenteditable="true" data-field="objeciones" data-placeholder="Por qué no compraría">${esc(bp.objeciones || '')}</div>
+      <span class="editable-label">📱 Canales</span>
+      <div class="editable-field" contenteditable="true" data-field="canales" data-placeholder="En qué redes consume contenido">${esc(bp.canales || '')}</div>
+      <div style="margin-top: 10px; text-align: right;">
+        <button class="btn-ghost btn-danger btn-sm" onclick="removePreviewCard(this, 'bp-idx')" style="font-size: 11.5px;">🗑 Eliminar este perfil</button>
+      </div>
     </div>
   `).join('');
 
   $('genModalBody').innerHTML = `
     <div class="gen-preview">
-      <div class="gen-preview-header">✨ Propuesta de la IA</div>
-      ${cardsHtml}
+      <div class="gen-preview-header">✨ Propuesta de la IA — click en cualquier texto para editarlo</div>
+      <div class="editable-hint">
+        💡 Podés editar cualquier campo, eliminar perfiles enteros, o aceptar como está. Después de guardar, también vas a poder volver a editar.
+      </div>
+      <div id="buyerPersonasPreview">${cardsHtml}</div>
     </div>
-    <p style="font-size: 12.5px; color: var(--gris-text-soft); margin-top: 14px;">
-      Si te gusta, clickeá "Aceptar" y quedarán guardados en la estrategia. Podés editarlos después manualmente en la planilla si querés ajustar algo.
-    </p>
   `;
-  window._pendingBuyerPersonas = personas;
   window._pendingEstrategiaId = estrategiaId;
 
   $('genModalFooter').innerHTML = `
@@ -2053,8 +2113,31 @@ function mostrarPreviewBuyerPersonas(estrategiaId, personas) {
   `;
 }
 
+function removePreviewCard(btn, idxAttr) {
+  const card = btn.closest('[data-' + idxAttr + ']');
+  if (card) card.remove();
+}
+
+function extractBuyerPersonasFromDOM() {
+  const cards = document.querySelectorAll('#buyerPersonasPreview [data-bp-idx]');
+  const personas = [];
+  cards.forEach(card => {
+    const bp = {};
+    card.querySelectorAll('[data-field]').forEach(field => {
+      const val = field.innerText.trim();
+      if (val) bp[field.dataset.field] = val;
+    });
+    if (bp.nombre || bp.demografia || bp.dolores) personas.push(bp);
+  });
+  return personas;
+}
+
 async function aceptarBuyerPersonas() {
-  const personas = window._pendingBuyerPersonas;
+  const personas = extractBuyerPersonasFromDOM();
+  if (personas.length === 0) {
+    showToast('No hay perfiles para guardar', 'error');
+    return;
+  }
   const estrategiaId = window._pendingEstrategiaId;
   try {
     await sheetUpdate('Estrategias', estrategiaId, { buyer_personas_json: JSON.stringify(personas) });
@@ -2132,29 +2215,47 @@ Generá 4 o 5 pilares de contenido para esta estrategia, con porcentajes que sum
 
 function mostrarPreviewPilares(estrategiaId, pilares) {
   const total = pilares.reduce((sum, p) => sum + (Number(p.porcentaje) || 0), 0);
-  const cardsHtml = pilares.map(p => `
-    <div class="pilar-card">
-      <div class="pilar-card-header">
-        <h4>${esc(p.nombre || 'Pilar')}</h4>
-        ${p.porcentaje ? `<span class="pilar-porcentaje">${esc(String(p.porcentaje))}%</span>` : ''}
+  const cardsHtml = pilares.map((p, i) => `
+    <div class="pilar-card" data-pilar-idx="${i}">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px;">
+        <div style="flex: 1;">
+          <span class="editable-label">Nombre del pilar</span>
+          <h4 class="editable-field" contenteditable="true" data-field="nombre" data-placeholder="Nombre corto y evocativo">${esc(p.nombre || '')}</h4>
+        </div>
+        <div style="text-align: center;">
+          <span class="editable-label">%</span>
+          <input type="number" class="form-input" data-field="porcentaje" value="${esc(String(p.porcentaje || ''))}" style="width: 70px; padding: 4px 6px; font-size: 13px; text-align: center;" min="0" max="100">
+        </div>
       </div>
-      ${p.descripcion ? `<div style="color: var(--gris-text-soft); font-size: 12.5px; margin-bottom: 6px;">${esc(p.descripcion)}</div>` : ''}
-      ${p.aborda ? `<div style="font-size: 12px; margin-bottom: 4px;"><span style="font-weight: 600; color: var(--gris-text-soft);">Aborda:</span> ${esc(p.aborda)}</div>` : ''}
-      ${p.temas && p.temas.length ? `<div style="font-size: 12px;"><span style="font-weight: 600; color: var(--gris-text-soft);">Ejemplos de temas:</span> ${esc(Array.isArray(p.temas) ? p.temas.join(' · ') : p.temas)}</div>` : ''}
+      <span class="editable-label">Descripción</span>
+      <div class="editable-field" contenteditable="true" data-field="descripcion" data-placeholder="Qué tipo de contenido entra en este pilar">${esc(p.descripcion || '')}</div>
+      <span class="editable-label">Aborda (dolor/deseo del público)</span>
+      <div class="editable-field" contenteditable="true" data-field="aborda" data-placeholder="Qué dolor o deseo del público aborda">${esc(p.aborda || '')}</div>
+      <span class="editable-label">Ejemplos de temas (separados por coma)</span>
+      <div class="editable-field" contenteditable="true" data-field="temas" data-placeholder="Tema 1, Tema 2, Tema 3">${esc(Array.isArray(p.temas) ? p.temas.join(', ') : (p.temas || ''))}</div>
+      <div style="margin-top: 10px; text-align: right;">
+        <button class="btn-ghost btn-danger btn-sm" onclick="removePreviewCard(this, 'pilar-idx'); actualizarTotalPilares();" style="font-size: 11.5px;">🗑 Eliminar este pilar</button>
+      </div>
     </div>
   `).join('');
 
   $('genModalBody').innerHTML = `
     <div class="gen-preview">
-      <div class="gen-preview-header">✨ Propuesta de pilares (total: ${total}%)</div>
-      ${cardsHtml}
+      <div class="gen-preview-header" id="pilaresHeader">✨ Propuesta de pilares (total: ${total}%)</div>
+      <div class="editable-hint">
+        💡 Podés editar cualquier texto o porcentaje, eliminar pilares completos, o aceptar como está. Los porcentajes deberían sumar 100%.
+      </div>
+      <div id="pilaresPreview">${cardsHtml}</div>
     </div>
-    <p style="font-size: 12.5px; color: var(--gris-text-soft); margin-top: 14px;">
-      Los porcentajes indican cuánto del calendario mensual dedicar a cada pilar.
-    </p>
   `;
-  window._pendingPilares = pilares;
   window._pendingEstrategiaId = estrategiaId;
+
+  // Recalcular total al cambiar porcentajes
+  setTimeout(() => {
+    document.querySelectorAll('#pilaresPreview input[data-field="porcentaje"]').forEach(inp => {
+      inp.addEventListener('input', actualizarTotalPilares);
+    });
+  }, 50);
 
   $('genModalFooter').innerHTML = `
     <button class="btn btn-secondary" onclick="closeModal()">Descartar</button>
@@ -2163,8 +2264,45 @@ function mostrarPreviewPilares(estrategiaId, pilares) {
   `;
 }
 
+function actualizarTotalPilares() {
+  const inputs = document.querySelectorAll('#pilaresPreview input[data-field="porcentaje"]');
+  let total = 0;
+  inputs.forEach(inp => { total += Number(inp.value) || 0; });
+  const header = $('pilaresHeader');
+  if (header) {
+    const color = total === 100 ? 'var(--verde)' : 'var(--fucsia)';
+    header.innerHTML = `✨ Propuesta de pilares (total: <span style="color: ${color};">${total}%</span>)`;
+  }
+}
+
+function extractPilaresFromDOM() {
+  const cards = document.querySelectorAll('#pilaresPreview [data-pilar-idx]');
+  const pilares = [];
+  cards.forEach(card => {
+    const p = {};
+    card.querySelectorAll('[data-field]').forEach(field => {
+      let val;
+      if (field.tagName === 'INPUT') val = field.value.trim();
+      else val = field.innerText.trim();
+      if (field.dataset.field === 'porcentaje') {
+        p.porcentaje = Number(val) || 0;
+      } else if (field.dataset.field === 'temas') {
+        if (val) p.temas = val.split(',').map(t => t.trim()).filter(t => t);
+      } else if (val) {
+        p[field.dataset.field] = val;
+      }
+    });
+    if (p.nombre || p.descripcion) pilares.push(p);
+  });
+  return pilares;
+}
+
 async function aceptarPilares() {
-  const pilares = window._pendingPilares;
+  const pilares = extractPilaresFromDOM();
+  if (pilares.length === 0) {
+    showToast('No hay pilares para guardar', 'error');
+    return;
+  }
   const estrategiaId = window._pendingEstrategiaId;
   try {
     await sheetUpdate('Estrategias', estrategiaId, { pilares_json: JSON.stringify(pilares) });
@@ -2233,18 +2371,26 @@ Definí el tono de voz de esta marca.`;
 function mostrarPreviewTonoVoz(estrategiaId, tono) {
   $('genModalBody').innerHTML = `
     <div class="gen-preview">
-      <div class="gen-preview-header">✨ Propuesta de tono de voz</div>
-      <div style="background: #fff; padding: 14px; border-radius: 6px; border: 1px solid var(--gris-border); font-size: 13px;">
-        ${tono.tono ? `<div style="margin-bottom: 8px;"><strong>Tono general:</strong> ${esc(tono.tono)}</div>` : ''}
-        ${tono.personalidad ? `<div style="margin-bottom: 8px;"><strong>Personalidad:</strong> ${esc(tono.personalidad)}</div>` : ''}
-        ${tono.si ? `<div style="margin-bottom: 8px;"><strong style="color: var(--verde);">✓ Palabras/expresiones SÍ:</strong> ${esc(tono.si)}</div>` : ''}
-        ${tono.no ? `<div style="margin-bottom: 8px;"><strong style="color: var(--rojo);">✗ Palabras/expresiones NO:</strong> ${esc(tono.no)}</div>` : ''}
-        ${tono.emojis ? `<div style="margin-bottom: 8px;"><strong>Emojis:</strong> ${esc(tono.emojis)}</div>` : ''}
-        ${tono.ejemplos ? `<div><strong>Ejemplos de frases:</strong><br><em style="color: var(--gris-text-soft); display: block; margin-top: 4px;">${esc(tono.ejemplos).replace(/\n/g, '<br>')}</em></div>` : ''}
+      <div class="gen-preview-header">✨ Propuesta de tono de voz — editable</div>
+      <div class="editable-hint">
+        💡 Click en cualquier campo para editarlo.
+      </div>
+      <div id="tonoVozPreview" style="background: #fff; padding: 14px; border-radius: 6px; border: 1px solid var(--gris-border);">
+        <span class="editable-label">Tono general</span>
+        <div class="editable-field" contenteditable="true" data-field="tono" data-placeholder="Cálido, cercano y profesional...">${esc(tono.tono || '')}</div>
+        <span class="editable-label">Personalidad de marca</span>
+        <div class="editable-field" contenteditable="true" data-field="personalidad" data-placeholder="3-4 adjetivos">${esc(tono.personalidad || '')}</div>
+        <span class="editable-label">✓ Palabras / expresiones SÍ</span>
+        <div class="editable-field" contenteditable="true" data-field="si" data-placeholder="Separadas por coma">${esc(tono.si || '')}</div>
+        <span class="editable-label">✗ Palabras / expresiones NO</span>
+        <div class="editable-field" contenteditable="true" data-field="no" data-placeholder="Separadas por coma">${esc(tono.no || '')}</div>
+        <span class="editable-label">Política de emojis</span>
+        <div class="editable-field" contenteditable="true" data-field="emojis" data-placeholder="Si usamos, cuáles, con qué frecuencia">${esc(tono.emojis || '')}</div>
+        <span class="editable-label">Ejemplos de frases que suenan a la marca</span>
+        <div class="editable-field" contenteditable="true" data-field="ejemplos" data-placeholder="Una frase por línea" style="min-height: 60px; white-space: pre-wrap;">${esc(tono.ejemplos || '')}</div>
       </div>
     </div>
   `;
-  window._pendingTonoVoz = tono;
   window._pendingEstrategiaId = estrategiaId;
 
   $('genModalFooter').innerHTML = `
@@ -2254,8 +2400,21 @@ function mostrarPreviewTonoVoz(estrategiaId, tono) {
   `;
 }
 
+function extractTonoVozFromDOM() {
+  const tono = {};
+  document.querySelectorAll('#tonoVozPreview [data-field]').forEach(field => {
+    const val = field.innerText.trim();
+    if (val) tono[field.dataset.field] = val;
+  });
+  return tono;
+}
+
 async function aceptarTonoVoz() {
-  const tono = window._pendingTonoVoz;
+  const tono = extractTonoVozFromDOM();
+  if (Object.keys(tono).length === 0) {
+    showToast('No hay datos para guardar', 'error');
+    return;
+  }
   const estrategiaId = window._pendingEstrategiaId;
   try {
     await sheetUpdate('Estrategias', estrategiaId, { tono_voz_json: JSON.stringify(tono) });
@@ -2324,17 +2483,26 @@ Proponé KPIs concretos y medibles para esta estrategia.`;
 }
 
 function mostrarPreviewKpis(estrategiaId, kpis) {
+  const itemsHtml = kpis.map((k, i) => `
+    <div data-kpi-idx="${i}" style="display: flex; gap: 8px; align-items: flex-start; margin-bottom: 8px;">
+      <div style="color: var(--fucsia); font-weight: 600; padding-top: 6px; min-width: 20px;">•</div>
+      <div class="editable-field" contenteditable="true" data-field="kpi" style="flex: 1; min-height: 24px;" data-placeholder="KPI con meta numérica">${esc(k)}</div>
+      <button class="btn-ghost btn-danger btn-sm" onclick="removePreviewCard(this, 'kpi-idx')" style="padding: 4px 8px; font-size: 14px;" title="Eliminar">🗑</button>
+    </div>
+  `).join('');
+
   $('genModalBody').innerHTML = `
     <div class="gen-preview">
-      <div class="gen-preview-header">✨ KPIs sugeridos (${kpis.length})</div>
-      <div style="background: #fff; padding: 14px 14px 14px 30px; border-radius: 6px; border: 1px solid var(--gris-border);">
-        <ul style="font-size: 13px; margin: 0; padding-left: 4px;">
-          ${kpis.map(k => `<li style="margin-bottom: 8px;">${esc(k)}</li>`).join('')}
-        </ul>
+      <div class="gen-preview-header">✨ KPIs sugeridos — editables</div>
+      <div class="editable-hint">
+        💡 Click en cualquier KPI para editarlo. Podés eliminar los que no te gusten o agregar nuevos.
+      </div>
+      <div id="kpisPreview" style="background: #fff; padding: 14px; border-radius: 6px; border: 1px solid var(--gris-border);">
+        ${itemsHtml}
+        <button class="btn btn-secondary btn-sm" onclick="agregarKpiManual()" style="margin-top: 6px;">+ Agregar KPI manualmente</button>
       </div>
     </div>
   `;
-  window._pendingKpis = kpis;
   window._pendingEstrategiaId = estrategiaId;
 
   $('genModalFooter').innerHTML = `
@@ -2344,8 +2512,39 @@ function mostrarPreviewKpis(estrategiaId, kpis) {
   `;
 }
 
+function agregarKpiManual() {
+  const container = $('kpisPreview');
+  const btn = container.querySelector('button');
+  const existing = container.querySelectorAll('[data-kpi-idx]');
+  const newIdx = existing.length;
+  const div = document.createElement('div');
+  div.setAttribute('data-kpi-idx', newIdx);
+  div.style.cssText = 'display: flex; gap: 8px; align-items: flex-start; margin-bottom: 8px;';
+  div.innerHTML = `
+    <div style="color: var(--fucsia); font-weight: 600; padding-top: 6px; min-width: 20px;">•</div>
+    <div class="editable-field" contenteditable="true" data-field="kpi" style="flex: 1; min-height: 24px;" data-placeholder="Nuevo KPI"></div>
+    <button class="btn-ghost btn-danger btn-sm" onclick="removePreviewCard(this, 'kpi-idx')" style="padding: 4px 8px; font-size: 14px;" title="Eliminar">🗑</button>
+  `;
+  container.insertBefore(div, btn);
+  div.querySelector('[data-field]').focus();
+}
+
+function extractKpisFromDOM() {
+  const items = document.querySelectorAll('#kpisPreview [data-kpi-idx] [data-field]');
+  const kpis = [];
+  items.forEach(item => {
+    const val = item.innerText.trim();
+    if (val) kpis.push(val);
+  });
+  return kpis;
+}
+
 async function aceptarKpis() {
-  const kpis = window._pendingKpis;
+  const kpis = extractKpisFromDOM();
+  if (kpis.length === 0) {
+    showToast('No hay KPIs para guardar', 'error');
+    return;
+  }
   const estrategiaId = window._pendingEstrategiaId;
   try {
     await sheetUpdate('Estrategias', estrategiaId, { kpis_sugeridos_json: JSON.stringify(kpis) });
@@ -2354,6 +2553,186 @@ async function aceptarKpis() {
     renderTabEstrategia();
   } catch (e) { showToast('Error: ' + e.message, 'error'); }
 }
+
+// ============================================================================
+// EDICIÓN POSTERIOR (abrir modal con datos ya guardados)
+// ============================================================================
+function editarBuyerPersonas(estrategiaId) {
+  const estrategia = state.estrategias.find(e => e.id === estrategiaId);
+  if (!estrategia) return;
+  const personas = parseJsonSafe(estrategia.buyer_personas_json);
+  const cliente = state.clientes.find(c => c.id === state.currentClienteId);
+
+  $('modal').className = 'modal modal-lg';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>✏️ Editar Buyer Personas</h2>
+      <button class="btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="genModalBody"></div>
+    <div class="modal-footer" id="genModalFooter"></div>
+  `;
+  $('modalOverlay').classList.add('active');
+  mostrarPreviewBuyerPersonas(estrategiaId, personas);
+  // Ajustar títulos y botones para contexto de edición (no generación)
+  const header = document.querySelector('#genModalBody .gen-preview-header');
+  if (header) header.innerHTML = '✏️ Editando buyer personas — click en cualquier texto';
+  const regenBtn = document.querySelector('#genModalFooter button:nth-child(2)');
+  if (regenBtn) regenBtn.style.display = 'none';
+  // Agregar botón para agregar perfil nuevo
+  const preview = $('buyerPersonasPreview');
+  if (preview) {
+    const btnAdd = document.createElement('button');
+    btnAdd.className = 'btn btn-secondary btn-sm';
+    btnAdd.textContent = '+ Agregar perfil';
+    btnAdd.style.marginTop = '8px';
+    btnAdd.onclick = agregarBuyerPersonaManual;
+    preview.parentElement.insertBefore(btnAdd, preview.nextSibling);
+  }
+}
+
+function agregarBuyerPersonaManual() {
+  const preview = $('buyerPersonasPreview');
+  const existing = preview.querySelectorAll('[data-bp-idx]');
+  const newIdx = existing.length;
+  const div = document.createElement('div');
+  div.className = 'buyer-persona-card';
+  div.setAttribute('data-bp-idx', newIdx);
+  div.innerHTML = `
+    <span class="editable-label">Nombre del perfil</span>
+    <h4 class="editable-field" contenteditable="true" data-field="nombre" data-placeholder="Ej: Sofía, 32"></h4>
+    <span class="editable-label">📊 Demografía</span>
+    <div class="editable-field" contenteditable="true" data-field="demografia" data-placeholder="Edad, género, ocupación"></div>
+    <span class="editable-label">🌱 Contexto</span>
+    <div class="editable-field" contenteditable="true" data-field="contexto" data-placeholder="Cómo vive"></div>
+    <span class="editable-label">😣 Dolores</span>
+    <div class="editable-field" contenteditable="true" data-field="dolores" data-placeholder="Qué le duele"></div>
+    <span class="editable-label">🎯 Deseos</span>
+    <div class="editable-field" contenteditable="true" data-field="deseos" data-placeholder="Qué quiere lograr"></div>
+    <span class="editable-label">🚫 Objeciones</span>
+    <div class="editable-field" contenteditable="true" data-field="objeciones" data-placeholder="Por qué no compraría"></div>
+    <span class="editable-label">📱 Canales</span>
+    <div class="editable-field" contenteditable="true" data-field="canales" data-placeholder="Dónde consume info"></div>
+    <div style="margin-top: 10px; text-align: right;">
+      <button class="btn-ghost btn-danger btn-sm" onclick="removePreviewCard(this, 'bp-idx')" style="font-size: 11.5px;">🗑 Eliminar</button>
+    </div>
+  `;
+  preview.appendChild(div);
+  div.querySelector('[data-field="nombre"]').focus();
+}
+
+function editarPilares(estrategiaId) {
+  const estrategia = state.estrategias.find(e => e.id === estrategiaId);
+  if (!estrategia) return;
+  const pilares = parseJsonSafe(estrategia.pilares_json);
+
+  $('modal').className = 'modal modal-lg';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>✏️ Editar Pilares de contenido</h2>
+      <button class="btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="genModalBody"></div>
+    <div class="modal-footer" id="genModalFooter"></div>
+  `;
+  $('modalOverlay').classList.add('active');
+  mostrarPreviewPilares(estrategiaId, pilares);
+  const header = document.querySelector('#genModalBody .gen-preview-header');
+  if (header) header.innerHTML = '✏️ Editando pilares — click en cualquier campo';
+  const regenBtn = document.querySelector('#genModalFooter button:nth-child(2)');
+  if (regenBtn) regenBtn.style.display = 'none';
+  const preview = $('pilaresPreview');
+  if (preview) {
+    const btnAdd = document.createElement('button');
+    btnAdd.className = 'btn btn-secondary btn-sm';
+    btnAdd.textContent = '+ Agregar pilar';
+    btnAdd.style.marginTop = '8px';
+    btnAdd.onclick = agregarPilarManual;
+    preview.parentElement.insertBefore(btnAdd, preview.nextSibling);
+  }
+}
+
+function agregarPilarManual() {
+  const preview = $('pilaresPreview');
+  const existing = preview.querySelectorAll('[data-pilar-idx]');
+  const newIdx = existing.length;
+  const div = document.createElement('div');
+  div.className = 'pilar-card';
+  div.setAttribute('data-pilar-idx', newIdx);
+  div.innerHTML = `
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px;">
+      <div style="flex: 1;">
+        <span class="editable-label">Nombre del pilar</span>
+        <h4 class="editable-field" contenteditable="true" data-field="nombre" data-placeholder="Nombre del pilar"></h4>
+      </div>
+      <div style="text-align: center;">
+        <span class="editable-label">%</span>
+        <input type="number" class="form-input" data-field="porcentaje" value="0" style="width: 70px; padding: 4px 6px; font-size: 13px; text-align: center;" min="0" max="100">
+      </div>
+    </div>
+    <span class="editable-label">Descripción</span>
+    <div class="editable-field" contenteditable="true" data-field="descripcion" data-placeholder="Qué tipo de contenido entra"></div>
+    <span class="editable-label">Aborda</span>
+    <div class="editable-field" contenteditable="true" data-field="aborda" data-placeholder="Qué dolor o deseo aborda"></div>
+    <span class="editable-label">Temas (separados por coma)</span>
+    <div class="editable-field" contenteditable="true" data-field="temas" data-placeholder="Tema 1, Tema 2, Tema 3"></div>
+    <div style="margin-top: 10px; text-align: right;">
+      <button class="btn-ghost btn-danger btn-sm" onclick="removePreviewCard(this, 'pilar-idx'); actualizarTotalPilares();" style="font-size: 11.5px;">🗑 Eliminar</button>
+    </div>
+  `;
+  preview.appendChild(div);
+  div.querySelector('[data-field="nombre"]').focus();
+  div.querySelector('input[data-field="porcentaje"]').addEventListener('input', actualizarTotalPilares);
+}
+
+function editarTonoVoz(estrategiaId) {
+  const estrategia = state.estrategias.find(e => e.id === estrategiaId);
+  if (!estrategia) return;
+  const tono = parseJsonSafe(estrategia.tono_voz_json) || {};
+
+  $('modal').className = 'modal modal-lg';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>✏️ Editar Tono de voz</h2>
+      <button class="btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="genModalBody"></div>
+    <div class="modal-footer" id="genModalFooter"></div>
+  `;
+  $('modalOverlay').classList.add('active');
+  // parseJsonSafe devuelve [] si no es array; para tono es un objeto
+  const tonoObj = (typeof tono === 'object' && !Array.isArray(tono)) ? tono : {};
+  mostrarPreviewTonoVoz(estrategiaId, tonoObj);
+  const header = document.querySelector('#genModalBody .gen-preview-header');
+  if (header) header.innerHTML = '✏️ Editando tono de voz';
+  const regenBtn = document.querySelector('#genModalFooter button:nth-child(2)');
+  if (regenBtn) regenBtn.style.display = 'none';
+}
+
+function editarKpis(estrategiaId) {
+  const estrategia = state.estrategias.find(e => e.id === estrategiaId);
+  if (!estrategia) return;
+  const kpis = parseJsonSafe(estrategia.kpis_sugeridos_json);
+
+  $('modal').className = 'modal modal-lg';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>✏️ Editar KPIs</h2>
+      <button class="btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="genModalBody"></div>
+    <div class="modal-footer" id="genModalFooter"></div>
+  `;
+  $('modalOverlay').classList.add('active');
+  mostrarPreviewKpis(estrategiaId, kpis);
+  const header = document.querySelector('#genModalBody .gen-preview-header');
+  if (header) header.innerHTML = '✏️ Editando KPIs';
+  const regenBtn = document.querySelector('#genModalFooter button:nth-child(2)');
+  if (regenBtn) regenBtn.style.display = 'none';
+}
+
+// parseJsonSafe ajustado: para tono de voz (objeto) también lo devuelve correctamente
+// (la original devolvía [] si fallaba, pero ahora mantenemos retrocompatibilidad)
 
 // ===== TAB: ACCESOS =====
 async function renderTabAccesos() {
