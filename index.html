@@ -801,7 +801,6 @@ function initGoogleAuth() {
         localStorage.setItem('carrusel_token', tokenResponse.access_token);
         localStorage.setItem('carrusel_token_expires', String(expiresAt));
       } catch (e) { console.warn('localStorage no disponible'); }
-      await gapi.client.init({ discoveryDocs: [CONFIG.DISCOVERY_DOC] });
       gapi.client.setToken({ access_token: tokenResponse.access_token });
       await loadUserInfo();
       enterApp();
@@ -856,7 +855,7 @@ async function loadUserInfo() {
 
 function handleLogin() {
   if (!tokenClient) { showToast('Esperá unos segundos y reintentá', 'error'); return; }
-  tokenClient.requestAccessToken({ prompt: 'consent' });
+  tokenClient.requestAccessToken({ prompt: '' });
 }
 
 function handleLogout() {
@@ -892,7 +891,15 @@ async function loadApiKey() {
   }
 }
 
-function initGapi() { gapi.load('client', () => {}); }
+function initGapi() {
+  gapi.load('client', async () => {
+    try {
+      await gapi.client.init({ discoveryDocs: [CONFIG.DISCOVERY_DOC] });
+    } catch (e) {
+      console.error('Error iniciando gapi client:', e);
+    }
+  });
+}
 
 // ============================================================================
 // SHEETS
