@@ -753,6 +753,8 @@ let state = {
 
 let tokenClient = null;
 let autosaveTimers = {};
+let gapiReadyResolve = null;
+const gapiReady = new Promise(resolve => { gapiReadyResolve = resolve; });
 
 // ============================================================================
 // HELPERS
@@ -824,7 +826,7 @@ async function tryRestoreSession() {
     }
     // Validar que el token aún funcione
     state.accessToken = token;
-    await gapi.client.init({ discoveryDocs: [CONFIG.DISCOVERY_DOC] });
+    await gapiReady; // esperar que gapi.client esté inicializado
     gapi.client.setToken({ access_token: token });
     try {
       await loadUserInfo();
@@ -895,8 +897,10 @@ function initGapi() {
   gapi.load('client', async () => {
     try {
       await gapi.client.init({ discoveryDocs: [CONFIG.DISCOVERY_DOC] });
+      gapiReadyResolve(); // señal: gapi.client ya está listo
     } catch (e) {
       console.error('Error iniciando gapi client:', e);
+      gapiReadyResolve(); // resolver igual para no bloquear
     }
   });
 }
