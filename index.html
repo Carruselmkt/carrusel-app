@@ -3079,6 +3079,25 @@ function renderIdeaCard(idea) {
   const estadoClase = estado.toLowerCase().replace(/ /g, '-');
   const tieneCopyDesarrollado = idea.copy && idea.copy.trim();
 
+  // Detectar si tiene carrusel o reel guardados en notas (formato: "CARRUSEL_SLIDES:JSON" o "REEL_GUION:JSON")
+  let tieneCarrusel = false, tieneReel = false;
+  let slidesCount = 0, escenasCount = 0;
+  if (idea.notas && typeof idea.notas === 'string') {
+    if (idea.notas.startsWith('CARRUSEL_SLIDES:')) {
+      tieneCarrusel = true;
+      try {
+        const slides = JSON.parse(idea.notas.substring('CARRUSEL_SLIDES:'.length));
+        slidesCount = Array.isArray(slides) ? slides.length : 0;
+      } catch (e) {}
+    } else if (idea.notas.startsWith('REEL_GUION:')) {
+      tieneReel = true;
+      try {
+        const escenas = JSON.parse(idea.notas.substring('REEL_GUION:'.length));
+        escenasCount = Array.isArray(escenas) ? escenas.length : 0;
+      } catch (e) {}
+    }
+  }
+
   return `
     <div class="idea-card estado-${estadoClase}">
       <div class="idea-header">
@@ -3091,10 +3110,12 @@ function renderIdeaCard(idea) {
         ${idea.formato ? `<span class="idea-chip formato">${esc(idea.formato)}</span>` : ''}
         ${idea.origen === 'IA' ? `<span class="idea-chip origen-ia">🤖 IA</span>` : `<span class="idea-chip origen-manual">✏️ Manual</span>`}
         ${tieneCopyDesarrollado ? `<span class="idea-chip" style="background: #e6f4ef; color: var(--verde);">✓ Copy desarrollado</span>` : ''}
+        ${tieneCarrusel ? `<span class="idea-chip" style="background: #fef0e5; color: #c06a3d;">🎠 ${slidesCount} slides</span>` : ''}
+        ${tieneReel ? `<span class="idea-chip" style="background: #e6f0fb; color: var(--petroleo);">🎬 ${escenasCount} escenas</span>` : ''}
       </div>
 
       ${idea.hook ? `<div class="idea-hook">"${esc(idea.hook)}"</div>` : ''}
-      ${idea.idea && idea.idea !== idea.titulo ? `<div class="idea-descripcion">${esc(idea.idea)}</div>` : ''}
+      ${idea.idea && idea.idea !== idea.titulo && !tieneCarrusel && !tieneReel ? `<div class="idea-descripcion">${esc(idea.idea)}</div>` : ''}
 
       ${tieneCopyDesarrollado ? `
         <details style="margin-bottom: 10px;">
@@ -3105,15 +3126,84 @@ function renderIdeaCard(idea) {
         </details>
       ` : ''}
 
+      ${tieneCarrusel ? `
+        <div style="margin-bottom: 10px;">
+          <button class="btn btn-secondary btn-sm" onclick="verCarruselDeIdea('${esc(idea.id)}')">🎠 Ver ${slidesCount} slides</button>
+        </div>
+      ` : ''}
+      ${tieneReel ? `
+        <div style="margin-bottom: 10px;">
+          <button class="btn btn-secondary btn-sm" onclick="verReelDeIdea('${esc(idea.id)}')">🎬 Ver ${escenasCount} escenas</button>
+        </div>
+      ` : ''}
+
       <div class="idea-actions">
         ${estado !== 'Publicada' ? `
-          ${!tieneCopyDesarrollado ? `<button class="gen-btn gen-btn-small" onclick="desarrollarIdea('${esc(idea.id)}')">✨ Desarrollar copy</button>` : ''}
+          ${!tieneCopyDesarrollado && !tieneCarrusel && !tieneReel ? `<button class="gen-btn gen-btn-small" onclick="desarrollarIdea('${esc(idea.id)}')">✨ Desarrollar copy</button>` : ''}
           ${estado !== 'Agendada' ? `<button class="btn btn-primary btn-sm" onclick="agendarIdea('${esc(idea.id)}')">📅 Agendar</button>` : ''}
         ` : ''}
         <button class="btn btn-secondary btn-sm" onclick="openIdeaModal('${esc(idea.id)}')">✏️ Editar</button>
         <button class="btn-ghost btn-danger btn-sm" onclick="confirmDeleteIdea('${esc(idea.id)}', '${esc((idea.titulo || '').replace(/'/g, "\\'"))}')">🗑</button>
       </div>
     </div>`;
+}
+
+// Ver el carrusel guardado en una idea (solo lectura con opción de cerrar)
+function verCarruselDeIdea(ideaId) {
+  const idea = state.ideas.find(i => i.id === ideaId);
+  if (!idea || !idea.notas) return;
+  let slides = [];
+  try { slides = JSON.parse(idea.notas.substring('CARRUSEL_SLIDES:'.length)); } catch (e) { showToast('Error leyendo el carrusel', 'error'); return; }
+
+  const slidesHtml = slides.map((s, i) => {
+    const tipoLower = (s.tipo || 'Desarrollo').toLowerCase();
+    return `
+      <div class="slide-card ${tipoLower}">
+        <span class="slide-number ${tipoLower}">Slide ${s.numero || (i+1)} · ${esc(s.tipo || 'Desarrollo')}</span>
+        ${s.texto_principal ? `<div class="slide-section"><span class="slide-section-label">Texto principal</span><div style="font-weight: 600;">${esc(s.texto_principal)}</div></div>` : ''}
+        ${s.texto_secundario ? `<div class="slide-section"><span class="slide-section-label">Texto secundario</span><div>${esc(s.texto_secundario)}</div></div>` : ''}
+        ${s.visual ? `<div class="slide-section"><span class="slide-section-label">🎨 Visual</span><div style="font-style: italic; color: var(--gris-text-soft);">${esc(s.visual)}</div></div>` : ''}
+      </div>`;
+  }).join('');
+
+  $('modal').className = 'modal modal-lg';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>🎠 Carrusel: ${esc(idea.titulo)}</h2>
+      <button class="btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">${slidesHtml}</div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cerrar</button>
+    </div>`;
+  $('modalOverlay').classList.add('active');
+}
+
+function verReelDeIdea(ideaId) {
+  const idea = state.ideas.find(i => i.id === ideaId);
+  if (!idea || !idea.notas) return;
+  let escenas = [];
+  try { escenas = JSON.parse(idea.notas.substring('REEL_GUION:'.length)); } catch (e) { showToast('Error leyendo el guión', 'error'); return; }
+
+  const escenasHtml = escenas.map(e => `
+    <div class="escena-card">
+      <span class="escena-tiempo">⏱️ ${esc(e.tiempo || '?')}</span>
+      ${e.texto_pantalla ? `<div class="slide-section"><span class="slide-section-label">📝 Texto en pantalla</span><div style="font-weight: 600;">${esc(e.texto_pantalla)}</div></div>` : ''}
+      ${e.voz_audio ? `<div class="slide-section"><span class="slide-section-label">🎤 Voz / Audio</span><div>${esc(e.voz_audio)}</div></div>` : ''}
+      ${e.accion ? `<div class="slide-section"><span class="slide-section-label">🎬 Acción</span><div style="font-style: italic; color: var(--gris-text-soft);">${esc(e.accion)}</div></div>` : ''}
+    </div>`).join('');
+
+  $('modal').className = 'modal modal-lg';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>🎬 Reel: ${esc(idea.titulo)}</h2>
+      <button class="btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">${escenasHtml}</div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cerrar</button>
+    </div>`;
+  $('modalOverlay').classList.add('active');
 }
 
 // ============================================================================
@@ -3876,6 +3966,15 @@ async function confirmarAgendarIdea(ideaId) {
     idea_id: ideaId,
   };
 
+  // Si la idea tiene carrusel o reel guardado en notas, traspasarlo a la publicación
+  if (idea.notas && typeof idea.notas === 'string') {
+    if (idea.notas.startsWith('CARRUSEL_SLIDES:')) {
+      publicacion.carrusel_slides = idea.notas.substring('CARRUSEL_SLIDES:'.length);
+    } else if (idea.notas.startsWith('REEL_GUION:')) {
+      publicacion.reel_guion = idea.notas.substring('REEL_GUION:'.length);
+    }
+  }
+
   try {
     await Promise.all([
       sheetAppend('Calendario', publicacion),
@@ -4478,15 +4577,30 @@ async function renderGeneradores() {
           <h3>Generar lote de ideas</h3>
           <p>Proponé 10-30 ideas de contenido para un cliente, con enfoque en su fase actual o una campaña específica.</p>
         </div>
+        <div class="generador-card" onclick="atajoGenerarCopy()">
+          <div class="generador-icon" style="background: linear-gradient(135deg, var(--petroleo) 0%, var(--fucsia) 100%);">📝</div>
+          <h3>Generar copy suelto</h3>
+          <p>Desarrollá un copy completo (hook + texto + hashtags + CTA) sobre un tema específico, sin comprometerte con una fecha. Se guarda en el banco del cliente.</p>
+        </div>
+        <div class="generador-card" onclick="atajoGenerarCarrusel()">
+          <div class="generador-icon" style="background: linear-gradient(135deg, var(--fucsia) 0%, var(--fucsia-light) 100%);">🎠</div>
+          <h3>Generar carrusel suelto</h3>
+          <p>Armá la estructura completa de un carrusel (5-8 slides con textos y visuales sugeridos) sobre cualquier tema. Se guarda en el banco.</p>
+        </div>
+        <div class="generador-card" onclick="atajoGenerarReel()">
+          <div class="generador-icon" style="background: linear-gradient(135deg, var(--petroleo) 0%, var(--petroleo-dark) 100%);">🎬</div>
+          <h3>Generar reel suelto</h3>
+          <p>Desarrollá el guión de un reel escena por escena (tiempo, texto en pantalla, voz, acción). Se guarda en el banco.</p>
+        </div>
         <div class="generador-card" onclick="atajoGenerarCalendarioMensual()">
-          <div class="generador-icon">📅</div>
+          <div class="generador-icon" style="background: linear-gradient(135deg, var(--salmon) 0%, var(--fucsia) 100%);">📅</div>
           <h3>Generar calendario mensual</h3>
-          <p>Armá todo el calendario del mes de un solo click. Respeta pilares, frecuencia y eventos especiales.</p>
+          <p>Armá todo el calendario del mes de un solo click. Respeta pilares, frecuencia y eventos especiales. Se crean las publicaciones en el calendario.</p>
         </div>
       </div>
 
       <div style="margin-top: 30px; padding: 16px; background: var(--crema); border-radius: var(--radio); font-size: 13px; color: var(--gris-text-soft);">
-        💡 <strong>Tip:</strong> Los generadores específicos de copy, carrusel y reel están dentro de cada publicación del calendario (entrás al cliente → Calendario → click en una publicación).
+        💡 <strong>Tip:</strong> Los generadores sueltos (copy, carrusel, reel) guardan en el banco de ideas del cliente. Desde el banco podés agendar después para una fecha específica. Para generar pegado a una fecha concreta, abrí el cliente → Calendario → click en un día.
       </div>
     `;
   } catch (e) {
@@ -4567,6 +4681,411 @@ async function ejecutarAtajoCalendario() {
     state.estrategias = estrategiasRes.data.filter(e => e.cliente_id === clienteId);
     state.briefs = briefsRes.data;
     abrirGeneradorCalendarioMensual();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+// ============================================================================
+// GENERADORES LIBRES (sueltos) — guardan al banco de ideas del cliente
+// ============================================================================
+
+async function atajoGenerarCopy() { abrirGeneradorLibre('copy'); }
+async function atajoGenerarCarrusel() { abrirGeneradorLibre('carrusel'); }
+async function atajoGenerarReel() { abrirGeneradorLibre('reel'); }
+
+function abrirGeneradorLibre(tipo) {
+  if (state.clientes.length === 0) {
+    showToast('No hay clientes cargados', 'error');
+    return;
+  }
+  const titulos = {
+    copy: { icon: '📝', title: 'Generar copy suelto', descripcion: 'La IA va a generar un copy completo (hook + texto + hashtags + CTA) y guardarlo en el banco de ideas del cliente.' },
+    carrusel: { icon: '🎠', title: 'Generar carrusel suelto', descripcion: 'La IA va a generar un carrusel de 5-8 slides con textos y visuales. Se guarda en el banco del cliente como idea lista para agendar.' },
+    reel: { icon: '🎬', title: 'Generar reel suelto', descripcion: 'La IA va a generar el guión de un reel escena por escena. Se guarda en el banco del cliente.' },
+  };
+  const t = titulos[tipo];
+
+  const opciones = state.clientes.map(c => `<option value="${esc(c.id)}">${esc(c.nombre)}</option>`).join('');
+
+  $('modal').className = 'modal modal-lg';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>${t.icon} ${t.title}</h2>
+      <button class="btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="color: var(--gris-text-soft); font-size: 13px; margin-bottom: 16px;">${t.descripcion}</p>
+      <div class="form-row">
+        <label class="form-label">Cliente *</label>
+        <select class="form-select" id="libre_cliente" onchange="cargarPilaresClienteLibre()">${opciones}</select>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Tema / Título de la publicación *</label>
+        <input type="text" class="form-input" id="libre_titulo" placeholder="Ej: 'Por qué usar hilo dental cambia todo', 'Cómo hago mis macramés paso a paso'...">
+      </div>
+      <div class="form-row-grid">
+        <div>
+          <label class="form-label">Pilar</label>
+          <select class="form-select" id="libre_pilar">
+            <option value="">—</option>
+          </select>
+          <div class="form-help" style="font-size: 11.5px;">Se carga cuando elegís un cliente con pilares definidos</div>
+        </div>
+        <div>
+          <label class="form-label">Hook (opcional)</label>
+          <input type="text" class="form-input" id="libre_hook" placeholder="Primera línea si ya la tenés en mente">
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Contexto / Ángulo (opcional)</label>
+        <textarea class="form-textarea" id="libre_contexto" placeholder="Qué ángulo darle, qué mensaje transmitir, qué evitar..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="ejecutarGeneradorLibre('${tipo}')">✨ Generar</button>
+    </div>`;
+  $('modalOverlay').classList.add('active');
+  setTimeout(() => cargarPilaresClienteLibre(), 100);
+}
+
+async function cargarPilaresClienteLibre() {
+  const clienteId = $('libre_cliente').value;
+  const pilarSelect = $('libre_pilar');
+  if (!pilarSelect) return;
+  pilarSelect.innerHTML = '<option value="">—</option>';
+  try {
+    // Cargar estrategias del cliente para extraer pilares
+    const { data } = await sheetRead('Estrategias');
+    const estrategiaActiva = data.find(e => e.cliente_id === clienteId && (e.estado || 'Activa') === 'Activa' && e.tipo === 'Principal');
+    if (estrategiaActiva) {
+      const pilares = parseJsonSafe(estrategiaActiva.pilares_json);
+      pilares.forEach(p => {
+        pilarSelect.innerHTML += `<option value="${esc(p.nombre)}">${esc(p.nombre)}</option>`;
+      });
+    }
+    // Guardar el cliente_id y estrategia para usarlos al ejecutar
+    window._libreClienteId = clienteId;
+    window._libreEstrategia = estrategiaActiva || null;
+  } catch (e) { console.warn('Error cargando pilares:', e); }
+}
+
+async function ejecutarGeneradorLibre(tipo) {
+  if (!checkApiKey()) return;
+  const clienteId = $('libre_cliente').value;
+  const titulo = $('libre_titulo').value.trim();
+  const pilar = $('libre_pilar').value;
+  const hook = $('libre_hook').value.trim();
+  const contexto = $('libre_contexto').value.trim();
+
+  if (!clienteId) { showToast('Elegí un cliente', 'error'); return; }
+  if (!titulo) { showToast('Poné un título o tema', 'error'); return; }
+
+  // Setear estado para que los generadores funcionen bien
+  state.currentClienteId = clienteId;
+
+  // Cargar brief y estrategia del cliente si no están
+  try {
+    if (!state.briefs || state.briefs.length === 0) {
+      const { data } = await sheetRead('Briefs');
+      state.briefs = data;
+    }
+    if (!state.estrategias || !state.estrategias.some(e => e.cliente_id === clienteId)) {
+      const { data } = await sheetRead('Estrategias');
+      state.estrategias = data;
+    }
+  } catch (e) { showToast('Error cargando datos: ' + e.message, 'error'); return; }
+
+  const estrategia = state.estrategias.find(e => e.cliente_id === clienteId && (e.estado || 'Activa') === 'Activa' && e.tipo === 'Principal');
+
+  // Mostrar modal de generación
+  const titulos = {
+    copy: { icon: '📝', title: 'Generando copy' },
+    carrusel: { icon: '🎠', title: 'Generando carrusel' },
+    reel: { icon: '🎬', title: 'Generando reel' },
+  };
+  const t = titulos[tipo];
+  abrirModalGeneracion(t.title, t.icon, `Generando ${tipo} para "${titulo}"...`);
+
+  // Disparar el generador correspondiente
+  if (tipo === 'copy') {
+    await generarCopyLibre({ clienteId, titulo, pilar, hook, contexto, estrategia });
+  } else if (tipo === 'carrusel') {
+    await generarCarruselLibre({ clienteId, titulo, pilar, hook, contexto, estrategia });
+  } else if (tipo === 'reel') {
+    await generarReelLibre({ clienteId, titulo, pilar, hook, contexto, estrategia });
+  }
+}
+
+// ---- Generador de copy libre ----
+async function generarCopyLibre({ clienteId, titulo, pilar, hook, contexto, estrategia }) {
+  await generarCopyIA({
+    titulo,
+    pilar,
+    formato: 'Post',
+    hook,
+    idea: contexto,
+    estrategia,
+    onAccept: async (copyData) => {
+      // Guardar en el banco de ideas
+      try {
+        await sheetAppend('Ideas', {
+          id: genId('idea'),
+          cliente_id: clienteId,
+          fecha_creada: todayISO(),
+          titulo: titulo,
+          pilar: pilar || '',
+          formato: 'Post',
+          hook: copyData.hook || hook || '',
+          idea: contexto || '',
+          copy: copyData.copy || '',
+          hashtags: copyData.hashtags || '',
+          cta: copyData.cta || '',
+          estado: 'Sin usar',
+          origen: 'IA',
+        });
+        closeModal();
+        showToast('Copy guardado en el banco de ideas del cliente', 'success');
+        // Llevar al banco del cliente
+        state.currentClienteId = clienteId;
+        state.currentClienteTab = 'ideas';
+        renderClienteDetalle();
+      } catch (e) { showToast('Error: ' + e.message, 'error'); }
+    }
+  });
+}
+
+// ---- Generador de carrusel libre ----
+async function generarCarruselLibre({ clienteId, titulo, pilar, hook, contexto, estrategia }) {
+  const tonoVoz = estrategia ? parseJsonSafe(estrategia.tono_voz_json) : {};
+  const buyerPersonas = estrategia ? parseJsonSafe(estrategia.buyer_personas_json) : [];
+
+  const buyerContext = buyerPersonas.length > 0
+    ? '\n\nBUYER PERSONAS:\n' + buyerPersonas.map(bp => `- ${bp.nombre}: dolores: ${bp.dolores || '-'}; deseos: ${bp.deseos || '-'}`).join('\n')
+    : '';
+  const tonoContext = (tonoVoz && Object.keys(tonoVoz).length > 0)
+    ? `\n\nTONO DE VOZ:\n${tonoVoz.tono || ''}\nPalabras SÍ: ${tonoVoz.si || ''}\nPalabras NO: ${tonoVoz.no || ''}\nEmojis: ${tonoVoz.emojis || ''}`
+    : '';
+
+  const systemPrompt = `Sos una diseñadora de contenido de Carrusel MKT, agencia argentina. Especialista en armar carruseles de Instagram que son leídos de principio a fin.
+
+REGLAS DE CARRUSELES:
+- Total: entre 5 y 8 slides.
+- Slide 1 (portada): el HOOK visual. Texto corto, impacto fuerte.
+- Slides intermedios: desarrollan el tema de forma progresiva. Cada slide aporta valor.
+- Último slide: CTA claro.
+- TEXTOS CORTOS Y LEGIBLES.
+- Usá español rioplatense.
+- Respetá el tono de voz del cliente.
+
+FORMATO DE SALIDA: SOLO un JSON válido (sin markdown):
+[
+  { "numero": 1, "tipo": "Portada", "texto_principal": "...", "texto_secundario": "...", "visual": "..." },
+  { "numero": 2, "tipo": "Desarrollo", "texto_principal": "...", "texto_secundario": "...", "visual": "..." },
+  { "numero": "último", "tipo": "CTA", "texto_principal": "...", "texto_secundario": "...", "visual": "..." }
+]`;
+
+  const userPrompt = `Cliente: ${state.clientes.find(c => c.id === clienteId).nombre}
+
+${buildBriefContext(clienteId)}
+
+${estrategia ? buildEstrategiaContext(estrategia) : ''}${buyerContext}${tonoContext}
+
+TEMA DEL CARRUSEL:
+Título: ${titulo}
+${pilar ? 'Pilar: ' + pilar : ''}
+${hook ? 'Hook: ' + hook : ''}
+${contexto ? 'Contexto/ángulo: ' + contexto : ''}
+
+Generá la estructura del carrusel, slide por slide.`;
+
+  try {
+    const raw = await callClaude(systemPrompt, userPrompt, { maxTokens: 3000 });
+    const slides = extractJson(raw);
+    if (!Array.isArray(slides) || slides.length === 0) throw new Error('No se pudo generar el carrusel');
+    mostrarPreviewCarruselLibre(slides, { clienteId, titulo, pilar, hook, contexto });
+  } catch (e) {
+    mostrarErrorGeneracion(e.message);
+  }
+}
+
+function mostrarPreviewCarruselLibre(slides, ctx) {
+  const cardsHtml = slides.map((s, i) => {
+    const tipoLower = (s.tipo || 'Desarrollo').toLowerCase();
+    return `
+    <div class="slide-card ${tipoLower}" data-slide-idx="${i}">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <span class="slide-number ${tipoLower}">Slide ${s.numero || (i+1)} · ${esc(s.tipo || 'Desarrollo')}</span>
+        <button class="btn-ghost btn-danger btn-sm" onclick="removePreviewCard(this, 'slide-idx')" style="padding: 4px 8px;">🗑</button>
+      </div>
+      <div class="slide-section">
+        <span class="slide-section-label">Texto principal</span>
+        <div class="editable-field" contenteditable="true" data-field="texto_principal" style="font-weight: 600;">${esc(s.texto_principal || '')}</div>
+      </div>
+      <div class="slide-section">
+        <span class="slide-section-label">Texto secundario</span>
+        <div class="editable-field" contenteditable="true" data-field="texto_secundario">${esc(s.texto_secundario || '')}</div>
+      </div>
+      <div class="slide-section">
+        <span class="slide-section-label">🎨 Visual sugerido</span>
+        <div class="editable-field" contenteditable="true" data-field="visual" style="font-style: italic; color: var(--gris-text-soft);">${esc(s.visual || '')}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  $('genModalBody').innerHTML = `
+    <div class="gen-preview">
+      <div class="gen-preview-header">🎠 Carrusel (${slides.length} slides) — se guardará en el banco del cliente</div>
+      <div class="editable-hint">
+        💡 Editá los slides que necesites. Al aceptar, se crea una idea en el banco con los slides guardados. Después la podés agendar desde el banco.
+      </div>
+      <div id="carruselPreview">${cardsHtml}</div>
+    </div>
+  `;
+  window._carruselLibreCtx = ctx;
+
+  $('genModalFooter').innerHTML = `
+    <button class="btn btn-secondary" onclick="closeModal()">Descartar</button>
+    <button class="btn btn-primary" onclick="aceptarCarruselLibre()">✓ Guardar en banco</button>
+  `;
+}
+
+async function aceptarCarruselLibre() {
+  const slides = extractCarruselFromDOM();
+  const ctx = window._carruselLibreCtx;
+  try {
+    await sheetAppend('Ideas', {
+      id: genId('idea'),
+      cliente_id: ctx.clienteId,
+      fecha_creada: todayISO(),
+      titulo: ctx.titulo,
+      pilar: ctx.pilar || '',
+      formato: 'Carrusel',
+      hook: ctx.hook || '',
+      idea: ctx.contexto || `Carrusel de ${slides.length} slides`,
+      notas: 'CARRUSEL_SLIDES:' + JSON.stringify(slides), // guardamos los slides en notas como workaround
+      estado: 'Sin usar',
+      origen: 'IA',
+    });
+    closeModal();
+    showToast(`Carrusel de ${slides.length} slides guardado en el banco`, 'success');
+    state.currentClienteId = ctx.clienteId;
+    state.currentClienteTab = 'ideas';
+    renderClienteDetalle();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+// ---- Generador de reel libre ----
+async function generarReelLibre({ clienteId, titulo, pilar, hook, contexto, estrategia }) {
+  const tonoVoz = estrategia ? parseJsonSafe(estrategia.tono_voz_json) : {};
+  const tonoContext = (tonoVoz && Object.keys(tonoVoz).length > 0)
+    ? `\n\nTONO DE VOZ:\n${tonoVoz.tono || ''}\nPalabras SÍ: ${tonoVoz.si || ''}\nPalabras NO: ${tonoVoz.no || ''}`
+    : '';
+
+  const systemPrompt = `Sos una productora de reels de Carrusel MKT. Especialista en reels que capturan atención en los primeros 3 segundos.
+
+REGLAS DE REELS:
+- Duración: 15-45 segundos (recomendado 20-30s).
+- Escena 1 (0-3s): HOOK VISUAL. Texto grande + acción impactante.
+- Escenas intermedias: ritmo rápido, cortes cada 2-4 segundos.
+- Escena final: CTA + loop.
+- TEXTO EN PANTALLA: corto, grande. Los reels se miran sin sonido.
+- Usá español rioplatense.
+
+FORMATO DE SALIDA: SOLO un JSON válido:
+[
+  { "tiempo": "0-3s", "texto_pantalla": "...", "voz_audio": "...", "accion": "..." },
+  ...
+]`;
+
+  const userPrompt = `Cliente: ${state.clientes.find(c => c.id === clienteId).nombre}
+
+${buildBriefContext(clienteId)}
+
+${estrategia ? buildEstrategiaContext(estrategia) : ''}${tonoContext}
+
+TEMA DEL REEL:
+Título: ${titulo}
+${pilar ? 'Pilar: ' + pilar : ''}
+${hook ? 'Hook: ' + hook : ''}
+${contexto ? 'Contexto/ángulo: ' + contexto : ''}
+
+Generá el guión completo, escena por escena.`;
+
+  try {
+    const raw = await callClaude(systemPrompt, userPrompt, { maxTokens: 2500 });
+    const escenas = extractJson(raw);
+    if (!Array.isArray(escenas) || escenas.length === 0) throw new Error('No se pudo generar el guión');
+    mostrarPreviewReelLibre(escenas, { clienteId, titulo, pilar, hook, contexto });
+  } catch (e) {
+    mostrarErrorGeneracion(e.message);
+  }
+}
+
+function mostrarPreviewReelLibre(escenas, ctx) {
+  const cardsHtml = escenas.map((e, i) => `
+    <div class="escena-card" data-escena-idx="${i}">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <span class="escena-tiempo">⏱️ ${esc(e.tiempo || '?')}</span>
+        <button class="btn-ghost btn-danger btn-sm" onclick="removePreviewCard(this, 'escena-idx')" style="padding: 4px 8px;">🗑</button>
+      </div>
+      <div class="slide-section">
+        <span class="slide-section-label">Tiempo</span>
+        <div class="editable-field" contenteditable="true" data-field="tiempo" style="font-family: 'Courier New', monospace;">${esc(e.tiempo || '')}</div>
+      </div>
+      <div class="slide-section">
+        <span class="slide-section-label">📝 Texto en pantalla</span>
+        <div class="editable-field" contenteditable="true" data-field="texto_pantalla" style="font-weight: 600;">${esc(e.texto_pantalla || '')}</div>
+      </div>
+      <div class="slide-section">
+        <span class="slide-section-label">🎤 Voz / Audio</span>
+        <div class="editable-field" contenteditable="true" data-field="voz_audio">${esc(e.voz_audio || '')}</div>
+      </div>
+      <div class="slide-section">
+        <span class="slide-section-label">🎬 Acción / Qué se ve</span>
+        <div class="editable-field" contenteditable="true" data-field="accion" style="font-style: italic; color: var(--gris-text-soft);">${esc(e.accion || '')}</div>
+      </div>
+    </div>
+  `).join('');
+
+  $('genModalBody').innerHTML = `
+    <div class="gen-preview">
+      <div class="gen-preview-header">🎬 Reel (${escenas.length} escenas) — se guardará en el banco del cliente</div>
+      <div class="editable-hint">
+        💡 Editá las escenas que necesites. Al aceptar, se crea una idea en el banco con el guión guardado. Después la podés agendar desde el banco.
+      </div>
+      <div id="reelPreview">${cardsHtml}</div>
+    </div>
+  `;
+  window._reelLibreCtx = ctx;
+
+  $('genModalFooter').innerHTML = `
+    <button class="btn btn-secondary" onclick="closeModal()">Descartar</button>
+    <button class="btn btn-primary" onclick="aceptarReelLibre()">✓ Guardar en banco</button>
+  `;
+}
+
+async function aceptarReelLibre() {
+  const escenas = extractReelFromDOM();
+  const ctx = window._reelLibreCtx;
+  try {
+    await sheetAppend('Ideas', {
+      id: genId('idea'),
+      cliente_id: ctx.clienteId,
+      fecha_creada: todayISO(),
+      titulo: ctx.titulo,
+      pilar: ctx.pilar || '',
+      formato: 'Reel',
+      hook: ctx.hook || '',
+      idea: ctx.contexto || `Reel de ${escenas.length} escenas`,
+      notas: 'REEL_GUION:' + JSON.stringify(escenas),
+      estado: 'Sin usar',
+      origen: 'IA',
+    });
+    closeModal();
+    showToast(`Reel de ${escenas.length} escenas guardado en el banco`, 'success');
+    state.currentClienteId = ctx.clienteId;
+    state.currentClienteTab = 'ideas';
+    renderClienteDetalle();
   } catch (e) { showToast('Error: ' + e.message, 'error'); }
 }
 
