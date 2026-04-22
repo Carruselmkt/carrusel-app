@@ -630,6 +630,87 @@
   }
   .idea-preview-item input[type="checkbox"] { margin-top: 3px; }
 
+  /* ===== CARRUSEL SLIDES ===== */
+  .slide-card {
+    background: #fff; border: 1px solid var(--gris-border);
+    border-radius: var(--radio-sm); padding: 12px 14px;
+    margin-bottom: 10px; border-left: 4px solid var(--fucsia-light);
+  }
+  .slide-card.portada { border-left-color: var(--fucsia); background: #fef8fb; }
+  .slide-card.cta { border-left-color: var(--verde); background: #f6faf8; }
+  .slide-number {
+    display: inline-block; background: var(--fucsia); color: #fff;
+    padding: 2px 10px; border-radius: 10px; font-size: 11px;
+    font-weight: 700; margin-bottom: 8px;
+  }
+  .slide-number.portada { background: var(--fucsia); }
+  .slide-number.desarrollo { background: var(--petroleo); }
+  .slide-number.cta { background: var(--verde); }
+  .slide-section { font-size: 12.5px; margin-bottom: 6px; }
+  .slide-section-label {
+    font-size: 10.5px; font-weight: 600; color: var(--gris-text-muted);
+    text-transform: uppercase; letter-spacing: 0.04em; display: block;
+  }
+
+  /* ===== REEL ESCENAS ===== */
+  .escena-card {
+    background: #fff; border: 1px solid var(--gris-border);
+    border-radius: var(--radio-sm); padding: 12px 14px;
+    margin-bottom: 10px; border-left: 4px solid var(--petroleo);
+  }
+  .escena-tiempo {
+    display: inline-block; background: var(--petroleo); color: #fff;
+    padding: 2px 10px; border-radius: 10px; font-size: 11px;
+    font-weight: 700; margin-bottom: 8px; font-family: 'Courier New', monospace;
+  }
+
+  /* ===== MÓDULO GENERADORES ===== */
+  .generadores-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px; margin-top: 20px;
+  }
+  .generador-card {
+    background: #fff; border: 1px solid var(--gris-border);
+    border-radius: var(--radio); padding: 20px;
+    cursor: pointer; transition: all 0.15s;
+    position: relative;
+  }
+  .generador-card:hover {
+    border-color: var(--fucsia);
+    transform: translateY(-2px);
+    box-shadow: var(--sombra-lg);
+  }
+  .generador-card h3 {
+    font-size: 16px; margin-bottom: 6px; color: var(--gris-text);
+  }
+  .generador-card p {
+    color: var(--gris-text-soft); font-size: 13px; line-height: 1.5;
+  }
+  .generador-icon {
+    font-size: 28px; margin-bottom: 10px;
+    background: linear-gradient(135deg, var(--fucsia) 0%, var(--salmon) 100%);
+    width: 56px; height: 56px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+  }
+  .cliente-selector {
+    background: #fff; border: 1px solid var(--gris-border);
+    border-radius: var(--radio); padding: 16px; margin-bottom: 20px;
+  }
+
+  /* ===== CALENDARIO MENSUAL GENERADO ===== */
+  .mes-generado-item {
+    background: #fff; padding: 12px 14px; margin-bottom: 8px;
+    border-radius: var(--radio-sm); border: 1px solid var(--gris-border);
+    display: flex; align-items: flex-start; gap: 10px;
+  }
+  .mes-generado-item input[type="checkbox"] { margin-top: 4px; }
+  .mes-generado-fecha {
+    background: var(--fucsia); color: #fff; padding: 4px 8px;
+    border-radius: 6px; font-size: 11px; font-weight: 700;
+    min-width: 70px; text-align: center; flex-shrink: 0;
+  }
+
   /* ===== RESPONSIVE ===== */
   @media (max-width: 900px) {
     .app.active { grid-template-columns: 1fr; }
@@ -690,8 +771,8 @@
       <button class="nav-item disabled" disabled>
         <span class="nav-icon">📊</span><span>Métricas</span><span class="nav-badge">Fase 2</span>
       </button>
-      <button class="nav-item disabled" disabled>
-        <span class="nav-icon">✨</span><span>Generadores IA</span><span class="nav-badge">Fase 2</span>
+      <button class="nav-item" data-page="generadores">
+        <span class="nav-icon">✨</span><span>Generadores IA</span>
       </button>
       <button class="nav-item disabled" disabled>
         <span class="nav-icon">💰</span><span>Finanzas</span><span class="nav-badge">Fase 4</span>
@@ -997,6 +1078,7 @@ function navigateTo(page) {
     b.classList.toggle('active', b.dataset.page === page);
   });
   if (page === 'clientes') renderClientes();
+  else if (page === 'generadores') renderGeneradores();
   else if (page === 'config') renderConfig();
 }
 
@@ -1228,7 +1310,16 @@ async function deleteCliente(id) {
   } catch (e) { showToast('Error: ' + e.message, 'error'); }
 }
 
-function closeModal() { $('modalOverlay').classList.remove('active'); }
+function closeModal() {
+  $('modalOverlay').classList.remove('active');
+  // Limpiar globals solo si no estamos en medio de un flujo de "aceptar carrusel/reel"
+  // (esos flujos setean _preservarPendings antes de cerrar)
+  if (!window._preservarPendings) {
+    window._pendingCarruselSlides = null;
+    window._pendingReelGuion = null;
+  }
+  window._preservarPendings = false;
+}
 
 // ============================================================================
 // VISTA DETALLE DEL CLIENTE (con solapas)
@@ -3849,7 +3940,8 @@ async function generarCopyDesdeEditorPost() {
     idea: '',
     estrategia,
     onAccept: async (copyData) => {
-      // Volver al editor con los datos generados
+      // Volver al editor con los datos generados, preservando carrusel/reel si había
+      window._preservarPendings = true;
       closeModal();
       const saved = window._postModalEditorData;
       setTimeout(() => {
@@ -4105,10 +4197,11 @@ async function renderTabCalendario() {
           <button class="btn btn-secondary btn-sm" onclick="changeMonth(1)">›</button>
           <button class="btn-ghost btn-sm" onclick="goToToday()">Hoy</button>
         </div>
-        <div style="display: flex; align-items: center; gap: 14px;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
           <div style="font-size: 12px; color: var(--gris-text-soft);">
             ${stats.total} posts · ${stats.publicadas} publicadas · ${stats.pendientes} pendientes
           </div>
+          <button class="gen-btn gen-btn-small" onclick="abrirGeneradorCalendarioMensual()">✨ Generar mes con IA</button>
           <button class="btn btn-primary btn-sm" onclick="openPostModal()">+ Nueva publicación</button>
         </div>
       </div>
@@ -4148,6 +4241,9 @@ function openPostModal(id = null, defaultDate = null) {
   const esNuevo = !id;
   const fecha = p.fecha_publicacion || defaultDate || todayISO();
   window._postModalEditingId = id;
+  // Cargar si tiene carrusel/reel previos al editor
+  if (p.carrusel_slides) window._pendingCarruselSlides = p.carrusel_slides;
+  if (p.reel_guion) window._pendingReelGuion = p.reel_guion;
 
   $('modal').className = 'modal modal-lg';
   $('modal').innerHTML = `
@@ -4211,9 +4307,13 @@ function openPostModal(id = null, defaultDate = null) {
       </div>
       <div style="padding: 10px 14px; background: linear-gradient(135deg, #fef8fb 0%, #fefbf7 100%); border: 1px solid var(--fucsia-light); border-radius: var(--radio-sm); margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
         <div style="font-size: 12.5px; color: var(--gris-text-soft);">
-          ✨ <strong>Generar copy con IA</strong> completando los campos de abajo automáticamente
+          ✨ <strong>Generar con IA:</strong>
         </div>
-        <button type="button" class="gen-btn gen-btn-small" onclick="generarCopyDesdeEditorPost()">✨ Generar</button>
+        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+          <button type="button" class="gen-btn gen-btn-small" onclick="generarCopyDesdeEditorPost()">📝 Copy</button>
+          <button type="button" class="gen-btn gen-btn-small" onclick="generarCarruselDesdeEditor()" style="background: linear-gradient(135deg, var(--fucsia) 0%, var(--fucsia-light) 100%);">🎠 Carrusel</button>
+          <button type="button" class="gen-btn gen-btn-small" onclick="generarReelDesdeEditor()" style="background: linear-gradient(135deg, var(--petroleo) 0%, var(--petroleo-dark) 100%);">🎬 Reel</button>
+        </div>
       </div>
       <div class="form-row">
         <label class="form-label">Hook / Gancho</label>
@@ -4258,6 +4358,22 @@ function openPostModal(id = null, defaultDate = null) {
       </div>
     </div>`;
   $('modalOverlay').classList.add('active');
+
+  // Si había carrusel o reel previo (al editar una publicación existente), mostrar indicadores
+  setTimeout(() => {
+    if (window._pendingCarruselSlides) {
+      try {
+        const slides = JSON.parse(window._pendingCarruselSlides);
+        if (Array.isArray(slides) && slides.length > 0) mostrarIndicadorCarrusel(slides.length);
+      } catch (e) {}
+    }
+    if (window._pendingReelGuion) {
+      try {
+        const escenas = JSON.parse(window._pendingReelGuion);
+        if (Array.isArray(escenas) && escenas.length > 0) mostrarIndicadorReel(escenas.length);
+      } catch (e) {}
+    }
+  }, 100);
 }
 
 async function savePost(id) {
@@ -4280,6 +4396,16 @@ async function savePost(id) {
     estado: $('f_estado').value,
     notas: $('f_notas').value.trim(),
   };
+
+  // Si hay carrusel pendiente de guardar, incluirlo
+  if (window._pendingCarruselSlides) {
+    data.carrusel_slides = window._pendingCarruselSlides;
+  }
+  // Si hay guión de reel pendiente, incluirlo
+  if (window._pendingReelGuion) {
+    data.reel_guion = window._pendingReelGuion;
+  }
+
   try {
     if (id) {
       await sheetUpdate('Calendario', id, data);
@@ -4289,6 +4415,9 @@ async function savePost(id) {
       await sheetAppend('Calendario', data);
       showToast('Publicación creada', 'success');
     }
+    // Limpiar globals pendientes
+    window._pendingCarruselSlides = null;
+    window._pendingReelGuion = null;
     closeModal();
     renderTabCalendario();
   } catch (e) { showToast('Error: ' + e.message, 'error'); }
@@ -4321,6 +4450,949 @@ async function deletePost(id) {
 // ============================================================================
 // CONFIG
 // ============================================================================
+// ============================================================================
+// MÓDULO: GENERADORES (menú principal)
+// ============================================================================
+async function renderGeneradores() {
+  const main = $('mainContent');
+  main.innerHTML = `
+    <div class="page-header">
+      <div class="page-title-area">
+        <h1 class="page-title">Generadores con IA</h1>
+        <div class="page-subtitle">Atajos a los generadores más potentes. Todo queda guardado en el cliente correspondiente.</div>
+      </div>
+    </div>
+    <div id="generadoresContent"><div class="loading"><div class="spinner"></div>Cargando...</div></div>
+  `;
+
+  try {
+    if (state.clientes.length === 0) {
+      const { data } = await sheetRead('Clientes');
+      state.clientes = data;
+    }
+
+    $('generadoresContent').innerHTML = `
+      <div class="generadores-grid">
+        <div class="generador-card" onclick="atajoGenerarIdeas()">
+          <div class="generador-icon">💡</div>
+          <h3>Generar lote de ideas</h3>
+          <p>Proponé 10-30 ideas de contenido para un cliente, con enfoque en su fase actual o una campaña específica.</p>
+        </div>
+        <div class="generador-card" onclick="atajoGenerarCalendarioMensual()">
+          <div class="generador-icon">📅</div>
+          <h3>Generar calendario mensual</h3>
+          <p>Armá todo el calendario del mes de un solo click. Respeta pilares, frecuencia y eventos especiales.</p>
+        </div>
+      </div>
+
+      <div style="margin-top: 30px; padding: 16px; background: var(--crema); border-radius: var(--radio); font-size: 13px; color: var(--gris-text-soft);">
+        💡 <strong>Tip:</strong> Los generadores específicos de copy, carrusel y reel están dentro de cada publicación del calendario (entrás al cliente → Calendario → click en una publicación).
+      </div>
+    `;
+  } catch (e) {
+    $('generadoresContent').innerHTML = `<div class="card" style="border-color: var(--rojo);"><strong style="color: var(--rojo);">Error</strong><p>${esc(e.message)}</p></div>`;
+  }
+}
+
+async function atajoGenerarIdeas() {
+  if (state.clientes.length === 0) {
+    showToast('No hay clientes cargados', 'error');
+    return;
+  }
+  const opciones = state.clientes.map(c => `<option value="${esc(c.id)}">${esc(c.nombre)}</option>`).join('');
+  $('modal').className = 'modal';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>💡 Generar ideas</h2>
+      <button class="btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label class="form-label">Seleccioná el cliente</label>
+        <select class="form-select" id="atajo_cliente">${opciones}</select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="ejecutarAtajoIdeas()">Continuar</button>
+    </div>`;
+  $('modalOverlay').classList.add('active');
+}
+
+async function ejecutarAtajoIdeas() {
+  const clienteId = $('atajo_cliente').value;
+  state.currentClienteId = clienteId;
+  state.currentClienteTab = 'ideas';
+  closeModal();
+  // Cargar datos necesarios del cliente
+  try {
+    const [estrategiasRes, briefsRes] = await Promise.all([sheetRead('Estrategias'), sheetRead('Briefs')]);
+    state.estrategias = estrategiasRes.data.filter(e => e.cliente_id === clienteId);
+    state.briefs = briefsRes.data;
+    abrirGeneradorIdeas();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+async function atajoGenerarCalendarioMensual() {
+  if (state.clientes.length === 0) {
+    showToast('No hay clientes cargados', 'error');
+    return;
+  }
+  const opciones = state.clientes.map(c => `<option value="${esc(c.id)}">${esc(c.nombre)}</option>`).join('');
+  $('modal').className = 'modal';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>📅 Generar calendario mensual</h2>
+      <button class="btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label class="form-label">Seleccioná el cliente</label>
+        <select class="form-select" id="atajo_cliente">${opciones}</select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="ejecutarAtajoCalendario()">Continuar</button>
+    </div>`;
+  $('modalOverlay').classList.add('active');
+}
+
+async function ejecutarAtajoCalendario() {
+  const clienteId = $('atajo_cliente').value;
+  state.currentClienteId = clienteId;
+  closeModal();
+  try {
+    const [estrategiasRes, briefsRes] = await Promise.all([sheetRead('Estrategias'), sheetRead('Briefs')]);
+    state.estrategias = estrategiasRes.data.filter(e => e.cliente_id === clienteId);
+    state.briefs = briefsRes.data;
+    abrirGeneradorCalendarioMensual();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+// ============================================================================
+// GENERADOR DE CARRUSEL (desde editor de publicación)
+// ============================================================================
+async function generarCarruselDesdeEditor() {
+  if (!checkApiKey()) return;
+
+  const titulo = $('f_titulo') ? $('f_titulo').value.trim() : '';
+  const pilar = $('f_pilar') ? $('f_pilar').value.trim() : '';
+  const hook = $('f_hook') ? $('f_hook').value.trim() : '';
+  const copy = $('f_copy') ? $('f_copy').value.trim() : '';
+
+  if (!titulo && !hook && !copy) {
+    showToast('Completá al menos el título, hook o copy para generar las slides', 'error');
+    return;
+  }
+
+  // Guardar estado actual del editor
+  window._postModalEditorData = {
+    fecha_publicacion: $('f_fecha_publicacion').value,
+    hora: $('f_hora').value,
+    red_social: $('f_red_social').value,
+    formato: $('f_formato').value,
+    pilar, titulo, hook, copy,
+    hashtags: $('f_hashtags').value,
+    cta: $('f_cta').value,
+    link_diseno: $('f_link_diseno').value,
+    link_multimedia: $('f_link_multimedia').value,
+    estado: $('f_estado').value,
+    notas: $('f_notas').value,
+    postId: window._postModalEditingId || null,
+  };
+
+  // Cargar estrategia si no está
+  if (!state.estrategias || state.estrategias.length === 0) {
+    try {
+      const { data } = await sheetRead('Estrategias');
+      state.estrategias = data.filter(e => e.cliente_id === state.currentClienteId);
+    } catch (e) {}
+  }
+  const estrategia = state.estrategias.find(e => (e.estado || 'Activa') === 'Activa' && e.tipo === 'Principal');
+
+  abrirModalGeneracion('Generando estructura de carrusel', '🎠', `Generando slides para "${titulo || hook}"...`);
+
+  const tonoVoz = estrategia ? parseJsonSafe(estrategia.tono_voz_json) : {};
+  const buyerPersonas = estrategia ? parseJsonSafe(estrategia.buyer_personas_json) : [];
+
+  const buyerContext = buyerPersonas.length > 0
+    ? '\n\nBUYER PERSONAS:\n' + buyerPersonas.map(bp => `- ${bp.nombre}: dolores: ${bp.dolores || '-'}; deseos: ${bp.deseos || '-'}`).join('\n')
+    : '';
+  const tonoContext = (tonoVoz && Object.keys(tonoVoz).length > 0)
+    ? `\n\nTONO DE VOZ:\n${tonoVoz.tono || ''}\nPalabras SÍ: ${tonoVoz.si || ''}\nPalabras NO: ${tonoVoz.no || ''}\nEmojis: ${tonoVoz.emojis || ''}`
+    : '';
+
+  const systemPrompt = `Sos una diseñadora de contenido de Carrusel MKT, agencia argentina. Especialista en armar carruseles de Instagram que son leídos de principio a fin.
+
+REGLAS DE CARRUSELES:
+- Total: entre 5 y 8 slides.
+- Slide 1 (portada): el HOOK visual. Texto corto, impacto fuerte. Hace que paren el scroll y deslicen.
+- Slides intermedios: desarrollan el tema de forma progresiva. Cada slide aporta valor. Conectadas narrativamente (cada una genera ganas de ver la siguiente).
+- Último slide: CTA claro. Invitación a comentar, guardar, compartir, visitar perfil o link.
+- TEXTOS CORTOS Y LEGIBLES: un carrusel se lee en segundos. Evitá párrafos largos. Ideas principales en grande, detalles en chico.
+- Usá español rioplatense.
+- Respetá el tono de voz del cliente.
+
+FORMATO DE SALIDA: SOLO un JSON válido (sin markdown):
+
+[
+  {
+    "numero": 1,
+    "tipo": "Portada",
+    "texto_principal": "Texto grande que va en la slide (máximo 10 palabras)",
+    "texto_secundario": "Texto más chico debajo del principal (opcional)",
+    "visual": "Descripción del visual sugerido: qué imagen, colores, composición, íconos, etc."
+  },
+  {
+    "numero": 2,
+    "tipo": "Desarrollo",
+    "texto_principal": "...",
+    "texto_secundario": "...",
+    "visual": "..."
+  },
+  {
+    "numero": "último",
+    "tipo": "CTA",
+    "texto_principal": "...",
+    "texto_secundario": "...",
+    "visual": "..."
+  }
+]`;
+
+  const userPrompt = `Cliente: ${state.clientes.find(c => c.id === state.currentClienteId).nombre}
+
+${buildBriefContext(state.currentClienteId)}
+
+${estrategia ? buildEstrategiaContext(estrategia) : ''}${buyerContext}${tonoContext}
+
+TEMA DEL CARRUSEL:
+Título: ${titulo}
+${pilar ? 'Pilar: ' + pilar : ''}
+${hook ? 'Hook: ' + hook : ''}
+${copy ? 'Copy del pie: ' + copy : ''}
+
+Generá la estructura del carrusel, slide por slide.`;
+
+  try {
+    const raw = await callClaude(systemPrompt, userPrompt, { maxTokens: 3000 });
+    const slides = extractJson(raw);
+    if (!Array.isArray(slides) || slides.length === 0) throw new Error('No se pudo generar el carrusel');
+    mostrarPreviewCarrusel(slides);
+  } catch (e) {
+    mostrarErrorGeneracion(e.message);
+  }
+}
+
+function mostrarPreviewCarrusel(slides) {
+  const cardsHtml = slides.map((s, i) => {
+    const tipoLower = (s.tipo || 'Desarrollo').toLowerCase();
+    return `
+    <div class="slide-card ${tipoLower}" data-slide-idx="${i}">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <span class="slide-number ${tipoLower}">Slide ${s.numero || (i+1)} · ${esc(s.tipo || 'Desarrollo')}</span>
+        <button class="btn-ghost btn-danger btn-sm" onclick="removePreviewCard(this, 'slide-idx')" style="padding: 4px 8px;">🗑</button>
+      </div>
+      <div class="slide-section">
+        <span class="slide-section-label">Texto principal (lo grande)</span>
+        <div class="editable-field" contenteditable="true" data-field="texto_principal" style="font-weight: 600;">${esc(s.texto_principal || '')}</div>
+      </div>
+      <div class="slide-section">
+        <span class="slide-section-label">Texto secundario (detalle)</span>
+        <div class="editable-field" contenteditable="true" data-field="texto_secundario">${esc(s.texto_secundario || '')}</div>
+      </div>
+      <div class="slide-section">
+        <span class="slide-section-label">🎨 Visual sugerido</span>
+        <div class="editable-field" contenteditable="true" data-field="visual" style="font-style: italic; color: var(--gris-text-soft);">${esc(s.visual || '')}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  $('genModalBody').innerHTML = `
+    <div class="gen-preview">
+      <div class="gen-preview-header">🎠 Estructura del carrusel (${slides.length} slides)</div>
+      <div class="editable-hint">
+        💡 Editá cualquier campo. Los textos principales son lo que va en grande en cada slide. Los visuales te ayudan a saber qué diseñar en Canva.
+      </div>
+      <div id="carruselPreview">${cardsHtml}</div>
+    </div>
+  `;
+
+  $('genModalFooter').innerHTML = `
+    <button class="btn btn-secondary" onclick="closeModal()">Descartar</button>
+    <button class="btn btn-secondary" onclick="regenerarCarrusel()">🔄 Regenerar</button>
+    <button class="btn btn-primary" onclick="aceptarCarrusel()">✓ Aceptar y guardar</button>
+  `;
+}
+
+function extractCarruselFromDOM() {
+  const cards = document.querySelectorAll('#carruselPreview [data-slide-idx]');
+  const slides = [];
+  cards.forEach((card, i) => {
+    const slide = { numero: i + 1 };
+    const tipoMatch = card.className.match(/slide-card (\w+)/);
+    slide.tipo = tipoMatch ? (tipoMatch[1].charAt(0).toUpperCase() + tipoMatch[1].slice(1)) : 'Desarrollo';
+    card.querySelectorAll('[data-field]').forEach(field => {
+      const val = field.innerText.trim();
+      if (val) slide[field.dataset.field] = val;
+    });
+    slides.push(slide);
+  });
+  return slides;
+}
+
+async function aceptarCarrusel() {
+  const slides = extractCarruselFromDOM();
+  const saved = window._postModalEditorData;
+
+  // Marcar los slides que queremos mantener después de cerrar el modal de preview
+  window._pendingCarruselSlides = JSON.stringify(slides);
+  window._preservarPendings = true;
+
+  // Volver al editor con los slides cargados
+  closeModal();
+  setTimeout(() => {
+    openPostModal(saved.postId, saved.fecha_publicacion);
+    setTimeout(() => {
+      // Restaurar todos los campos del editor
+      if ($('f_hora') && saved.hora) $('f_hora').value = saved.hora;
+      if ($('f_red_social') && saved.red_social) $('f_red_social').value = saved.red_social;
+      if ($('f_formato')) $('f_formato').value = 'Carrusel';
+      if ($('f_pilar') && saved.pilar) $('f_pilar').value = saved.pilar;
+      if ($('f_titulo') && saved.titulo) $('f_titulo').value = saved.titulo;
+      if ($('f_hook') && saved.hook) $('f_hook').value = saved.hook;
+      if ($('f_copy') && saved.copy) $('f_copy').value = saved.copy;
+      if ($('f_hashtags') && saved.hashtags) $('f_hashtags').value = saved.hashtags;
+      if ($('f_cta') && saved.cta) $('f_cta').value = saved.cta;
+      if ($('f_link_diseno') && saved.link_diseno) $('f_link_diseno').value = saved.link_diseno;
+      if ($('f_link_multimedia') && saved.link_multimedia) $('f_link_multimedia').value = saved.link_multimedia;
+      if ($('f_estado') && saved.estado) $('f_estado').value = saved.estado;
+      if ($('f_notas') && saved.notas) $('f_notas').value = saved.notas;
+      // Los slides ya están guardados en window._pendingCarruselSlides desde antes de closeModal
+      showToast(`Carrusel de ${slides.length} slides listo — guardá la publicación`, 'success');
+      mostrarIndicadorCarrusel(slides.length);
+    }, 150);
+  }, 100);
+}
+
+function mostrarIndicadorCarrusel(cantidad) {
+  const hashInput = $('f_hashtags');
+  if (!hashInput) return;
+  // Insertar un indicador visual arriba del hook
+  const hookField = $('f_hook');
+  if (!hookField) return;
+  const existing = document.getElementById('carrusel_indicador');
+  if (existing) existing.remove();
+  const indicador = document.createElement('div');
+  indicador.id = 'carrusel_indicador';
+  indicador.style.cssText = 'padding: 10px 14px; background: #fef8fb; border: 1px solid var(--fucsia-light); border-radius: 6px; margin-bottom: 12px; font-size: 12.5px; display: flex; justify-content: space-between; align-items: center; gap: 8px;';
+  indicador.innerHTML = `
+    <span>🎠 <strong>Carrusel de ${cantidad} slides</strong> listo para guardar con esta publicación</span>
+    <button type="button" class="btn-ghost btn-sm" onclick="verCarruselGuardado()" style="font-size: 12px;">Ver slides</button>
+  `;
+  hookField.parentElement.parentElement.insertBefore(indicador, hookField.parentElement);
+}
+
+function verCarruselGuardado() {
+  const json = window._pendingCarruselSlides;
+  if (!json) { showToast('No hay carrusel pendiente', 'error'); return; }
+  const slides = JSON.parse(json);
+  mostrarPreviewCarrusel(slides);
+  $('modal').querySelector('.modal-header h2').textContent = '🎠 Ver carrusel (editable)';
+  $('modalOverlay').classList.add('active');
+}
+
+async function regenerarCarrusel() {
+  closeModal();
+  setTimeout(() => {
+    openPostModal(window._postModalEditorData.postId, window._postModalEditorData.fecha_publicacion);
+    setTimeout(() => {
+      const saved = window._postModalEditorData;
+      if ($('f_titulo') && saved.titulo) $('f_titulo').value = saved.titulo;
+      if ($('f_hook') && saved.hook) $('f_hook').value = saved.hook;
+      if ($('f_copy') && saved.copy) $('f_copy').value = saved.copy;
+      if ($('f_pilar') && saved.pilar) $('f_pilar').value = saved.pilar;
+      generarCarruselDesdeEditor();
+    }, 100);
+  }, 100);
+}
+
+// ============================================================================
+// GENERADOR DE REEL (desde editor de publicación)
+// ============================================================================
+async function generarReelDesdeEditor() {
+  if (!checkApiKey()) return;
+
+  const titulo = $('f_titulo') ? $('f_titulo').value.trim() : '';
+  const pilar = $('f_pilar') ? $('f_pilar').value.trim() : '';
+  const hook = $('f_hook') ? $('f_hook').value.trim() : '';
+  const copy = $('f_copy') ? $('f_copy').value.trim() : '';
+
+  if (!titulo && !hook && !copy) {
+    showToast('Completá al menos el título, hook o copy para generar el guión', 'error');
+    return;
+  }
+
+  window._postModalEditorData = {
+    fecha_publicacion: $('f_fecha_publicacion').value,
+    hora: $('f_hora').value,
+    red_social: $('f_red_social').value,
+    formato: $('f_formato').value,
+    pilar, titulo, hook, copy,
+    hashtags: $('f_hashtags').value,
+    cta: $('f_cta').value,
+    link_diseno: $('f_link_diseno').value,
+    link_multimedia: $('f_link_multimedia').value,
+    estado: $('f_estado').value,
+    notas: $('f_notas').value,
+    postId: window._postModalEditingId || null,
+  };
+
+  if (!state.estrategias || state.estrategias.length === 0) {
+    try {
+      const { data } = await sheetRead('Estrategias');
+      state.estrategias = data.filter(e => e.cliente_id === state.currentClienteId);
+    } catch (e) {}
+  }
+  const estrategia = state.estrategias.find(e => (e.estado || 'Activa') === 'Activa' && e.tipo === 'Principal');
+
+  abrirModalGeneracion('Generando guión de reel', '🎬', `Armando escenas para "${titulo || hook}"...`);
+
+  const tonoVoz = estrategia ? parseJsonSafe(estrategia.tono_voz_json) : {};
+  const tonoContext = (tonoVoz && Object.keys(tonoVoz).length > 0)
+    ? `\n\nTONO DE VOZ:\n${tonoVoz.tono || ''}\nPalabras SÍ: ${tonoVoz.si || ''}\nPalabras NO: ${tonoVoz.no || ''}`
+    : '';
+
+  const systemPrompt = `Sos una productora de reels de Carrusel MKT, agencia argentina. Especialista en reels que capturan la atención en los primeros 3 segundos.
+
+REGLAS DE REELS:
+- Duración total: entre 15 y 45 segundos. Recomendado: 20-30s.
+- Escena 1 (0-3s): HOOK VISUAL que frena el scroll. Texto en pantalla grande + acción impactante. Nunca desperdiciar estos segundos.
+- Escenas intermedias: desarrollan el tema con ritmo rápido. Cortes cada 2-4 segundos.
+- Escena final: CTA + loop (termina de forma que invite a verlo de nuevo).
+- TEXTO EN PANTALLA: corto, grande, legible. Los reels se miran sin sonido.
+- VOZ EN OFF O AUDIO: sugerir tipo de audio (música trending, voz propia, audio viral, etc.).
+- ACCIÓN: qué se ve, qué se filma, qué pasa.
+- Usá español rioplatense.
+
+FORMATO DE SALIDA: SOLO un JSON válido (sin markdown):
+
+[
+  {
+    "tiempo": "0-3s",
+    "texto_pantalla": "Texto que aparece en pantalla (corto, 5-8 palabras máx)",
+    "voz_audio": "Lo que se dice o tipo de audio: 'Voz en off: ...' o 'Música trending tipo X' o 'Audio viral: ...'",
+    "accion": "Qué pasa en cámara: qué se filma, movimientos, planos"
+  },
+  ...
+]`;
+
+  const userPrompt = `Cliente: ${state.clientes.find(c => c.id === state.currentClienteId).nombre}
+
+${buildBriefContext(state.currentClienteId)}
+
+${estrategia ? buildEstrategiaContext(estrategia) : ''}${tonoContext}
+
+TEMA DEL REEL:
+Título: ${titulo}
+${pilar ? 'Pilar: ' + pilar : ''}
+${hook ? 'Hook: ' + hook : ''}
+${copy ? 'Contexto del copy: ' + copy : ''}
+
+Generá el guión completo, escena por escena.`;
+
+  try {
+    const raw = await callClaude(systemPrompt, userPrompt, { maxTokens: 2500 });
+    const escenas = extractJson(raw);
+    if (!Array.isArray(escenas) || escenas.length === 0) throw new Error('No se pudo generar el guión');
+    mostrarPreviewReel(escenas);
+  } catch (e) {
+    mostrarErrorGeneracion(e.message);
+  }
+}
+
+function mostrarPreviewReel(escenas) {
+  const cardsHtml = escenas.map((e, i) => `
+    <div class="escena-card" data-escena-idx="${i}">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <span class="escena-tiempo">⏱️ ${esc(e.tiempo || '?')}</span>
+        <button class="btn-ghost btn-danger btn-sm" onclick="removePreviewCard(this, 'escena-idx')" style="padding: 4px 8px;">🗑</button>
+      </div>
+      <div class="slide-section">
+        <span class="slide-section-label">Tiempo</span>
+        <div class="editable-field" contenteditable="true" data-field="tiempo" style="font-family: 'Courier New', monospace;">${esc(e.tiempo || '')}</div>
+      </div>
+      <div class="slide-section">
+        <span class="slide-section-label">📝 Texto en pantalla</span>
+        <div class="editable-field" contenteditable="true" data-field="texto_pantalla" style="font-weight: 600;">${esc(e.texto_pantalla || '')}</div>
+      </div>
+      <div class="slide-section">
+        <span class="slide-section-label">🎤 Voz / Audio</span>
+        <div class="editable-field" contenteditable="true" data-field="voz_audio">${esc(e.voz_audio || '')}</div>
+      </div>
+      <div class="slide-section">
+        <span class="slide-section-label">🎬 Acción / Qué se ve</span>
+        <div class="editable-field" contenteditable="true" data-field="accion" style="font-style: italic; color: var(--gris-text-soft);">${esc(e.accion || '')}</div>
+      </div>
+    </div>
+  `).join('');
+
+  $('genModalBody').innerHTML = `
+    <div class="gen-preview">
+      <div class="gen-preview-header">🎬 Guión del reel (${escenas.length} escenas)</div>
+      <div class="editable-hint">
+        💡 Editá cualquier campo. Los tiempos son orientativos. El texto en pantalla es lo que se lee, la voz/audio es lo que se escucha.
+      </div>
+      <div id="reelPreview">${cardsHtml}</div>
+    </div>
+  `;
+
+  $('genModalFooter').innerHTML = `
+    <button class="btn btn-secondary" onclick="closeModal()">Descartar</button>
+    <button class="btn btn-secondary" onclick="regenerarReel()">🔄 Regenerar</button>
+    <button class="btn btn-primary" onclick="aceptarReel()">✓ Aceptar y guardar</button>
+  `;
+}
+
+function extractReelFromDOM() {
+  const cards = document.querySelectorAll('#reelPreview [data-escena-idx]');
+  const escenas = [];
+  cards.forEach(card => {
+    const esc = {};
+    card.querySelectorAll('[data-field]').forEach(field => {
+      const val = field.innerText.trim();
+      if (val) esc[field.dataset.field] = val;
+    });
+    escenas.push(esc);
+  });
+  return escenas;
+}
+
+async function aceptarReel() {
+  const escenas = extractReelFromDOM();
+  const saved = window._postModalEditorData;
+  window._pendingReelGuion = JSON.stringify(escenas);
+  window._preservarPendings = true;
+  closeModal();
+  setTimeout(() => {
+    openPostModal(saved.postId, saved.fecha_publicacion);
+    setTimeout(() => {
+      if ($('f_hora') && saved.hora) $('f_hora').value = saved.hora;
+      if ($('f_red_social') && saved.red_social) $('f_red_social').value = saved.red_social;
+      if ($('f_formato')) $('f_formato').value = 'Reel';
+      if ($('f_pilar') && saved.pilar) $('f_pilar').value = saved.pilar;
+      if ($('f_titulo') && saved.titulo) $('f_titulo').value = saved.titulo;
+      if ($('f_hook') && saved.hook) $('f_hook').value = saved.hook;
+      if ($('f_copy') && saved.copy) $('f_copy').value = saved.copy;
+      if ($('f_hashtags') && saved.hashtags) $('f_hashtags').value = saved.hashtags;
+      if ($('f_cta') && saved.cta) $('f_cta').value = saved.cta;
+      if ($('f_link_diseno') && saved.link_diseno) $('f_link_diseno').value = saved.link_diseno;
+      if ($('f_link_multimedia') && saved.link_multimedia) $('f_link_multimedia').value = saved.link_multimedia;
+      if ($('f_estado') && saved.estado) $('f_estado').value = saved.estado;
+      if ($('f_notas') && saved.notas) $('f_notas').value = saved.notas;
+      // El guión ya está guardado en window._pendingReelGuion desde antes de closeModal
+      showToast(`Guión de ${escenas.length} escenas listo — guardá la publicación`, 'success');
+      mostrarIndicadorReel(escenas.length);
+    }, 150);
+  }, 100);
+}
+
+function mostrarIndicadorReel(cantidad) {
+  const hookField = $('f_hook');
+  if (!hookField) return;
+  const existing = document.getElementById('reel_indicador');
+  if (existing) existing.remove();
+  const indicador = document.createElement('div');
+  indicador.id = 'reel_indicador';
+  indicador.style.cssText = 'padding: 10px 14px; background: #e6f0fb; border: 1px solid var(--petroleo); border-radius: 6px; margin-bottom: 12px; font-size: 12.5px; display: flex; justify-content: space-between; align-items: center; gap: 8px;';
+  indicador.innerHTML = `
+    <span>🎬 <strong>Guión de ${cantidad} escenas</strong> listo para guardar con esta publicación</span>
+    <button type="button" class="btn-ghost btn-sm" onclick="verReelGuardado()" style="font-size: 12px;">Ver escenas</button>
+  `;
+  hookField.parentElement.parentElement.insertBefore(indicador, hookField.parentElement);
+}
+
+function verReelGuardado() {
+  const json = window._pendingReelGuion;
+  if (!json) { showToast('No hay guión pendiente', 'error'); return; }
+  const escenas = JSON.parse(json);
+  mostrarPreviewReel(escenas);
+  $('modal').querySelector('.modal-header h2').textContent = '🎬 Ver guión (editable)';
+  $('modalOverlay').classList.add('active');
+}
+
+async function regenerarReel() {
+  closeModal();
+  setTimeout(() => {
+    openPostModal(window._postModalEditorData.postId, window._postModalEditorData.fecha_publicacion);
+    setTimeout(() => {
+      const saved = window._postModalEditorData;
+      if ($('f_titulo') && saved.titulo) $('f_titulo').value = saved.titulo;
+      if ($('f_hook') && saved.hook) $('f_hook').value = saved.hook;
+      if ($('f_copy') && saved.copy) $('f_copy').value = saved.copy;
+      if ($('f_pilar') && saved.pilar) $('f_pilar').value = saved.pilar;
+      generarReelDesdeEditor();
+    }, 100);
+  }, 100);
+}
+
+// ============================================================================
+// GENERADOR DE CALENDARIO MENSUAL COMPLETO
+// ============================================================================
+async function abrirGeneradorCalendarioMensual() {
+  if (!checkApiKey()) return;
+  const cliente = state.clientes.find(c => c.id === state.currentClienteId);
+  const estrategiaActiva = state.estrategias.find(e => (e.estado || 'Activa') === 'Activa' && e.tipo === 'Principal');
+  if (!estrategiaActiva) {
+    showToast('Necesitás una estrategia Principal activa para este cliente', 'error');
+    return;
+  }
+  const pilares = parseJsonSafe(estrategiaActiva.pilares_json);
+  if (pilares.length === 0) {
+    showToast('La estrategia no tiene pilares. Generalos primero.', 'error');
+    return;
+  }
+
+  const hoy = new Date();
+  const proximoMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 1);
+  const defaultMes = proximoMes.toISOString().substring(0, 7); // YYYY-MM
+
+  // Detectar campañas activas
+  const campanasActivas = state.estrategias.filter(e =>
+    (e.estado || 'Activa') === 'Activa' && e.tipo === 'Campana'
+  );
+
+  const frecuenciaCliente = cliente.frecuencia_posts || '8';
+
+  $('modal').className = 'modal modal-lg';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>📅 Generar calendario mensual</h2>
+      <button class="btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="color: var(--gris-text-soft); font-size: 13px; margin-bottom: 16px;">
+        La IA va a armar el calendario completo para ${esc(cliente.nombre)} respetando pilares, porcentajes y frecuencia.
+      </p>
+      <div class="form-row-grid">
+        <div>
+          <label class="form-label">Mes a generar</label>
+          <input type="month" class="form-input" id="mes_target" value="${defaultMes}">
+        </div>
+        <div>
+          <label class="form-label">Cantidad de publicaciones</label>
+          <select class="form-select" id="mes_cantidad">
+            <option value="6" ${frecuenciaCliente === '6' ? 'selected' : ''}>6 posts</option>
+            <option value="8" ${frecuenciaCliente === '8' ? 'selected' : ''}>8 posts</option>
+            <option value="12" ${frecuenciaCliente === '12' ? 'selected' : ''}>12 posts</option>
+            <option value="16">16 posts</option>
+            <option value="20">20 posts</option>
+          </select>
+        </div>
+      </div>
+
+      ${campanasActivas.length > 0 ? `
+        <div class="form-row">
+          <label class="form-label">Campañas activas detectadas</label>
+          <div style="padding: 10px 12px; background: var(--crema); border-radius: 6px; font-size: 12.5px;">
+            ${campanasActivas.map(c => `
+              <label style="display: block; padding: 4px 0; cursor: pointer;">
+                <input type="checkbox" checked data-campana-id="${esc(c.id)}"> <strong>${esc(c.nombre)}</strong> (${formatDateEs(c.fecha_inicio)}${c.fecha_fin ? ' → ' + formatDateEs(c.fecha_fin) : ''})
+              </label>
+            `).join('')}
+            <div style="font-size: 11px; color: var(--gris-text-muted); margin-top: 4px;">
+              Destildá las que no querés considerar en este calendario.
+            </div>
+          </div>
+        </div>
+      ` : ''}
+
+      <div class="form-row">
+        <label class="form-label">📆 Eventos especiales o fechas relevantes del mes</label>
+        <textarea class="form-textarea" id="mes_eventos" placeholder="Ej:
+- Día de la Madre el 15/5
+- Feriado 25/5
+- Lanzamiento nuevo producto el 10/5
+- Semana de la salud bucal del 20 al 24"></textarea>
+        <div class="form-help">Anotá fechas importantes del rubro, feriados, lanzamientos, eventos de la marca. La IA las va a aprovechar en la planificación.</div>
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">💡 Temas específicos a tratar este mes</label>
+        <textarea class="form-textarea" id="mes_temas" placeholder="Ej:
+- Presentar a las 3 odontólogas del equipo
+- Hablar del nuevo escáner 3D que llega este mes
+- Enfatizar las facilidades de pago"></textarea>
+        <div class="form-help">Temas concretos que querés que aparezcan. Dejá vacío si querés que la IA elija libremente dentro de la estrategia.</div>
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">Distribución de formatos</label>
+        <select class="form-select" id="mes_formatos">
+          <option value="balanceado" selected>Balanceado (mayoría carruseles y reels, algunos posts)</option>
+          <option value="reels_carruseles">Priorizar reels y carruseles</option>
+          <option value="variado">Muy variado (incluir más formatos)</option>
+        </select>
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">Días preferidos de publicación</label>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; padding: 8px;">
+          ${['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'].map((d, i) => `
+            <label style="display: flex; align-items: center; gap: 5px; font-size: 13px; cursor: pointer;">
+              <input type="checkbox" ${[1,2,3,4,5].includes(i+1) || i === 6 ? 'checked' : ''} data-dia="${i+1}"> ${d}
+            </label>
+          `).join('')}
+        </div>
+        <div class="form-help">Tildá los días en los que está bien publicar para este cliente. Por defecto: lunes a viernes + domingo.</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="ejecutarGeneradorCalendarioMensual('${estrategiaActiva.id}')">✨ Generar calendario</button>
+    </div>`;
+  $('modalOverlay').classList.add('active');
+}
+
+async function ejecutarGeneradorCalendarioMensual(estrategiaId) {
+  const estrategia = state.estrategias.find(e => e.id === estrategiaId);
+  const mesTarget = $('mes_target').value; // YYYY-MM
+  const cantidad = parseInt($('mes_cantidad').value);
+  const eventos = $('mes_eventos').value.trim();
+  const temas = $('mes_temas').value.trim();
+  const distribFormatos = $('mes_formatos').value;
+
+  // Campañas seleccionadas
+  const campanasSeleccionadas = [];
+  document.querySelectorAll('[data-campana-id]').forEach(cb => {
+    if (cb.checked) {
+      const camp = state.estrategias.find(e => e.id === cb.dataset.campanaId);
+      if (camp) campanasSeleccionadas.push(camp);
+    }
+  });
+
+  // Días permitidos
+  const diasPermitidos = Array.from(document.querySelectorAll('[data-dia]'))
+    .filter(cb => cb.checked)
+    .map(cb => parseInt(cb.dataset.dia));
+
+  if (diasPermitidos.length === 0) {
+    showToast('Tildá al menos un día de publicación', 'error');
+    return;
+  }
+
+  // Construir lista de fechas válidas del mes
+  const [anio, mes] = mesTarget.split('-').map(Number);
+  const diasDelMes = new Date(anio, mes, 0).getDate();
+  const fechasValidas = [];
+  for (let d = 1; d <= diasDelMes; d++) {
+    const fecha = new Date(anio, mes - 1, d);
+    const diaSemana = fecha.getDay() === 0 ? 7 : fecha.getDay(); // Dom=7, Lun=1
+    if (diasPermitidos.includes(diaSemana)) {
+      fechasValidas.push(fecha.toISOString().split('T')[0]);
+    }
+  }
+
+  if (fechasValidas.length < cantidad) {
+    showToast(`No hay suficientes días disponibles (${fechasValidas.length}) para ${cantidad} posts. Sumá más días.`, 'error');
+    return;
+  }
+
+  abrirModalGeneracion(
+    'Generando calendario',
+    '📅',
+    `Armando ${cantidad} publicaciones para ${mesTarget}...`
+  );
+
+  const buyerPersonas = parseJsonSafe(estrategia.buyer_personas_json);
+  const pilares = parseJsonSafe(estrategia.pilares_json);
+  const tonoVoz = parseJsonSafe(estrategia.tono_voz_json);
+
+  const pilaresContext = pilares.map(p =>
+    `- "${p.nombre}" (${p.porcentaje || 0}%): ${p.descripcion || ''}`
+  ).join('\n');
+
+  const buyerContext = buyerPersonas.length > 0
+    ? '\n\nBUYER PERSONAS:\n' + buyerPersonas.map(bp => `- ${bp.nombre}`).join('\n')
+    : '';
+
+  const tonoContext = (tonoVoz && Object.keys(tonoVoz).length > 0)
+    ? `\nTono: ${tonoVoz.tono || ''}`
+    : '';
+
+  const formatoContext = distribFormatos === 'balanceado'
+    ? 'Mezclá: 40% carruseles, 35% reels, 15% posts, 10% stories (aproximado).'
+    : distribFormatos === 'reels_carruseles'
+    ? 'Priorizá: 50% reels, 40% carruseles, 10% posts.'
+    : 'Variá mucho: incluí todos los formatos (post, carrusel, reel, story, video).';
+
+  const campanasContext = campanasSeleccionadas.length > 0
+    ? '\n\nCAMPAÑAS ACTIVAS EN EL MES (deben aparecer en el calendario):\n' +
+      campanasSeleccionadas.map(c => `- "${c.nombre}" (${c.fecha_inicio} a ${c.fecha_fin}): ${c.objetivo_principal || ''}`).join('\n')
+    : '';
+
+  const eventosContext = eventos ? `\n\nEVENTOS ESPECIALES Y FECHAS RELEVANTES DEL MES:\n${eventos}` : '';
+  const temasContext = temas ? `\n\nTEMAS ESPECÍFICOS A TRATAR ESTE MES:\n${temas}` : '';
+
+  const systemPrompt = `Sos una estratega de contenido de Carrusel MKT. Armás calendarios editoriales mensuales completos para clientes.
+
+REGLAS DEL CALENDARIO MENSUAL:
+- Distribuir las publicaciones a lo largo del mes (no amontonar al principio).
+- Respetar RIGUROSAMENTE los porcentajes de los pilares. Si un pilar es 40%, debe tener 40% de los posts.
+- Si hay campañas activas, DEBE haber posts que las impulsen cerca de sus fechas.
+- Si hay eventos especiales (Día de la Madre, feriados, lanzamientos), DEBE haber posts que los aprovechen.
+- Asignar fechas elegidas de la lista de fechas permitidas que te paso.
+- Variar formatos según la distribución pedida.
+- Cada post debe ser DIFERENTE a los otros (distintos temas, ángulos).
+- Crear una narrativa mensual: el calendario debe tener coherencia global, no ser posts sueltos.
+${formatoContext}
+
+FORMATO DE SALIDA: SOLO un JSON válido (sin markdown):
+
+[
+  {
+    "fecha": "YYYY-MM-DD (una de las fechas permitidas)",
+    "pilar": "Nombre exacto del pilar",
+    "formato": "Post | Carrusel | Reel | Story | Video",
+    "titulo": "Título corto interno",
+    "hook": "Primera línea del post",
+    "idea": "Desarrollo breve: 2-3 líneas sobre qué va este post, qué ángulo, qué mensaje"
+  }
+]`;
+
+  const userPrompt = `Cliente: ${state.clientes.find(c => c.id === state.currentClienteId).nombre}
+
+${buildBriefContext(state.currentClienteId)}
+
+ESTRATEGIA ACTIVA: ${estrategia.nombre}
+Momento: ${estrategia.momento_fase || ''}
+Objetivo: ${estrategia.objetivo_principal}
+${estrategia.momento_descripcion ? 'Contexto: ' + estrategia.momento_descripcion : ''}
+
+PILARES DE CONTENIDO (con porcentajes obligatorios):
+${pilaresContext}${buyerContext}${tonoContext}${campanasContext}${eventosContext}${temasContext}
+
+MES: ${mesTarget}
+CANTIDAD: ${cantidad} publicaciones
+FECHAS PERMITIDAS para asignar (elegí entre estas):
+${fechasValidas.join(', ')}
+
+Generá EXACTAMENTE ${cantidad} publicaciones distribuidas en el mes, respetando los pilares, las campañas y los eventos.`;
+
+  try {
+    const raw = await callClaude(systemPrompt, userPrompt, { maxTokens: 5000 });
+    const posts = extractJson(raw);
+    if (!Array.isArray(posts) || posts.length === 0) throw new Error('No se pudo generar el calendario');
+    // Ordenar por fecha
+    posts.sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
+    mostrarPreviewCalendarioMensual(posts, mesTarget);
+  } catch (e) {
+    mostrarErrorGeneracion(e.message);
+  }
+}
+
+function mostrarPreviewCalendarioMensual(posts, mes) {
+  const itemsHtml = posts.map((p, i) => `
+    <div class="mes-generado-item" data-post-idx="${i}">
+      <input type="checkbox" checked data-post-check="${i}">
+      <div class="mes-generado-fecha">${p.fecha ? formatDateEs(p.fecha) : '?'}</div>
+      <div style="flex: 1;">
+        <div style="font-weight: 600; font-size: 13.5px; margin-bottom: 4px;">${esc(p.titulo || 'Publicación ' + (i+1))}</div>
+        <div style="display: flex; gap: 6px; margin-bottom: 4px; flex-wrap: wrap;">
+          ${p.pilar ? `<span class="idea-chip pilar">🪶 ${esc(p.pilar)}</span>` : ''}
+          ${p.formato ? `<span class="idea-chip formato">${esc(p.formato)}</span>` : ''}
+        </div>
+        ${p.hook ? `<div style="font-size: 12.5px; font-style: italic; color: var(--fucsia); margin-bottom: 4px;">"${esc(p.hook)}"</div>` : ''}
+        ${p.idea ? `<div style="font-size: 12.5px; color: var(--gris-text-soft);">${esc(p.idea)}</div>` : ''}
+      </div>
+    </div>
+  `).join('');
+
+  // Stats
+  const pilares = {};
+  const formatos = {};
+  posts.forEach(p => {
+    if (p.pilar) pilares[p.pilar] = (pilares[p.pilar] || 0) + 1;
+    if (p.formato) formatos[p.formato] = (formatos[p.formato] || 0) + 1;
+  });
+  const pilaresStat = Object.entries(pilares).map(([k, v]) => `${k}: ${v}`).join(' · ');
+  const formatosStat = Object.entries(formatos).map(([k, v]) => `${k}: ${v}`).join(' · ');
+
+  $('genModalBody').innerHTML = `
+    <div class="gen-preview">
+      <div class="gen-preview-header">📅 ${posts.length} publicaciones generadas para ${mes}</div>
+      <div style="padding: 12px; background: #fff; border-radius: 6px; margin-bottom: 10px; font-size: 12px;">
+        <div><strong>Pilares:</strong> ${pilaresStat}</div>
+        <div style="margin-top: 2px;"><strong>Formatos:</strong> ${formatosStat}</div>
+      </div>
+      <div class="editable-hint">
+        💡 Destildá las publicaciones que no querés crear. Después de guardar, podés editar cada una individualmente desde el calendario.
+      </div>
+      <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+        <button class="btn btn-secondary btn-sm" onclick="togglePostsMensual(true)">Seleccionar todas</button>
+        <button class="btn btn-secondary btn-sm" onclick="togglePostsMensual(false)">Ninguna</button>
+      </div>
+      <div style="max-height: 450px; overflow-y: auto;">${itemsHtml}</div>
+    </div>
+  `;
+  window._pendingPostsMensual = posts;
+
+  $('genModalFooter').innerHTML = `
+    <button class="btn btn-secondary" onclick="closeModal()">Descartar</button>
+    <button class="btn btn-primary" onclick="aceptarPostsMensual()">✓ Crear publicaciones seleccionadas</button>
+  `;
+}
+
+function togglePostsMensual(value) {
+  document.querySelectorAll('[data-post-check]').forEach(cb => { cb.checked = value; });
+}
+
+async function aceptarPostsMensual() {
+  const posts = window._pendingPostsMensual;
+  const checked = Array.from(document.querySelectorAll('[data-post-check]'))
+    .filter(cb => cb.checked)
+    .map(cb => parseInt(cb.dataset.postCheck));
+  const seleccionados = checked.map(i => posts[i]);
+
+  if (seleccionados.length === 0) {
+    showToast('No seleccionaste ninguna publicación', 'error');
+    return;
+  }
+
+  showAutosave('saving', `Creando ${seleccionados.length} publicaciones...`);
+
+  try {
+    for (const p of seleccionados) {
+      await sheetAppend('Calendario', {
+        id: genId('pub'),
+        cliente_id: state.currentClienteId,
+        fecha_publicacion: p.fecha || '',
+        red_social: 'Instagram',
+        formato: p.formato || 'Post',
+        pilar: p.pilar || '',
+        titulo: p.titulo || '',
+        hook: p.hook || '',
+        copy: p.idea || '',
+        estado: 'Idea',
+      });
+    }
+    showAutosave('saved', `${seleccionados.length} publicaciones creadas`);
+    closeModal();
+    showToast(`${seleccionados.length} publicaciones agregadas al calendario`, 'success');
+    // Si estamos en la solapa Calendario del cliente, refrescar
+    if (state.currentClienteTab === 'calendario') {
+      renderTabCalendario();
+    } else {
+      // Llevar al cliente y abrir calendario
+      state.currentClienteTab = 'calendario';
+      renderClienteDetalle();
+    }
+  } catch (e) {
+    showAutosave('error', 'Error');
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
 async function renderConfig() {
   const main = $('mainContent');
   main.innerHTML = `
@@ -4380,10 +5452,10 @@ async function renderConfig() {
     <div class="card" style="margin-top: 20px;">
       <div class="card-title">Versión de la app</div>
       <div class="config-item">
-        <div class="config-label">Fase 2 — Sub-entrega A</div>
+        <div class="config-label">Fase 2 completa 🎉</div>
         <div style="font-size: 13px; color: var(--gris-text-soft); margin-top: 4px;">
-          Módulos activos: Clientes · Brief · Estrategia con IA · <strong>Ideas con IA</strong> · Calendario con <strong>generador de copy</strong> · Accesos<br>
-          Próxima entrega (Sub-B): Generador de carrusel · Reel · Calendario mensual completo · Módulo Generadores en el menú
+          Módulos activos: Clientes · Brief · Estrategia con IA · Ideas con IA · Calendario con generadores de <strong>Copy + Carrusel + Reel</strong> · <strong>Calendario mensual completo</strong> · <strong>Módulo Generadores</strong> · Accesos<br>
+          Próxima fase (3): Pipeline de prospectos · Onboarding · Catálogo de servicios
         </div>
       </div>
     </div>`;
