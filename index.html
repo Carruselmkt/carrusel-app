@@ -1048,6 +1048,203 @@
     opacity: 0.6; background: var(--gris-bg);
   }
 
+  /* ===== DASHBOARD ===== */
+  .dashboard-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px; margin-bottom: 24px;
+  }
+  .kpi-card {
+    background: #fff; border: 1px solid var(--gris-border);
+    border-radius: var(--radio); padding: 18px 20px;
+    transition: all 0.12s; cursor: pointer;
+    position: relative; overflow: hidden;
+  }
+  .kpi-card:hover {
+    border-color: var(--fucsia); box-shadow: var(--sombra);
+    transform: translateY(-1px);
+  }
+  .kpi-card:before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0;
+    height: 3px; background: var(--fucsia);
+  }
+  .kpi-card.ingresos:before { background: var(--verde); }
+  .kpi-card.pendientes:before { background: var(--salmon); }
+  .kpi-card.prospectos:before { background: var(--petroleo); }
+  .kpi-card.publicaciones:before { background: #8a6a20; }
+  .kpi-icon {
+    font-size: 22px; margin-bottom: 4px;
+  }
+  .kpi-label {
+    font-size: 11.5px; color: var(--gris-text-muted);
+    text-transform: uppercase; font-weight: 600;
+    letter-spacing: 0.03em; margin-bottom: 2px;
+  }
+  .kpi-value {
+    font-size: 28px; font-weight: 700; color: var(--gris-text);
+    font-family: 'Fraunces', serif; line-height: 1.1;
+  }
+  .kpi-sub {
+    font-size: 12px; color: var(--gris-text-soft);
+    margin-top: 4px;
+  }
+  .dashboard-section {
+    background: #fff; border: 1px solid var(--gris-border);
+    border-radius: var(--radio); padding: 18px 20px;
+    margin-bottom: 16px;
+  }
+  .dashboard-section-title {
+    font-size: 15px; font-weight: 700; color: var(--gris-text);
+    margin-bottom: 14px; font-family: 'Fraunces', serif;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .dashboard-list-item {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 10px; padding: 10px 0;
+    border-bottom: 1px solid var(--gris-border);
+  }
+  .dashboard-list-item:last-child { border-bottom: none; }
+  .dashboard-list-item:hover { background: var(--gris-bg); margin: 0 -10px; padding: 10px; border-radius: 4px; }
+  .alerta-item {
+    padding: 10px 12px; margin-bottom: 8px;
+    border-radius: 6px; font-size: 13px;
+    border-left: 3px solid;
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 10px;
+  }
+  .alerta-item.warn { border-left-color: #d99a1e; background: #fff9ec; }
+  .alerta-item.danger { border-left-color: #c44545; background: #fef0ef; }
+  .alerta-item.info { border-left-color: var(--petroleo); background: #e6f0fb; }
+
+  /* Gráfico simple de barras (SVG sin librería) */
+  .grafico-barras {
+    display: flex; align-items: flex-end; justify-content: space-around;
+    height: 180px; gap: 10px; padding: 10px 0;
+    border-bottom: 1px solid var(--gris-border);
+  }
+  .barra-item {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; gap: 6px;
+    min-width: 0;
+  }
+  .barra-valor {
+    font-size: 10.5px; font-weight: 600; color: var(--gris-text-soft);
+  }
+  .barra-bar {
+    width: 70%; max-width: 40px; min-height: 2px;
+    background: linear-gradient(180deg, var(--fucsia) 0%, var(--fucsia-light) 100%);
+    border-radius: 4px 4px 0 0;
+    transition: all 0.3s;
+  }
+  .barra-label {
+    font-size: 10.5px; color: var(--gris-text-muted);
+    text-transform: uppercase; font-weight: 600;
+  }
+
+  /* ===== FINANZAS ===== */
+  .finanzas-tabs {
+    display: flex; gap: 4px; margin-bottom: 16px;
+    border-bottom: 1px solid var(--gris-border);
+  }
+  .finanzas-tab {
+    padding: 8px 16px; background: transparent;
+    border: none; cursor: pointer; font-size: 13px;
+    color: var(--gris-text-soft); font-weight: 600;
+    border-bottom: 2px solid transparent;
+    transition: all 0.12s;
+  }
+  .finanzas-tab:hover { color: var(--fucsia); }
+  .finanzas-tab.active {
+    color: var(--fucsia); border-bottom-color: var(--fucsia);
+  }
+  .finanzas-tabla {
+    width: 100%; border-collapse: collapse;
+    background: #fff; border-radius: var(--radio);
+    overflow: hidden; box-shadow: var(--sombra);
+  }
+  .finanzas-tabla th {
+    background: var(--gris-bg); padding: 10px 12px;
+    font-size: 11.5px; font-weight: 700; text-transform: uppercase;
+    color: var(--gris-text-muted); text-align: left;
+    letter-spacing: 0.03em;
+  }
+  .finanzas-tabla td {
+    padding: 12px; font-size: 13px;
+    border-top: 1px solid var(--gris-border);
+  }
+  .monto-positivo { color: var(--verde); font-weight: 600; }
+  .monto-negativo { color: var(--rojo); font-weight: 600; }
+  .finanzas-resumen {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px; margin-bottom: 20px;
+  }
+  .badge-estado-pago {
+    padding: 3px 10px; border-radius: 12px;
+    font-size: 11px; font-weight: 700;
+    display: inline-block;
+  }
+  .badge-estado-pago.Cobrado { background: #e6f4ef; color: var(--verde); }
+  .badge-estado-pago.Pendiente { background: #fff4e0; color: #8a6a20; }
+  .badge-estado-pago.Vencido { background: #fef0ef; color: var(--rojo); }
+
+  /* ===== MÉTRICAS ===== */
+  .metricas-cliente-card {
+    background: #fff; border: 1px solid var(--gris-border);
+    border-radius: var(--radio); padding: 18px 20px;
+    margin-bottom: 14px;
+  }
+  .metricas-kpis {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px; margin-top: 10px;
+  }
+  .metrica-mini {
+    background: var(--gris-bg); padding: 10px 12px;
+    border-radius: 6px;
+  }
+  .metrica-mini-label {
+    font-size: 10.5px; color: var(--gris-text-muted);
+    text-transform: uppercase; font-weight: 600;
+    letter-spacing: 0.03em;
+  }
+  .metrica-mini-value {
+    font-size: 20px; font-weight: 700; color: var(--gris-text);
+    font-family: 'Fraunces', serif; line-height: 1.1;
+    margin-top: 2px;
+  }
+  .metrica-delta {
+    font-size: 11px; font-weight: 600; margin-left: 4px;
+  }
+  .metrica-delta.up { color: var(--verde); }
+  .metrica-delta.down { color: var(--rojo); }
+
+  /* ===== REPORTES ===== */
+  .reporte-card {
+    background: #fff; border: 1px solid var(--gris-border);
+    border-radius: var(--radio); padding: 16px 18px;
+    margin-bottom: 12px; transition: all 0.12s;
+  }
+  .reporte-card:hover { box-shadow: var(--sombra); }
+  .reporte-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 10px; gap: 10px; flex-wrap: wrap;
+  }
+  .reporte-body {
+    background: var(--gris-bg); padding: 14px 16px;
+    border-radius: 6px; font-size: 13.5px; line-height: 1.6;
+    max-height: 300px; overflow-y: auto;
+    margin-top: 10px;
+  }
+  .reporte-body h1, .reporte-body h2, .reporte-body h3 {
+    font-family: 'Fraunces', serif;
+    margin: 14px 0 6px; line-height: 1.3;
+  }
+  .reporte-body h1 { font-size: 20px; color: var(--fucsia); }
+  .reporte-body h2 { font-size: 17px; color: var(--petroleo); }
+  .reporte-body h3 { font-size: 15px; color: var(--gris-text); }
+  .reporte-body ul { padding-left: 22px; margin: 6px 0; }
+  .reporte-body li { margin-bottom: 4px; }
+  .reporte-body p { margin: 6px 0; }
+  .reporte-body strong { color: var(--fucsia); }
+
   /* ===== RESPONSIVE ===== */
   @media (max-width: 900px) {
     .app.active { grid-template-columns: 1fr; }
@@ -1096,17 +1293,20 @@
   <aside class="sidebar">
     <div class="sidebar-logo">Carrusel</div>
     <nav class="sidebar-nav" id="sidebarNav">
-      <button class="nav-item active" data-page="clientes">
+      <button class="nav-item active" data-page="dashboard">
+        <span class="nav-icon">🏠</span><span>Inicio</span>
+      </button>
+      <button class="nav-item" data-page="clientes">
         <span class="nav-icon">👥</span><span>Clientes</span>
       </button>
       <button class="nav-item" data-page="prospectos">
         <span class="nav-icon">🎯</span><span>Prospectos</span>
       </button>
-      <button class="nav-item disabled" disabled>
-        <span class="nav-icon">💡</span><span>Ideas</span><span class="nav-badge">x cliente</span>
+      <button class="nav-item" data-page="metricas">
+        <span class="nav-icon">📊</span><span>Métricas</span>
       </button>
-      <button class="nav-item disabled" disabled>
-        <span class="nav-icon">📊</span><span>Métricas</span><span class="nav-badge">Fase 2</span>
+      <button class="nav-item" data-page="reportes">
+        <span class="nav-icon">📄</span><span>Reportes</span>
       </button>
       <button class="nav-item" data-page="servicios">
         <span class="nav-icon">💼</span><span>Servicios</span>
@@ -1114,11 +1314,8 @@
       <button class="nav-item" data-page="generadores">
         <span class="nav-icon">✨</span><span>Generadores IA</span>
       </button>
-      <button class="nav-item disabled" disabled>
-        <span class="nav-icon">💰</span><span>Finanzas</span><span class="nav-badge">Fase 4</span>
-      </button>
-      <button class="nav-item disabled" disabled>
-        <span class="nav-icon">🚀</span><span>Onboarding</span><span class="nav-badge">x cliente</span>
+      <button class="nav-item" data-page="finanzas">
+        <span class="nav-icon">💰</span><span>Finanzas</span>
       </button>
       <button class="nav-item" data-page="config">
         <span class="nav-icon">⚙️</span><span>Configuración</span>
@@ -1160,7 +1357,7 @@ let state = {
   user: null,
   accessToken: null,
   apiKey: null,
-  currentPage: 'clientes',
+  currentPage: 'dashboard',
   currentClienteId: null,
   currentClienteTab: 'ficha',
   calendarDate: new Date(),
@@ -1174,6 +1371,10 @@ let state = {
   prospectos: [],
   onboardings: [],
   plantillasOnboarding: [],
+  finanzas_ingresos: [],
+  finanzas_egresos: [],
+  metricas: [],
+  reportes: [],
 };
 
 let tokenClient = null;
@@ -1291,7 +1492,7 @@ function handleLogout() {
     localStorage.removeItem('carrusel_token');
     localStorage.removeItem('carrusel_token_expires');
   } catch (e) {}
-  state = { ...state, user: null, accessToken: null, clientes: [], briefs: [], estrategias: [], accesos: [], calendario: [], ideas: [], servicios: [], prospectos: [], onboardings: [], plantillasOnboarding: [] };
+  state = { ...state, user: null, accessToken: null, clientes: [], briefs: [], estrategias: [], accesos: [], calendario: [], ideas: [], servicios: [], prospectos: [], onboardings: [], plantillasOnboarding: [], finanzas_ingresos: [], finanzas_egresos: [], metricas: [], reportes: [] };
   $('loginScreen').style.display = 'flex';
   $('app').classList.remove('active');
 }
@@ -1421,10 +1622,14 @@ function navigateTo(page) {
   document.querySelectorAll('.nav-item').forEach(b => {
     b.classList.toggle('active', b.dataset.page === page);
   });
-  if (page === 'clientes') renderClientes();
+  if (page === 'dashboard') renderDashboard();
+  else if (page === 'clientes') renderClientes();
   else if (page === 'prospectos') renderProspectos();
   else if (page === 'servicios') renderServicios();
   else if (page === 'generadores') renderGeneradores();
+  else if (page === 'finanzas') renderFinanzas();
+  else if (page === 'metricas') renderMetricas();
+  else if (page === 'reportes') renderReportes();
   else if (page === 'config') renderConfig();
 }
 
@@ -8094,6 +8299,1589 @@ function mostrarCopiadoOk() {
   }
 }
 
+// ============================================================================
+// MÓDULO: DASHBOARD (pantalla de inicio)
+// ============================================================================
+
+async function renderDashboard() {
+  const main = $('mainContent');
+  const hoy = new Date();
+  const saludo = getSaludo(hoy);
+  const nombreCorto = state.user ? (state.user.name || '').split(' ')[0] : '';
+
+  main.innerHTML = `
+    <div class="page-header">
+      <div class="page-title-area">
+        <h1 class="page-title">${saludo}${nombreCorto ? ', ' + esc(nombreCorto) : ''}!</h1>
+        <div class="page-subtitle">Resumen de tu día · ${esc(formatDateEsLarga(hoy))}</div>
+      </div>
+    </div>
+    <div id="dashboardContent"><div class="loading"><div class="spinner"></div>Armando tu panel...</div></div>
+  `;
+
+  try {
+    // Cargar todos los datos necesarios en paralelo
+    const [clientesRes, prospectosRes, calendarioRes, ingresosRes, onboardingsRes, estrategiasRes] = await Promise.all([
+      sheetRead('Clientes'),
+      sheetRead('Prospectos'),
+      sheetRead('Calendario'),
+      sheetRead('Finanzas_Ingresos'),
+      sheetRead('Onboarding'),
+      sheetRead('Estrategias'),
+    ]);
+    state.clientes = clientesRes.data;
+    state.prospectos = prospectosRes.data;
+    state.calendario = calendarioRes.data;
+    state.onboardings = onboardingsRes.data;
+    state.estrategias = estrategiasRes.data;
+    const ingresos = ingresosRes.data;
+
+    renderDashboardContent(ingresos);
+  } catch (e) {
+    $('dashboardContent').innerHTML = `<div class="card" style="border-color: var(--rojo);"><strong style="color: var(--rojo);">Error</strong><p>${esc(e.message)}</p></div>`;
+  }
+}
+
+function getSaludo(d) {
+  const h = d.getHours();
+  if (h < 12) return 'Buen día';
+  if (h < 19) return 'Buenas tardes';
+  return 'Buenas noches';
+}
+
+function formatDateEsLarga(d) {
+  const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const dias = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+  return `${dias[d.getDay()]} ${d.getDate()} de ${meses[d.getMonth()]}`;
+}
+
+function renderDashboardContent(ingresos) {
+  const hoy = new Date();
+  const mesActual = hoy.getMonth() + 1;
+  const anioActual = hoy.getFullYear();
+
+  // ============== KPIs ==============
+  const clientesActivos = state.clientes.filter(c => (c.estado || 'Activo') === 'Activo').length;
+  const prospectosActivos = state.prospectos.filter(p => !['Ganado', 'Perdido'].includes(p.estado)).length;
+
+  // Ingresos del mes
+  const ingresosMes = ingresos
+    .filter(i => Number(i.mes) === mesActual && Number(i.anio) === anioActual)
+    .reduce((sum, i) => sum + (Number(i.monto_ars) || 0), 0);
+  const ingresosPendientes = ingresos
+    .filter(i => Number(i.mes) === mesActual && Number(i.anio) === anioActual && i.estado === 'Pendiente')
+    .reduce((sum, i) => sum + (Number(i.monto_ars) || 0), 0);
+
+  // Publicaciones esta semana
+  const semanaEnd = new Date(hoy);
+  semanaEnd.setDate(hoy.getDate() + 7);
+  const postsSemana = state.calendario.filter(p => {
+    if (!p.fecha_publicacion) return false;
+    const f = new Date(p.fecha_publicacion);
+    return f >= hoy && f <= semanaEnd;
+  });
+
+  const kpisHtml = `
+    <div class="dashboard-grid">
+      <div class="kpi-card" onclick="navigateTo('clientes')">
+        <div class="kpi-icon">👥</div>
+        <div class="kpi-label">Clientes activos</div>
+        <div class="kpi-value">${clientesActivos}</div>
+        <div class="kpi-sub">${state.clientes.length} totales</div>
+      </div>
+      <div class="kpi-card ingresos" onclick="navigateTo('finanzas')">
+        <div class="kpi-icon">💰</div>
+        <div class="kpi-label">Ingresos del mes</div>
+        <div class="kpi-value">$${formatMiles(ingresosMes)}</div>
+        <div class="kpi-sub">${ingresosPendientes > 0 ? `$${formatMiles(ingresosPendientes)} pendientes` : 'Todo cobrado ✓'}</div>
+      </div>
+      <div class="kpi-card prospectos" onclick="navigateTo('prospectos')">
+        <div class="kpi-icon">🎯</div>
+        <div class="kpi-label">Prospectos activos</div>
+        <div class="kpi-value">${prospectosActivos}</div>
+        <div class="kpi-sub">${state.prospectos.filter(p => p.estado === 'Ganado').length} convertidos</div>
+      </div>
+      <div class="kpi-card publicaciones">
+        <div class="kpi-icon">📅</div>
+        <div class="kpi-label">Posts próximos 7 días</div>
+        <div class="kpi-value">${postsSemana.length}</div>
+        <div class="kpi-sub">${postsSemana.filter(p => p.estado === 'Publicado').length} ya publicados</div>
+      </div>
+    </div>
+  `;
+
+  // ============== PRÓXIMAS ACCIONES ==============
+  const accionesHtml = generarSeccionAcciones(postsSemana);
+
+  // ============== ALERTAS ==============
+  const alertasHtml = generarSeccionAlertas();
+
+  // ============== GRÁFICO DE INGRESOS ==============
+  const graficoHtml = generarGraficoIngresos(ingresos);
+
+  $('dashboardContent').innerHTML = `
+    ${kpisHtml}
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;" class="dashboard-two-cols">
+      ${accionesHtml}
+      ${alertasHtml}
+    </div>
+    ${graficoHtml}
+  `;
+
+  // Forzar responsivo si es una pantalla chica
+  if (window.innerWidth < 900) {
+    document.querySelector('.dashboard-two-cols').style.gridTemplateColumns = '1fr';
+  }
+}
+
+function generarSeccionAcciones(postsSemana) {
+  const hoy = new Date();
+  const acciones = [];
+
+  // Prospectos con próximo paso cercano o sin actividad
+  state.prospectos
+    .filter(p => !['Ganado', 'Perdido'].includes(p.estado))
+    .forEach(p => {
+      const ultFecha = p.fecha_ultimo_contacto || p.fecha_primer_contacto || p.fecha_creacion;
+      const dias = ultFecha ? diasDesde(ultFecha, hoy) : 0;
+      if (dias >= 7 && p.proximo_paso) {
+        acciones.push({
+          tipo: 'prospecto',
+          texto: `${p.proximo_paso}`,
+          detalle: `${p.nombre} · ${dias} días sin actividad`,
+          icon: '🎯',
+          onClick: `navigateTo('prospectos')`,
+        });
+      }
+    });
+
+  // Publicaciones que necesitan revisión
+  state.calendario
+    .filter(p => p.estado === 'Revisión')
+    .slice(0, 3)
+    .forEach(p => {
+      const cliente = state.clientes.find(c => c.id === p.cliente_id);
+      acciones.push({
+        tipo: 'revision',
+        texto: `Revisar: ${p.titulo || p.hook || 'publicación'}`,
+        detalle: `${cliente ? cliente.nombre : ''} · ${formatDateEs(p.fecha_publicacion)}`,
+        icon: '👀',
+        onClick: `openCliente('${p.cliente_id}', 'calendario')`,
+      });
+    });
+
+  // Onboardings con pasos pendientes
+  state.onboardings.forEach(o => {
+    if (o.fecha_completado) return;
+    const pasos = parseJsonSafe(o.pasos_json) || [];
+    const proximoPendiente = pasos.find(p => !p.completado);
+    if (proximoPendiente) {
+      const cliente = state.clientes.find(c => c.id === o.cliente_id);
+      if (cliente && (cliente.estado || 'Activo') === 'Activo') {
+        acciones.push({
+          tipo: 'onboarding',
+          texto: `${proximoPendiente.emoji || '•'} ${proximoPendiente.texto}`,
+          detalle: `Onboarding · ${cliente.nombre}`,
+          icon: '🚀',
+          onClick: `openCliente('${o.cliente_id}', 'onboarding')`,
+        });
+      }
+    }
+  });
+
+  if (acciones.length === 0) {
+    return `
+      <div class="dashboard-section">
+        <div class="dashboard-section-title">✓ Próximas acciones</div>
+        <div style="color: var(--gris-text-soft); font-size: 13px; text-align: center; padding: 20px 10px;">
+          No tenés acciones urgentes pendientes. ¡Buen trabajo! 🎉
+        </div>
+      </div>
+    `;
+  }
+
+  // Mostrar máximo 6 acciones
+  const acc = acciones.slice(0, 6);
+
+  return `
+    <div class="dashboard-section">
+      <div class="dashboard-section-title">📌 Próximas acciones</div>
+      ${acc.map(a => `
+        <div class="dashboard-list-item" style="cursor: pointer;" onclick="${a.onClick}">
+          <div style="flex: 1; min-width: 0;">
+            <div style="font-size: 13px; font-weight: 500;">${a.icon} ${esc(a.texto)}</div>
+            <div style="font-size: 11.5px; color: var(--gris-text-muted); margin-top: 2px;">${esc(a.detalle)}</div>
+          </div>
+          <div style="color: var(--fucsia); font-size: 16px;">→</div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function generarSeccionAlertas() {
+  const alertas = [];
+  const hoy = new Date();
+
+  // Prospectos sin actividad 14+ días
+  const sinActividad14 = state.prospectos.filter(p => {
+    if (['Ganado', 'Perdido'].includes(p.estado)) return false;
+    const ult = p.fecha_ultimo_contacto || p.fecha_primer_contacto || p.fecha_creacion;
+    return ult && diasDesde(ult, hoy) >= 14;
+  });
+  if (sinActividad14.length > 0) {
+    alertas.push({
+      tipo: 'danger',
+      texto: `${sinActividad14.length} prospecto${sinActividad14.length > 1 ? 's' : ''} sin actividad hace +14 días`,
+      accion: `<button class="btn btn-secondary btn-sm" onclick="navigateTo('prospectos')">Ver</button>`,
+    });
+  }
+
+  // Clientes activos sin estrategia Principal activa
+  const sinEstrategia = state.clientes.filter(c => {
+    if ((c.estado || 'Activo') !== 'Activo') return false;
+    return !state.estrategias.some(e =>
+      e.cliente_id === c.id && e.tipo === 'Principal' && (e.estado || 'Activa') === 'Activa'
+    );
+  });
+  if (sinEstrategia.length > 0) {
+    alertas.push({
+      tipo: 'warn',
+      texto: `${sinEstrategia.length} cliente${sinEstrategia.length > 1 ? 's' : ''} sin estrategia Principal activa`,
+      accion: '',
+    });
+  }
+
+  // Clientes activos sin calendario del mes actual
+  const mesActual = hoy.getMonth() + 1;
+  const anioActual = hoy.getFullYear();
+  const clientesSinCalendario = state.clientes.filter(c => {
+    if ((c.estado || 'Activo') !== 'Activo') return false;
+    const postsDelMes = state.calendario.filter(p => {
+      if (p.cliente_id !== c.id) return false;
+      if (!p.fecha_publicacion) return false;
+      const f = new Date(p.fecha_publicacion);
+      return f.getMonth() + 1 === mesActual && f.getFullYear() === anioActual;
+    });
+    return postsDelMes.length === 0;
+  });
+  if (clientesSinCalendario.length > 0) {
+    alertas.push({
+      tipo: 'info',
+      texto: `${clientesSinCalendario.length} cliente${clientesSinCalendario.length > 1 ? 's' : ''} sin publicaciones este mes`,
+      accion: '',
+    });
+  }
+
+  if (alertas.length === 0) {
+    return `
+      <div class="dashboard-section">
+        <div class="dashboard-section-title">✨ Todo en orden</div>
+        <div style="color: var(--gris-text-soft); font-size: 13px; text-align: center; padding: 20px 10px;">
+          No hay alertas activas. Seguí así! 🌟
+        </div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="dashboard-section">
+      <div class="dashboard-section-title">⚠️ Alertas</div>
+      ${alertas.map(a => `
+        <div class="alerta-item ${a.tipo}">
+          <div style="flex: 1;">${esc(a.texto)}</div>
+          ${a.accion}
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function generarGraficoIngresos(ingresos) {
+  const hoy = new Date();
+  const meses = [];
+
+  // Últimos 6 meses
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+    const mes = d.getMonth() + 1;
+    const anio = d.getFullYear();
+    const total = ingresos
+      .filter(ing => Number(ing.mes) === mes && Number(ing.anio) === anio && ing.estado !== 'Vencido')
+      .reduce((sum, ing) => sum + (Number(ing.monto_ars) || 0), 0);
+    const nombresMeses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    meses.push({
+      label: nombresMeses[d.getMonth()],
+      valor: total,
+    });
+  }
+
+  const maximo = Math.max(...meses.map(m => m.valor), 1);
+  const hayDatos = meses.some(m => m.valor > 0);
+
+  if (!hayDatos) {
+    return `
+      <div class="dashboard-section">
+        <div class="dashboard-section-title">📈 Evolución de ingresos</div>
+        <div style="color: var(--gris-text-soft); font-size: 13px; text-align: center; padding: 30px;">
+          Todavía no cargaste ingresos. <a href="#" onclick="navigateTo('finanzas'); return false;" style="color: var(--fucsia);">Andá a Finanzas</a> para empezar.
+        </div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="dashboard-section">
+      <div class="dashboard-section-title">📈 Evolución de ingresos · últimos 6 meses</div>
+      <div class="grafico-barras">
+        ${meses.map(m => {
+          const altura = (m.valor / maximo) * 100;
+          return `
+            <div class="barra-item">
+              <div class="barra-valor">${m.valor > 0 ? '$' + formatMilesCompacto(m.valor) : ''}</div>
+              <div class="barra-bar" style="height: ${Math.max(altura, m.valor > 0 ? 8 : 0)}%;"></div>
+              <div class="barra-label">${m.label}</div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function formatMilesCompacto(n) {
+  const num = Number(n);
+  if (isNaN(num)) return '0';
+  if (num >= 1000000) return (num / 1000000).toFixed(1).replace('.0', '') + 'M';
+  if (num >= 1000) return Math.round(num / 1000) + 'k';
+  return String(num);
+}
+
+
+// ============================================================================
+// MÓDULO: FINANZAS
+// ============================================================================
+
+let finanzasTabActiva = 'ingresos';
+
+async function renderFinanzas() {
+  const main = $('mainContent');
+  main.innerHTML = `
+    <div class="page-header">
+      <div class="page-title-area">
+        <h1 class="page-title">Finanzas</h1>
+        <div class="page-subtitle">Gestión de ingresos, egresos y proyección del negocio.</div>
+      </div>
+    </div>
+
+    <div class="finanzas-tabs">
+      <button class="finanzas-tab ${finanzasTabActiva === 'ingresos' ? 'active' : ''}" onclick="switchFinanzasTab('ingresos')">💰 Ingresos</button>
+      <button class="finanzas-tab ${finanzasTabActiva === 'egresos' ? 'active' : ''}" onclick="switchFinanzasTab('egresos')">💸 Egresos</button>
+      <button class="finanzas-tab ${finanzasTabActiva === 'proyeccion' ? 'active' : ''}" onclick="switchFinanzasTab('proyeccion')">📈 Proyección</button>
+    </div>
+
+    <div id="finanzasContent"><div class="loading"><div class="spinner"></div>Cargando...</div></div>
+  `;
+
+  try {
+    const [ingRes, egrRes, cliRes, servRes] = await Promise.all([
+      sheetRead('Finanzas_Ingresos'),
+      sheetRead('Finanzas_Egresos'),
+      sheetRead('Clientes'),
+      sheetRead('Servicios'),
+    ]);
+    state.finanzas_ingresos = ingRes.data;
+    state.finanzas_egresos = egrRes.data;
+    state.clientes = cliRes.data;
+    state.servicios = servRes.data;
+
+    if (finanzasTabActiva === 'ingresos') renderFinanzasIngresos();
+    else if (finanzasTabActiva === 'egresos') renderFinanzasEgresos();
+    else renderFinanzasProyeccion();
+  } catch (e) {
+    $('finanzasContent').innerHTML = `<div class="card" style="border-color: var(--rojo);"><strong style="color: var(--rojo);">Error</strong><p>${esc(e.message)}</p></div>`;
+  }
+}
+
+function switchFinanzasTab(t) {
+  finanzasTabActiva = t;
+  renderFinanzas();
+}
+
+// ---- INGRESOS ----
+let ingresosFiltroMes = null; // por defecto mes actual
+
+function renderFinanzasIngresos() {
+  const hoy = new Date();
+  if (!ingresosFiltroMes) {
+    ingresosFiltroMes = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
+  }
+  const [anioStr, mesStr] = ingresosFiltroMes.split('-');
+  const anio = Number(anioStr);
+  const mes = Number(mesStr);
+
+  const ingresosDelMes = state.finanzas_ingresos.filter(i => Number(i.mes) === mes && Number(i.anio) === anio);
+  const totalMes = ingresosDelMes.reduce((s, i) => s + (Number(i.monto_ars) || 0), 0);
+  const cobrado = ingresosDelMes.filter(i => i.estado === 'Cobrado').reduce((s, i) => s + (Number(i.monto_ars) || 0), 0);
+  const pendiente = ingresosDelMes.filter(i => i.estado === 'Pendiente').reduce((s, i) => s + (Number(i.monto_ars) || 0), 0);
+  const vencido = ingresosDelMes.filter(i => i.estado === 'Vencido').reduce((s, i) => s + (Number(i.monto_ars) || 0), 0);
+
+  const filas = ingresosDelMes.map(i => {
+    const cliente = state.clientes.find(c => c.id === i.cliente_id);
+    return `
+      <tr>
+        <td>${esc(cliente ? cliente.nombre : '(cliente borrado)')}</td>
+        <td>${esc(i.concepto || '—')}</td>
+        <td style="font-weight: 600;">$${formatMiles(i.monto_ars || 0)}</td>
+        <td>${esc(formatDateEs(i.fecha_cobro) || '—')}</td>
+        <td><span class="badge-estado-pago ${esc(i.estado || 'Pendiente')}">${esc(i.estado || 'Pendiente')}</span></td>
+        <td>
+          <button class="btn-ghost btn-sm" onclick="openIngresoModal('${esc(i.id)}')" title="Editar">✏️</button>
+          ${i.estado !== 'Cobrado' ? `<button class="btn-ghost btn-sm" onclick="marcarCobrado('${esc(i.id)}')" title="Marcar como cobrado" style="color: var(--verde);">✓</button>` : ''}
+          <button class="btn-ghost btn-sm btn-danger" onclick="deleteIngreso('${esc(i.id)}')" title="Eliminar">🗑</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  $('finanzasContent').innerHTML = `
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <label style="font-size: 13px; color: var(--gris-text-soft);">Mes:</label>
+        <input type="month" class="form-input" id="mesIngresos" value="${ingresosFiltroMes}" onchange="ingresosFiltroMes = this.value; renderFinanzasIngresos()" style="width: auto;">
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn btn-secondary btn-sm" onclick="generarIngresosAutomaticos()">🔄 Generar ingresos del mes</button>
+        <button class="btn btn-primary btn-sm" onclick="openIngresoModal()">+ Nuevo ingreso</button>
+      </div>
+    </div>
+
+    <div class="finanzas-resumen">
+      <div class="kpi-card ingresos"><div class="kpi-label">Total del mes</div><div class="kpi-value">$${formatMiles(totalMes)}</div></div>
+      <div class="kpi-card"><div class="kpi-label">Cobrado</div><div class="kpi-value" style="color: var(--verde);">$${formatMiles(cobrado)}</div></div>
+      <div class="kpi-card pendientes"><div class="kpi-label">Pendiente</div><div class="kpi-value" style="color: #c06a3d;">$${formatMiles(pendiente)}</div></div>
+      ${vencido > 0 ? `<div class="kpi-card"><div class="kpi-label">Vencido</div><div class="kpi-value" style="color: var(--rojo);">$${formatMiles(vencido)}</div></div>` : ''}
+    </div>
+
+    ${ingresosDelMes.length === 0 ? `
+      <div class="empty-state">
+        <p>No hay ingresos registrados para este mes.</p>
+        <p style="font-size: 12.5px; margin-top: 8px;">
+          Podés generar automáticamente los ingresos de todos los clientes activos basado en sus servicios contratados, o crear uno manual.
+        </p>
+        <div style="display: flex; gap: 8px; justify-content: center; margin-top: 16px;">
+          <button class="btn btn-primary" onclick="generarIngresosAutomaticos()">🔄 Generar automáticamente</button>
+          <button class="btn btn-secondary" onclick="openIngresoModal()">+ Manual</button>
+        </div>
+      </div>
+    ` : `
+      <table class="finanzas-tabla">
+        <thead><tr><th>Cliente</th><th>Concepto</th><th>Monto</th><th>Fecha cobro</th><th>Estado</th><th></th></tr></thead>
+        <tbody>${filas}</tbody>
+      </table>
+    `}
+  `;
+}
+
+function openIngresoModal(id = null) {
+  const i = id ? state.finanzas_ingresos.find(x => x.id === id) : {};
+  const esNuevo = !id;
+  const hoy = new Date();
+  const mes = i.mes || (hoy.getMonth() + 1);
+  const anio = i.anio || hoy.getFullYear();
+  const clientesActivos = state.clientes.filter(c => (c.estado || 'Activo') === 'Activo');
+
+  $('modal').className = 'modal';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>${esNuevo ? '💰 Nuevo ingreso' : '✏️ Editar ingreso'}</h2>
+      <button class="btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label class="form-label">Cliente *</label>
+        <select class="form-select" id="f_cliente_id">
+          <option value="">—</option>
+          ${clientesActivos.map(c => `<option value="${esc(c.id)}" ${i.cliente_id === c.id ? 'selected' : ''}>${esc(c.nombre)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-row-grid">
+        <div>
+          <label class="form-label">Mes</label>
+          <select class="form-select" id="f_mes">
+            ${['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'].map((m, idx) => `<option value="${idx+1}" ${Number(mes) === idx+1 ? 'selected' : ''}>${m}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Año</label>
+          <input type="number" class="form-input" id="f_anio" value="${anio}" min="2024" max="2030">
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Concepto</label>
+        <input type="text" class="form-input" id="f_concepto" value="${esc(i.concepto || '')}" placeholder="Ej: Gestión mensual completa">
+      </div>
+      <div class="form-row-grid">
+        <div>
+          <label class="form-label">Monto ARS *</label>
+          <input type="number" class="form-input" id="f_monto_ars" value="${esc(String(i.monto_ars || ''))}" placeholder="Ej: 150000">
+        </div>
+        <div>
+          <label class="form-label">Monto USD (opcional)</label>
+          <input type="number" class="form-input" id="f_monto_usd" value="${esc(String(i.monto_usd || ''))}" placeholder="Ej: 150">
+        </div>
+      </div>
+      <div class="form-row-grid">
+        <div>
+          <label class="form-label">Fecha emisión</label>
+          <input type="date" class="form-input" id="f_fecha_emision" value="${esc(i.fecha_emision || '')}">
+        </div>
+        <div>
+          <label class="form-label">Fecha cobro</label>
+          <input type="date" class="form-input" id="f_fecha_cobro" value="${esc(i.fecha_cobro || '')}">
+        </div>
+      </div>
+      <div class="form-row-grid">
+        <div>
+          <label class="form-label">Estado</label>
+          <select class="form-select" id="f_estado">
+            <option value="Pendiente" ${(i.estado || 'Pendiente') === 'Pendiente' ? 'selected' : ''}>Pendiente</option>
+            <option value="Cobrado" ${i.estado === 'Cobrado' ? 'selected' : ''}>Cobrado</option>
+            <option value="Vencido" ${i.estado === 'Vencido' ? 'selected' : ''}>Vencido</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Forma de pago</label>
+          <input type="text" class="form-input" id="f_forma_pago" value="${esc(i.forma_pago || '')}" placeholder="Ej: Transferencia, MercadoPago">
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Notas</label>
+        <textarea class="form-textarea" id="f_notas">${esc(i.notas || '')}</textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveIngreso('${id || ''}')">${esNuevo ? 'Crear' : 'Guardar'}</button>
+    </div>`;
+  $('modalOverlay').classList.add('active');
+}
+
+async function saveIngreso(id) {
+  const cliente_id = $('f_cliente_id').value;
+  const monto_ars = $('f_monto_ars').value.trim();
+  if (!cliente_id || !monto_ars) { showToast('Cliente y monto son obligatorios', 'error'); return; }
+
+  const data = {
+    cliente_id,
+    mes: $('f_mes').value,
+    anio: $('f_anio').value,
+    concepto: $('f_concepto').value.trim(),
+    monto_ars,
+    monto_usd: $('f_monto_usd').value.trim(),
+    fecha_emision: $('f_fecha_emision').value,
+    fecha_cobro: $('f_fecha_cobro').value,
+    estado: $('f_estado').value,
+    forma_pago: $('f_forma_pago').value.trim(),
+    notas: $('f_notas').value.trim(),
+  };
+
+  try {
+    if (id) {
+      await sheetUpdate('Finanzas_Ingresos', id, data);
+      showToast('Ingreso actualizado', 'success');
+    } else {
+      data.id = genId('ing');
+      await sheetAppend('Finanzas_Ingresos', data);
+      showToast('Ingreso creado', 'success');
+    }
+    closeModal();
+    renderFinanzas();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+async function marcarCobrado(id) {
+  try {
+    await sheetUpdate('Finanzas_Ingresos', id, { estado: 'Cobrado', fecha_cobro: todayISO() });
+    showToast('Marcado como cobrado', 'success');
+    renderFinanzas();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+async function deleteIngreso(id) {
+  if (!confirm('¿Eliminar este ingreso?')) return;
+  try {
+    await sheetDelete('Finanzas_Ingresos', id);
+    showToast('Eliminado', 'success');
+    renderFinanzas();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+async function generarIngresosAutomaticos() {
+  const [anioStr, mesStr] = ingresosFiltroMes.split('-');
+  const anio = Number(anioStr);
+  const mes = Number(mesStr);
+
+  const clientesActivos = state.clientes.filter(c => (c.estado || 'Activo') === 'Activo' && c.servicio_contratado);
+  if (clientesActivos.length === 0) {
+    showToast('No hay clientes activos con servicio asignado', 'error');
+    return;
+  }
+
+  // Ya existen?
+  const yaExistentes = state.finanzas_ingresos.filter(i => Number(i.mes) === mes && Number(i.anio) === anio);
+  const yaGenerados = new Set(yaExistentes.map(i => i.cliente_id));
+
+  const aGenerar = clientesActivos.filter(c => !yaGenerados.has(c.id));
+
+  if (aGenerar.length === 0) {
+    showToast('Ya existen ingresos de todos los clientes activos para este mes', 'success');
+    return;
+  }
+
+  if (!confirm(`¿Generar ${aGenerar.length} ingreso${aGenerar.length > 1 ? 's' : ''} automáticamente según los servicios contratados? (podés editarlos después)`)) return;
+
+  showAutosave('saving', `Generando ${aGenerar.length} ingresos...`);
+
+  try {
+    for (const c of aGenerar) {
+      const servicio = state.servicios.find(s => s.nombre === c.servicio_contratado);
+      const monto = servicio ? (servicio.precio_ars || 0) : 0;
+      await sheetAppend('Finanzas_Ingresos', {
+        id: genId('ing'),
+        cliente_id: c.id,
+        mes,
+        anio,
+        concepto: c.servicio_contratado,
+        monto_ars: monto,
+        monto_usd: servicio ? (servicio.precio_usd || '') : '',
+        fecha_emision: todayISO(),
+        estado: 'Pendiente',
+      });
+    }
+    showAutosave('saved', 'Ingresos generados');
+    showToast(`${aGenerar.length} ingresos creados como Pendientes`, 'success');
+    renderFinanzas();
+  } catch (e) {
+    showAutosave('error', 'Error');
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+// ---- EGRESOS ----
+const CATEGORIAS_EGRESOS = ['Herramientas', 'Suscripciones', 'API / Tecnología', 'Impuestos', 'Contadora', 'Publicidad', 'Capacitación', 'Otros'];
+
+function renderFinanzasEgresos() {
+  const hoy = new Date();
+  const mesActual = hoy.getMonth() + 1;
+  const anioActual = hoy.getFullYear();
+
+  const egresosDelMes = state.finanzas_egresos.filter(e => {
+    if (!e.fecha) return false;
+    const f = new Date(e.fecha);
+    return f.getMonth() + 1 === mesActual && f.getFullYear() === anioActual;
+  });
+  const totalMes = egresosDelMes.reduce((s, e) => s + (Number(e.monto_ars) || 0), 0);
+
+  const porCategoria = {};
+  egresosDelMes.forEach(e => {
+    const cat = e.categoria || 'Otros';
+    porCategoria[cat] = (porCategoria[cat] || 0) + (Number(e.monto_ars) || 0);
+  });
+
+  const egresosOrdenados = [...state.finanzas_egresos].sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+
+  const filas = egresosOrdenados.slice(0, 50).map(e => `
+    <tr>
+      <td>${esc(formatDateEs(e.fecha) || '—')}</td>
+      <td>${esc(e.concepto || '—')}</td>
+      <td><span class="idea-chip">${esc(e.categoria || 'Otros')}</span></td>
+      <td class="monto-negativo">-$${formatMiles(e.monto_ars || 0)}</td>
+      <td>${e.recurrente === 'Sí' ? '🔁' : ''}</td>
+      <td>
+        <button class="btn-ghost btn-sm" onclick="openEgresoModal('${esc(e.id)}')" title="Editar">✏️</button>
+        <button class="btn-ghost btn-sm btn-danger" onclick="deleteEgreso('${esc(e.id)}')" title="Eliminar">🗑</button>
+      </td>
+    </tr>
+  `).join('');
+
+  $('finanzasContent').innerHTML = `
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <div style="font-size: 13px; color: var(--gris-text-soft);">${state.finanzas_egresos.length} egresos registrados</div>
+      <button class="btn btn-primary btn-sm" onclick="openEgresoModal()">+ Nuevo egreso</button>
+    </div>
+
+    <div class="finanzas-resumen">
+      <div class="kpi-card"><div class="kpi-label">Total este mes</div><div class="kpi-value" style="color: var(--rojo);">$${formatMiles(totalMes)}</div></div>
+      ${Object.entries(porCategoria).slice(0, 3).map(([k, v]) => `
+        <div class="kpi-card"><div class="kpi-label">${esc(k)}</div><div class="kpi-value">$${formatMiles(v)}</div></div>
+      `).join('')}
+    </div>
+
+    ${state.finanzas_egresos.length === 0 ? `
+      <div class="empty-state">
+        <p>Sin egresos cargados todavía.</p>
+        <button class="btn btn-primary" onclick="openEgresoModal()" style="margin-top: 12px;">+ Cargar primer egreso</button>
+      </div>
+    ` : `
+      <table class="finanzas-tabla">
+        <thead><tr><th>Fecha</th><th>Concepto</th><th>Categoría</th><th>Monto</th><th></th><th></th></tr></thead>
+        <tbody>${filas}</tbody>
+      </table>
+    `}
+  `;
+}
+
+function openEgresoModal(id = null) {
+  const e = id ? state.finanzas_egresos.find(x => x.id === id) : {};
+  const esNuevo = !id;
+
+  $('modal').className = 'modal';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>${esNuevo ? '💸 Nuevo egreso' : '✏️ Editar egreso'}</h2>
+      <button class="btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row-grid">
+        <div>
+          <label class="form-label">Fecha *</label>
+          <input type="date" class="form-input" id="f_fecha" value="${esc(e.fecha || todayISO())}">
+        </div>
+        <div>
+          <label class="form-label">Categoría</label>
+          <select class="form-select" id="f_categoria">
+            ${CATEGORIAS_EGRESOS.map(c => `<option value="${c}" ${e.categoria === c ? 'selected' : ''}>${c}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Concepto *</label>
+        <input type="text" class="form-input" id="f_concepto" value="${esc(e.concepto || '')}" placeholder="Ej: Canva Pro · Anthropic API · Contadora">
+      </div>
+      <div class="form-row-grid">
+        <div>
+          <label class="form-label">Monto ARS *</label>
+          <input type="number" class="form-input" id="f_monto_ars" value="${esc(String(e.monto_ars || ''))}">
+        </div>
+        <div>
+          <label class="form-label">Monto USD (opcional)</label>
+          <input type="number" class="form-input" id="f_monto_usd" value="${esc(String(e.monto_usd || ''))}">
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">
+          <input type="checkbox" id="f_recurrente" ${e.recurrente === 'Sí' ? 'checked' : ''}>
+          🔁 Gasto recurrente (mensual)
+        </label>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Notas</label>
+        <textarea class="form-textarea" id="f_notas">${esc(e.notas || '')}</textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveEgreso('${id || ''}')">${esNuevo ? 'Crear' : 'Guardar'}</button>
+    </div>`;
+  $('modalOverlay').classList.add('active');
+}
+
+async function saveEgreso(id) {
+  const fecha = $('f_fecha').value;
+  const concepto = $('f_concepto').value.trim();
+  const monto_ars = $('f_monto_ars').value.trim();
+  if (!fecha || !concepto || !monto_ars) { showToast('Fecha, concepto y monto son obligatorios', 'error'); return; }
+
+  const data = {
+    fecha,
+    concepto,
+    categoria: $('f_categoria').value,
+    monto_ars,
+    monto_usd: $('f_monto_usd').value.trim(),
+    recurrente: $('f_recurrente').checked ? 'Sí' : 'No',
+    notas: $('f_notas').value.trim(),
+  };
+
+  try {
+    if (id) {
+      await sheetUpdate('Finanzas_Egresos', id, data);
+      showToast('Egreso actualizado', 'success');
+    } else {
+      data.id = genId('egr');
+      await sheetAppend('Finanzas_Egresos', data);
+      showToast('Egreso creado', 'success');
+    }
+    closeModal();
+    renderFinanzas();
+  } catch (err) { showToast('Error: ' + err.message, 'error'); }
+}
+
+async function deleteEgreso(id) {
+  if (!confirm('¿Eliminar este egreso?')) return;
+  try {
+    await sheetDelete('Finanzas_Egresos', id);
+    showToast('Eliminado', 'success');
+    renderFinanzas();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+// ---- PROYECCIÓN ----
+function renderFinanzasProyeccion() {
+  const hoy = new Date();
+  const meses = [];
+
+  // Próximos 3 meses + actual
+  for (let i = 0; i < 4; i++) {
+    const d = new Date(hoy.getFullYear(), hoy.getMonth() + i, 1);
+    const mes = d.getMonth() + 1;
+    const anio = d.getFullYear();
+
+    // Ingresos confirmados (cargados en la planilla)
+    const ingresosMes = state.finanzas_ingresos.filter(ing => Number(ing.mes) === mes && Number(ing.anio) === anio);
+    const ingresosTotal = ingresosMes.reduce((s, ing) => s + (Number(ing.monto_ars) || 0), 0);
+
+    // Proyección basada en clientes activos con servicios
+    const clientesActivos = state.clientes.filter(c => (c.estado || 'Activo') === 'Activo' && c.servicio_contratado);
+    let proyectado = 0;
+    clientesActivos.forEach(c => {
+      const servicio = state.servicios.find(s => s.nombre === c.servicio_contratado);
+      if (servicio) proyectado += Number(servicio.precio_ars) || 0;
+    });
+
+    // Egresos recurrentes
+    const egresosRecurrentes = state.finanzas_egresos.filter(e => e.recurrente === 'Sí');
+    const egresosTotal = egresosRecurrentes.reduce((s, e) => s + (Number(e.monto_ars) || 0), 0);
+
+    const nombresMeses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    meses.push({
+      nombre: `${nombresMeses[d.getMonth()]} ${anio}`,
+      ingresosConfirmados: ingresosTotal,
+      ingresosProyectados: i === 0 ? 0 : proyectado, // mes actual no lo proyectamos
+      egresos: egresosTotal,
+      esActual: i === 0,
+    });
+  }
+
+  $('finanzasContent').innerHTML = `
+    <div class="card" style="margin-bottom: 16px;">
+      <div class="card-title">📈 Proyección próximos 3 meses</div>
+      <p style="color: var(--gris-text-soft); font-size: 13px;">
+        La proyección se calcula automáticamente basada en tus clientes activos con servicios contratados. Los egresos recurrentes se suman cada mes.
+      </p>
+    </div>
+
+    <table class="finanzas-tabla">
+      <thead>
+        <tr>
+          <th>Mes</th>
+          <th>Ingresos confirmados</th>
+          <th>Ingresos proyectados</th>
+          <th>Egresos recurrentes</th>
+          <th>Balance estimado</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${meses.map(m => {
+          const totalIngresos = m.ingresosConfirmados + m.ingresosProyectados;
+          const balance = totalIngresos - m.egresos;
+          return `
+            <tr ${m.esActual ? 'style="background: #fef8fb;"' : ''}>
+              <td style="font-weight: 600;">${esc(m.nombre)}${m.esActual ? ' <span style="font-size: 11px; color: var(--fucsia); font-weight: 700;">(actual)</span>' : ''}</td>
+              <td class="monto-positivo">$${formatMiles(m.ingresosConfirmados)}</td>
+              <td style="color: var(--gris-text-soft);">${m.ingresosProyectados > 0 ? '+$' + formatMiles(m.ingresosProyectados) : '—'}</td>
+              <td class="monto-negativo">-$${formatMiles(m.egresos)}</td>
+              <td style="font-weight: 700; color: ${balance >= 0 ? 'var(--verde)' : 'var(--rojo)'};">$${formatMiles(balance)}</td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+
+// ============================================================================
+// MÓDULO: MÉTRICAS
+// ============================================================================
+
+const REDES_SOCIALES = ['Instagram', 'Facebook', 'TikTok', 'LinkedIn', 'YouTube'];
+
+async function renderMetricas() {
+  const main = $('mainContent');
+  main.innerHTML = `
+    <div class="page-header">
+      <div class="page-title-area">
+        <h1 class="page-title">Métricas</h1>
+        <div class="page-subtitle">Carga y visualización de resultados de las redes sociales de tus clientes.</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-primary" onclick="openMetricasModal()">+ Cargar métricas del mes</button>
+      </div>
+    </div>
+    <div id="metricasContent"><div class="loading"><div class="spinner"></div>Cargando...</div></div>
+  `;
+
+  try {
+    const [metRes, cliRes] = await Promise.all([
+      sheetRead('Metricas'),
+      sheetRead('Clientes'),
+    ]);
+    state.metricas = metRes.data;
+    state.clientes = cliRes.data;
+    renderMetricasList();
+  } catch (e) {
+    $('metricasContent').innerHTML = `<div class="card" style="border-color: var(--rojo);"><strong style="color: var(--rojo);">Error</strong><p>${esc(e.message)}</p></div>`;
+  }
+}
+
+function renderMetricasList() {
+  const clientesActivos = state.clientes.filter(c => (c.estado || 'Activo') === 'Activo');
+
+  if (state.metricas.length === 0) {
+    $('metricasContent').innerHTML = `
+      <div class="empty-state">
+        <p>Todavía no cargaste métricas de ningún cliente.</p>
+        <p style="font-size: 12.5px; margin-top: 8px;">
+          Cargá los números mensuales de cada red social para ver la evolución y generar reportes automáticos con IA.
+        </p>
+        <button class="btn btn-primary" onclick="openMetricasModal()" style="margin-top: 16px;">+ Cargar primeras métricas</button>
+      </div>
+    `;
+    return;
+  }
+
+  // Agrupar por cliente
+  const porCliente = {};
+  state.metricas.forEach(m => {
+    if (!porCliente[m.cliente_id]) porCliente[m.cliente_id] = [];
+    porCliente[m.cliente_id].push(m);
+  });
+
+  const cards = clientesActivos.map(c => {
+    const metricasCliente = (porCliente[c.id] || []).sort((a, b) => {
+      return (Number(b.anio) * 12 + Number(b.mes)) - (Number(a.anio) * 12 + Number(a.mes));
+    });
+    if (metricasCliente.length === 0) {
+      return `
+        <div class="metricas-cliente-card">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0;">${esc(c.nombre)}</h3>
+            <button class="btn btn-secondary btn-sm" onclick="openMetricasModal(null, '${esc(c.id)}')">+ Cargar métricas</button>
+          </div>
+          <p style="color: var(--gris-text-soft); font-size: 13px; margin-top: 8px;">Sin métricas cargadas todavía.</p>
+        </div>
+      `;
+    }
+
+    // Tomar la más reciente y comparar con anterior si existe
+    const ultima = metricasCliente[0];
+    const anterior = metricasCliente[1];
+    const nombresMeses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    const labelMes = `${nombresMeses[Number(ultima.mes) - 1]} ${ultima.anio}`;
+
+    const metricasMostrar = [
+      { key: 'seguidores_fin', label: 'Seguidores', icon: '👥' },
+      { key: 'alcance', label: 'Alcance', icon: '📡' },
+      { key: 'interacciones', label: 'Interacciones', icon: '❤️' },
+      { key: 'visitas_perfil', label: 'Visitas perfil', icon: '👀' },
+    ];
+
+    return `
+      <div class="metricas-cliente-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <div>
+            <h3 style="margin: 0;">${esc(c.nombre)}</h3>
+            <div style="font-size: 12px; color: var(--gris-text-soft);">${esc(ultima.red_social || 'Instagram')} · ${labelMes}</div>
+          </div>
+          <div style="display: flex; gap: 6px;">
+            <button class="btn btn-secondary btn-sm" onclick="verHistorialMetricas('${esc(c.id)}')">📊 Ver historial</button>
+            <button class="btn btn-secondary btn-sm" onclick="openMetricasModal(null, '${esc(c.id)}')">+ Nuevo mes</button>
+          </div>
+        </div>
+        <div class="metricas-kpis">
+          ${metricasMostrar.map(m => {
+            const valor = Number(ultima[m.key]) || 0;
+            const valorAnt = anterior ? (Number(anterior[m.key]) || 0) : null;
+            let delta = '';
+            if (valorAnt !== null && valorAnt > 0) {
+              const cambio = ((valor - valorAnt) / valorAnt) * 100;
+              const up = cambio >= 0;
+              delta = `<span class="metrica-delta ${up ? 'up' : 'down'}">${up ? '↑' : '↓'} ${Math.abs(cambio).toFixed(1)}%</span>`;
+            }
+            return `
+              <div class="metrica-mini">
+                <div class="metrica-mini-label">${m.icon} ${m.label}</div>
+                <div class="metrica-mini-value">${formatMilesCompacto(valor)}${delta}</div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  $('metricasContent').innerHTML = cards;
+}
+
+function openMetricasModal(id = null, clienteIdPredef = null) {
+  const m = id ? state.metricas.find(x => x.id === id) : {};
+  const esNuevo = !id;
+  const hoy = new Date();
+  const mes = m.mes || (hoy.getMonth() + 1);
+  const anio = m.anio || hoy.getFullYear();
+  const clienteId = m.cliente_id || clienteIdPredef || '';
+  const clientesActivos = state.clientes.filter(c => (c.estado || 'Activo') === 'Activo');
+
+  $('modal').className = 'modal modal-lg';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>${esNuevo ? '📊 Cargar métricas' : '✏️ Editar métricas'}</h2>
+      <button class="btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row-grid">
+        <div>
+          <label class="form-label">Cliente *</label>
+          <select class="form-select" id="f_cliente_id">
+            <option value="">—</option>
+            ${clientesActivos.map(c => `<option value="${esc(c.id)}" ${clienteId === c.id ? 'selected' : ''}>${esc(c.nombre)}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Red social</label>
+          <select class="form-select" id="f_red_social">
+            ${REDES_SOCIALES.map(r => `<option value="${r}" ${m.red_social === r ? 'selected' : ''}>${r}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="form-row-grid">
+        <div>
+          <label class="form-label">Mes</label>
+          <select class="form-select" id="f_mes">
+            ${['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'].map((mn, idx) => `<option value="${idx+1}" ${Number(mes) === idx+1 ? 'selected' : ''}>${mn}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Año</label>
+          <input type="number" class="form-input" id="f_anio" value="${anio}" min="2024" max="2030">
+        </div>
+      </div>
+
+      <div class="card-title" style="margin-top: 12px; font-size: 14px;">👥 Seguidores</div>
+      <div class="form-row-grid">
+        <div>
+          <label class="form-label">Inicio del mes</label>
+          <input type="number" class="form-input" id="f_seguidores_inicio" value="${esc(String(m.seguidores_inicio || ''))}">
+        </div>
+        <div>
+          <label class="form-label">Fin del mes *</label>
+          <input type="number" class="form-input" id="f_seguidores_fin" value="${esc(String(m.seguidores_fin || ''))}">
+        </div>
+      </div>
+
+      <div class="card-title" style="margin-top: 12px; font-size: 14px;">📡 Alcance y visibilidad</div>
+      <div class="form-row-grid">
+        <div>
+          <label class="form-label">Alcance</label>
+          <input type="number" class="form-input" id="f_alcance" value="${esc(String(m.alcance || ''))}">
+        </div>
+        <div>
+          <label class="form-label">Impresiones</label>
+          <input type="number" class="form-input" id="f_impresiones" value="${esc(String(m.impresiones || ''))}">
+        </div>
+      </div>
+
+      <div class="card-title" style="margin-top: 12px; font-size: 14px;">❤️ Interacciones</div>
+      <div class="form-row-grid">
+        <div>
+          <label class="form-label">Total interacciones</label>
+          <input type="number" class="form-input" id="f_interacciones" value="${esc(String(m.interacciones || ''))}">
+        </div>
+        <div>
+          <label class="form-label">Guardados</label>
+          <input type="number" class="form-input" id="f_guardados" value="${esc(String(m.guardados || ''))}">
+        </div>
+      </div>
+      <div class="form-row-grid">
+        <div>
+          <label class="form-label">Compartidos</label>
+          <input type="number" class="form-input" id="f_compartidos" value="${esc(String(m.compartidos || ''))}">
+        </div>
+        <div>
+          <label class="form-label">Visitas al perfil</label>
+          <input type="number" class="form-input" id="f_visitas_perfil" value="${esc(String(m.visitas_perfil || ''))}">
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Clicks al link en bio</label>
+        <input type="number" class="form-input" id="f_clicks_link_bio" value="${esc(String(m.clicks_link_bio || ''))}">
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">Notas del mes</label>
+        <textarea class="form-textarea" id="f_notas" placeholder="Observaciones del mes: qué funcionó mejor, qué cambió, aprendizajes...">${esc(m.notas || '')}</textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveMetrica('${id || ''}')">${esNuevo ? 'Crear' : 'Guardar'}</button>
+    </div>`;
+  $('modalOverlay').classList.add('active');
+}
+
+async function saveMetrica(id) {
+  const cliente_id = $('f_cliente_id').value;
+  const seguidores_fin = $('f_seguidores_fin').value.trim();
+  if (!cliente_id || !seguidores_fin) { showToast('Cliente y seguidores al fin del mes son obligatorios', 'error'); return; }
+
+  const data = {
+    cliente_id,
+    red_social: $('f_red_social').value,
+    mes: $('f_mes').value,
+    anio: $('f_anio').value,
+    seguidores_inicio: $('f_seguidores_inicio').value.trim(),
+    seguidores_fin,
+    alcance: $('f_alcance').value.trim(),
+    impresiones: $('f_impresiones').value.trim(),
+    interacciones: $('f_interacciones').value.trim(),
+    guardados: $('f_guardados').value.trim(),
+    compartidos: $('f_compartidos').value.trim(),
+    visitas_perfil: $('f_visitas_perfil').value.trim(),
+    clicks_link_bio: $('f_clicks_link_bio').value.trim(),
+    notas: $('f_notas').value.trim(),
+  };
+
+  try {
+    if (id) {
+      await sheetUpdate('Metricas', id, data);
+      showToast('Métricas actualizadas', 'success');
+    } else {
+      data.id = genId('met');
+      await sheetAppend('Metricas', data);
+      showToast('Métricas cargadas', 'success');
+    }
+    closeModal();
+    renderMetricas();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+function verHistorialMetricas(clienteId) {
+  const cliente = state.clientes.find(c => c.id === clienteId);
+  const historial = state.metricas
+    .filter(m => m.cliente_id === clienteId)
+    .sort((a, b) => (Number(b.anio) * 12 + Number(b.mes)) - (Number(a.anio) * 12 + Number(a.mes)));
+
+  const nombresMeses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+  $('modal').className = 'modal modal-lg';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>📊 Historial: ${esc(cliente.nombre)}</h2>
+      <button class="btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      ${historial.length === 0 ? '<p style="color: var(--gris-text-soft);">Sin métricas cargadas.</p>' : `
+        <table class="finanzas-tabla">
+          <thead><tr><th>Mes</th><th>Red</th><th>Seguidores</th><th>Alcance</th><th>Interacciones</th><th></th></tr></thead>
+          <tbody>
+            ${historial.map(m => `
+              <tr>
+                <td>${nombresMeses[Number(m.mes) - 1]} ${m.anio}</td>
+                <td>${esc(m.red_social)}</td>
+                <td>${formatMiles(m.seguidores_fin)}</td>
+                <td>${formatMiles(m.alcance || 0)}</td>
+                <td>${formatMiles(m.interacciones || 0)}</td>
+                <td>
+                  <button class="btn-ghost btn-sm" onclick="closeModal(); openMetricasModal('${esc(m.id)}')" title="Editar">✏️</button>
+                  <button class="btn-ghost btn-sm btn-danger" onclick="deleteMetrica('${esc(m.id)}')" title="Eliminar">🗑</button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `}
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cerrar</button>
+    </div>`;
+  $('modalOverlay').classList.add('active');
+}
+
+async function deleteMetrica(id) {
+  if (!confirm('¿Eliminar estas métricas?')) return;
+  try {
+    await sheetDelete('Metricas', id);
+    showToast('Eliminado', 'success');
+    closeModal();
+    renderMetricas();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+
+// ============================================================================
+// MÓDULO: REPORTES MENSUALES CON IA
+// ============================================================================
+
+async function renderReportes() {
+  const main = $('mainContent');
+  main.innerHTML = `
+    <div class="page-header">
+      <div class="page-title-area">
+        <h1 class="page-title">Reportes mensuales</h1>
+        <div class="page-subtitle">Informes automáticos con IA para tus clientes, basados en sus métricas y publicaciones del mes.</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-primary" onclick="abrirGeneradorReporte()">✨ Generar nuevo reporte</button>
+      </div>
+    </div>
+    <div id="reportesContent"><div class="loading"><div class="spinner"></div>Cargando...</div></div>
+  `;
+
+  try {
+    const [repRes, cliRes] = await Promise.all([
+      sheetRead('Reportes'),
+      sheetRead('Clientes'),
+    ]);
+    state.reportes = repRes.data;
+    state.clientes = cliRes.data;
+    renderReportesList();
+  } catch (e) {
+    $('reportesContent').innerHTML = `<div class="card" style="border-color: var(--rojo);"><strong style="color: var(--rojo);">Error</strong><p>${esc(e.message)}</p></div>`;
+  }
+}
+
+function renderReportesList() {
+  const nombresMeses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+  if (state.reportes.length === 0) {
+    $('reportesContent').innerHTML = `
+      <div class="empty-state">
+        <p>Aún no generaste ningún reporte.</p>
+        <p style="font-size: 12.5px; margin-top: 8px;">
+          La IA genera un reporte por cliente y mes, usando las métricas cargadas, las publicaciones del mes y la estrategia.
+        </p>
+        <button class="btn btn-primary" onclick="abrirGeneradorReporte()" style="margin-top: 16px;">✨ Generar primer reporte</button>
+      </div>
+    `;
+    return;
+  }
+
+  const reportesOrdenados = [...state.reportes].sort((a, b) => (b.fecha_generacion || '').localeCompare(a.fecha_generacion || ''));
+
+  $('reportesContent').innerHTML = reportesOrdenados.map(r => {
+    const cliente = state.clientes.find(c => c.id === r.cliente_id);
+    const mes = `${nombresMeses[Number(r.mes) - 1]} ${r.anio}`;
+    return `
+      <div class="reporte-card">
+        <div class="reporte-header">
+          <div>
+            <h3 style="margin: 0;">${esc(cliente ? cliente.nombre : '(cliente borrado)')} · ${mes}</h3>
+            <div style="font-size: 12px; color: var(--gris-text-muted); margin-top: 2px;">
+              Generado el ${esc(formatDateEs(r.fecha_generacion))}
+            </div>
+          </div>
+          <div style="display: flex; gap: 6px;">
+            <button class="btn btn-secondary btn-sm" onclick="copiarReporte('${esc(r.id)}')">📋 Copiar</button>
+            <button class="btn btn-secondary btn-sm" onclick="editarReporte('${esc(r.id)}')">✏️ Editar</button>
+            <button class="btn-ghost btn-sm btn-danger" onclick="deleteReporte('${esc(r.id)}')">🗑</button>
+          </div>
+        </div>
+        <div class="reporte-body">${renderMarkdown(r.contenido_md || '')}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Mini renderer de markdown (títulos, listas, bold)
+function renderMarkdown(md) {
+  if (!md) return '';
+  let html = esc(md);
+  html = html.replace(/^### (.*)$/gm, '<h3>$1</h3>');
+  html = html.replace(/^## (.*)$/gm, '<h2>$1</h2>');
+  html = html.replace(/^# (.*)$/gm, '<h1>$1</h1>');
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  // Listas
+  html = html.replace(/(?:^|\n)((?:- .+\n?)+)/g, (m) => {
+    const items = m.trim().split('\n').map(l => l.replace(/^- /, '')).map(l => `<li>${l}</li>`).join('');
+    return '\n<ul>' + items + '</ul>';
+  });
+  // Párrafos (líneas en blanco)
+  html = html.split(/\n\n+/).map(p => {
+    if (p.trim().startsWith('<h') || p.trim().startsWith('<ul')) return p;
+    return p.trim() ? `<p>${p.replace(/\n/g, '<br>')}</p>` : '';
+  }).join('\n');
+  return html;
+}
+
+function abrirGeneradorReporte() {
+  if (!checkApiKey()) return;
+  const clientesActivos = state.clientes.filter(c => (c.estado || 'Activo') === 'Activo');
+  if (clientesActivos.length === 0) {
+    showToast('No hay clientes activos', 'error');
+    return;
+  }
+
+  const hoy = new Date();
+  const mesPasado = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+  const mesDefault = mesPasado.getMonth() + 1;
+  const anioDefault = mesPasado.getFullYear();
+
+  $('modal').className = 'modal';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>✨ Generar reporte mensual</h2>
+      <button class="btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="color: var(--gris-text-soft); font-size: 13px; margin-bottom: 16px;">
+        La IA va a analizar las métricas, publicaciones y estrategia del cliente para ese mes, y va a generar un reporte completo.
+      </p>
+      <div class="form-row">
+        <label class="form-label">Cliente *</label>
+        <select class="form-select" id="f_cliente_rep">
+          <option value="">—</option>
+          ${clientesActivos.map(c => `<option value="${esc(c.id)}">${esc(c.nombre)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-row-grid">
+        <div>
+          <label class="form-label">Mes</label>
+          <select class="form-select" id="f_mes_rep">
+            ${['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'].map((m, idx) => `<option value="${idx+1}" ${idx+1 === mesDefault ? 'selected' : ''}>${m}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Año</label>
+          <input type="number" class="form-input" id="f_anio_rep" value="${anioDefault}" min="2024" max="2030">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="ejecutarGeneradorReporte()">✨ Generar</button>
+    </div>`;
+  $('modalOverlay').classList.add('active');
+}
+
+async function ejecutarGeneradorReporte() {
+  const clienteId = $('f_cliente_rep').value;
+  const mes = Number($('f_mes_rep').value);
+  const anio = Number($('f_anio_rep').value);
+  if (!clienteId) { showToast('Elegí un cliente', 'error'); return; }
+
+  const cliente = state.clientes.find(c => c.id === clienteId);
+
+  // Cargar datos necesarios si no están
+  try {
+    if (!state.metricas) {
+      const { data } = await sheetRead('Metricas');
+      state.metricas = data;
+    }
+    if (!state.calendario || state.calendario.length === 0) {
+      const { data } = await sheetRead('Calendario');
+      state.calendario = data;
+    }
+    if (!state.estrategias || state.estrategias.length === 0) {
+      const { data } = await sheetRead('Estrategias');
+      state.estrategias = data;
+    }
+    if (!state.briefs || state.briefs.length === 0) {
+      const { data } = await sheetRead('Briefs');
+      state.briefs = data;
+    }
+  } catch (e) { showToast('Error cargando datos: ' + e.message, 'error'); return; }
+
+  // Datos para el prompt
+  const metricasMes = state.metricas.find(m => m.cliente_id === clienteId && Number(m.mes) === mes && Number(m.anio) === anio);
+  const metricasAnterior = state.metricas.find(m => {
+    if (m.cliente_id !== clienteId) return false;
+    const mesAnterior = mes === 1 ? 12 : mes - 1;
+    const anioAnterior = mes === 1 ? anio - 1 : anio;
+    return Number(m.mes) === mesAnterior && Number(m.anio) === anioAnterior;
+  });
+
+  const postsMes = state.calendario.filter(p => {
+    if (p.cliente_id !== clienteId) return false;
+    if (!p.fecha_publicacion) return false;
+    const f = new Date(p.fecha_publicacion);
+    return f.getMonth() + 1 === mes && f.getFullYear() === anio;
+  });
+
+  const estrategia = state.estrategias.find(e => e.cliente_id === clienteId && e.tipo === 'Principal' && (e.estado || 'Activa') === 'Activa');
+  const nombresMeses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+  abrirModalGeneracion('Generando reporte', '📄', `Analizando ${cliente.nombre} · ${nombresMeses[mes-1]} ${anio}...`);
+
+  // Construir contexto del prompt
+  const metricasContexto = metricasMes ? `
+MÉTRICAS DEL MES (${nombresMeses[mes-1]} ${anio}):
+- Red social: ${metricasMes.red_social || 'Instagram'}
+- Seguidores al inicio: ${metricasMes.seguidores_inicio || 'n/d'}
+- Seguidores al fin: ${metricasMes.seguidores_fin || 'n/d'}
+- Alcance: ${metricasMes.alcance || 'n/d'}
+- Impresiones: ${metricasMes.impresiones || 'n/d'}
+- Interacciones: ${metricasMes.interacciones || 'n/d'}
+- Guardados: ${metricasMes.guardados || 'n/d'}
+- Compartidos: ${metricasMes.compartidos || 'n/d'}
+- Visitas al perfil: ${metricasMes.visitas_perfil || 'n/d'}
+- Clicks al link: ${metricasMes.clicks_link_bio || 'n/d'}
+${metricasMes.notas ? 'Notas: ' + metricasMes.notas : ''}
+` : 'MÉTRICAS DEL MES: no cargadas';
+
+  const metricasComparadas = metricasAnterior ? `
+COMPARACIÓN MES ANTERIOR:
+- Seguidores: ${metricasAnterior.seguidores_fin || 'n/d'} → ${metricasMes?.seguidores_fin || 'n/d'}
+- Alcance: ${metricasAnterior.alcance || 'n/d'} → ${metricasMes?.alcance || 'n/d'}
+- Interacciones: ${metricasAnterior.interacciones || 'n/d'} → ${metricasMes?.interacciones || 'n/d'}
+` : '';
+
+  const postsContexto = postsMes.length > 0 ? `
+PUBLICACIONES DEL MES (${postsMes.length} en total):
+${postsMes.slice(0, 20).map(p => `- [${p.formato}] ${p.titulo || p.hook || 'Sin título'} (${p.pilar || 'sin pilar'})`).join('\n')}
+` : 'PUBLICACIONES DEL MES: ninguna registrada';
+
+  const estrategiaContexto = estrategia ? `
+ESTRATEGIA ACTIVA:
+- Objetivo: ${estrategia.objetivo_principal || 'n/d'}
+- Fase: ${estrategia.momento_fase || 'n/d'}
+${estrategia.metricas_meta ? '- Métricas meta: ' + estrategia.metricas_meta : ''}
+` : '';
+
+  const systemPrompt = `Sos una analista de marketing digital de Carrusel MKT, agencia argentina. Escribís reportes mensuales profesionales para clientes, que sean entendibles, accionables y con tono cálido pero profesional.
+
+ESTRUCTURA DEL REPORTE (markdown):
+
+# Reporte de ${nombresMeses[mes-1]} ${anio}
+## ${cliente.nombre}
+
+## 📈 Resumen ejecutivo
+[2-3 líneas: qué pasó en el mes, principal logro, principal oportunidad]
+
+## 📊 Métricas del mes
+[Análisis de las métricas numéricas con comparación al mes anterior si hay]
+[Incluir números concretos y variaciones porcentuales]
+
+## 🎯 Qué funcionó
+[Análisis de las publicaciones del mes: qué pilar funcionó mejor, qué formato, qué temas]
+
+## 🔍 Oportunidades detectadas
+[Lo que se puede mejorar, qué probar el próximo mes]
+
+## 🚀 Recomendaciones para ${nombresMeses[mes % 12]}
+[3-5 recomendaciones concretas y accionables para el próximo mes]
+
+REGLAS:
+- Usá español rioplatense (vos).
+- Sé específica y honesta: si las métricas bajaron, decilo y explicá posibles razones.
+- No exageres: si no hay datos suficientes, aclaralo.
+- Tono: profesional pero cálido, como una socia estratégica.
+- Extensión: mediana, no demasiado larga.
+- Devolvés SOLO el markdown del reporte, sin preámbulo ni cierre.`;
+
+  const userPrompt = `Generá el reporte mensual para:
+
+Cliente: ${cliente.nombre}
+Rubro: ${cliente.rubro || 'n/d'}
+Mes: ${nombresMeses[mes-1]} ${anio}
+
+${estrategiaContexto}
+${metricasContexto}
+${metricasComparadas}
+${postsContexto}
+
+Generá el reporte completo en markdown siguiendo la estructura indicada.`;
+
+  try {
+    const contenidoMd = await callClaude(systemPrompt, userPrompt, { maxTokens: 3000 });
+    if (!contenidoMd || contenidoMd.trim().length < 50) throw new Error('La IA no devolvió un reporte válido');
+
+    // Verificar si ya existe un reporte para este cliente/mes/año
+    const existente = state.reportes.find(r => r.cliente_id === clienteId && Number(r.mes) === mes && Number(r.anio) === anio);
+    if (existente) {
+      // Actualizar el existente
+      await sheetUpdate('Reportes', existente.id, {
+        contenido_md: contenidoMd,
+        fecha_generacion: todayISO(),
+        estado: 'Generado',
+      });
+      showToast('Reporte actualizado', 'success');
+    } else {
+      await sheetAppend('Reportes', {
+        id: genId('rep'),
+        cliente_id: clienteId,
+        mes,
+        anio,
+        contenido_md: contenidoMd,
+        fecha_generacion: todayISO(),
+        estado: 'Generado',
+      });
+      showToast('Reporte generado', 'success');
+    }
+    closeModal();
+    renderReportes();
+  } catch (e) {
+    mostrarErrorGeneracion(e.message);
+  }
+}
+
+function editarReporte(id) {
+  const r = state.reportes.find(x => x.id === id);
+  if (!r) return;
+  const cliente = state.clientes.find(c => c.id === r.cliente_id);
+  const nombresMeses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+  $('modal').className = 'modal modal-lg';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>✏️ Editar reporte: ${esc(cliente ? cliente.nombre : '?')} · ${nombresMeses[Number(r.mes) - 1]} ${r.anio}</h2>
+      <button class="btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size: 12.5px; color: var(--gris-text-soft); margin-bottom: 10px;">
+        El reporte está en markdown. Usá # para títulos grandes, ## para secundarios, **texto** para negritas, - para listas.
+      </p>
+      <textarea class="form-textarea" id="f_reporte_md" style="min-height: 500px; font-family: 'Courier New', monospace; font-size: 13px;">${esc(r.contenido_md || '')}</textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveReporte('${esc(id)}')">Guardar</button>
+    </div>`;
+  $('modalOverlay').classList.add('active');
+}
+
+async function saveReporte(id) {
+  const contenido_md = $('f_reporte_md').value.trim();
+  if (!contenido_md) { showToast('El contenido no puede estar vacío', 'error'); return; }
+  try {
+    await sheetUpdate('Reportes', id, { contenido_md, estado: 'Editado' });
+    showToast('Reporte guardado', 'success');
+    closeModal();
+    renderReportes();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+function copiarReporte(id) {
+  const r = state.reportes.find(x => x.id === id);
+  if (!r) return;
+  const texto = r.contenido_md || '';
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(texto).then(() => {
+      showToast('Reporte copiado al portapapeles', 'success');
+    });
+  }
+}
+
+async function deleteReporte(id) {
+  if (!confirm('¿Eliminar este reporte?')) return;
+  try {
+    await sheetDelete('Reportes', id);
+    showToast('Eliminado', 'success');
+    renderReportes();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
 async function renderConfig() {
   const main = $('mainContent');
   main.innerHTML = `
@@ -8162,10 +9950,10 @@ async function renderConfig() {
     <div class="card" style="margin-top: 20px;">
       <div class="card-title">Versión de la app</div>
       <div class="config-item">
-        <div class="config-label">Fase 3 completa 🎉</div>
+        <div class="config-label">Fase 4 completa 🎉</div>
         <div style="font-size: 13px; color: var(--gris-text-soft); margin-top: 4px;">
-          Módulos activos: Clientes · Brief · Estrategia con IA · Ideas con IA · Calendario completo · Generadores IA · Catálogo de Servicios · Pipeline de Prospectos · <strong>Onboarding con checklists</strong> · <strong>Plantillas copiables</strong> · Accesos<br>
-          Próxima fase (4): Dashboard · Finanzas · Métricas · Reportes mensuales
+          Módulos activos: <strong>Dashboard</strong> · Clientes · Brief · Estrategia con IA · Onboarding · Ideas con IA · Calendario · Generadores IA · Catálogo de Servicios · Prospectos · <strong>Finanzas</strong> · <strong>Métricas</strong> · <strong>Reportes con IA</strong> · Accesos<br>
+          🎠 La app está completa. ¡Felicitaciones!
         </div>
       </div>
     </div>`;
