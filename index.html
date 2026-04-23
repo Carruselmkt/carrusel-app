@@ -785,13 +785,13 @@
 
   /* ===== KANBAN DE PROSPECTOS ===== */
   .kanban-container {
-    display: flex; gap: 12px; overflow-x: auto;
+    display: flex; gap: 10px; overflow-x: auto;
     padding: 10px 4px 20px;
     min-height: 70vh;
   }
   .kanban-column {
-    flex: 0 0 280px; background: var(--gris-bg);
-    border-radius: var(--radio); padding: 12px;
+    flex: 0 0 220px; background: var(--gris-bg);
+    border-radius: var(--radio); padding: 10px;
     display: flex; flex-direction: column;
     max-height: calc(100vh - 200px);
   }
@@ -800,27 +800,29 @@
   }
   .kanban-column-header {
     display: flex; align-items: center; justify-content: space-between;
-    padding-bottom: 10px; margin-bottom: 10px;
+    padding-bottom: 8px; margin-bottom: 8px;
     border-bottom: 1px solid var(--gris-border);
   }
   .kanban-column-title {
-    font-size: 13px; font-weight: 700; color: var(--gris-text);
-    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 700; color: var(--gris-text);
+    display: flex; align-items: center; gap: 5px;
+    line-height: 1.2;
   }
   .kanban-column-count {
     background: #fff; color: var(--gris-text-soft);
-    padding: 2px 8px; border-radius: 10px;
+    padding: 1px 7px; border-radius: 10px;
     font-size: 11px; font-weight: 700;
+    flex-shrink: 0;
   }
   .kanban-cards {
     flex: 1; overflow-y: auto;
-    display: flex; flex-direction: column; gap: 8px;
-    padding-right: 4px;
+    display: flex; flex-direction: column; gap: 7px;
+    padding-right: 3px;
   }
   .kanban-add-btn {
-    width: 100%; padding: 8px; border: 1px dashed var(--gris-border);
+    width: 100%; padding: 6px; border: 1px dashed var(--gris-border);
     background: transparent; border-radius: 6px; color: var(--gris-text-soft);
-    font-size: 12px; cursor: pointer; margin-top: 8px;
+    font-size: 11.5px; cursor: pointer; margin-top: 6px;
     transition: all 0.12s;
   }
   .kanban-add-btn:hover {
@@ -830,7 +832,7 @@
 
   .prospecto-card {
     background: #fff; border: 1px solid var(--gris-border);
-    border-radius: 8px; padding: 10px 12px;
+    border-radius: 7px; padding: 8px 10px;
     cursor: grab; transition: all 0.12s;
     border-left: 3px solid var(--petroleo);
     user-select: none;
@@ -844,19 +846,20 @@
   .prospecto-card.alerta-7 { border-left-color: #d99a1e; background: #fff9ec; }
   .prospecto-card.alerta-14 { border-left-color: #c44545; background: #fef0ef; }
   .prospecto-card-nombre {
-    font-weight: 700; font-size: 13.5px; line-height: 1.3;
-    margin-bottom: 4px;
+    font-weight: 700; font-size: 13px; line-height: 1.3;
+    margin-bottom: 3px;
+    word-wrap: break-word;
   }
   .prospecto-card-rubro {
-    font-size: 11.5px; color: var(--gris-text-soft);
-    margin-bottom: 6px;
+    font-size: 11px; color: var(--gris-text-soft);
+    margin-bottom: 5px;
   }
   .prospecto-card-chips {
-    display: flex; gap: 4px; flex-wrap: wrap;
-    margin-top: 6px;
+    display: flex; gap: 3px; flex-wrap: wrap;
+    margin-top: 5px;
   }
   .prospecto-chip {
-    font-size: 10.5px; padding: 2px 6px; border-radius: 8px;
+    font-size: 10px; padding: 2px 6px; border-radius: 8px;
     font-weight: 600;
     background: var(--gris-bg); color: var(--gris-text-soft);
   }
@@ -865,14 +868,15 @@
   }
   .prospecto-chip.canal { background: #e6f0fb; color: var(--petroleo); }
   .prospecto-proximo-paso {
-    font-size: 11.5px; color: var(--fucsia);
-    margin-top: 6px; padding: 5px 8px;
+    font-size: 11px; color: var(--fucsia);
+    margin-top: 5px; padding: 4px 7px;
     background: #fef8fb; border-radius: 4px;
     font-weight: 500;
+    line-height: 1.3;
   }
   .prospecto-alerta-dias {
-    font-size: 10.5px; font-weight: 700;
-    margin-top: 6px; display: flex; align-items: center; gap: 3px;
+    font-size: 10px; font-weight: 700;
+    margin-top: 5px; display: flex; align-items: center; gap: 3px;
   }
   .prospecto-alerta-dias.warn { color: #d99a1e; }
   .prospecto-alerta-dias.danger { color: #c44545; }
@@ -6576,7 +6580,7 @@ async function deleteServicio(id) {
 const ETAPAS_PROSPECTO = [
   { id: 'Primer contacto', icon: '📥', color: '#176b87' },
   { id: 'En conversación', icon: '💬', color: '#0f6b8e' },
-  { id: 'Brief enviado', icon: '📋', color: '#2e7a9e' },
+  { id: 'Brief pre-contratación', icon: '📋', color: '#2e7a9e' },
   { id: 'Propuesta enviada', icon: '💰', color: '#c06a3d' },
   { id: 'Esperando decisión', icon: '⏳', color: '#8a6a20' },
   { id: 'Ganado', icon: '✅', color: '#1e7a5e' },
@@ -6618,6 +6622,19 @@ async function renderProspectos() {
     state.prospectos = prospRes.data;
     state.servicios = servRes.data;
     state.clientes = clientesRes.data;
+
+    // Migración silenciosa: si hay prospectos con estado viejo "Brief enviado",
+    // los actualizamos a "Brief pre-contratación" en la planilla
+    const paraMigrar = state.prospectos.filter(p => p.estado === 'Brief enviado');
+    if (paraMigrar.length > 0) {
+      for (const p of paraMigrar) {
+        try {
+          await sheetUpdate('Prospectos', p.id, { estado: 'Brief pre-contratación' });
+          p.estado = 'Brief pre-contratación';
+        } catch (e) { console.warn('Error migrando prospecto:', e); }
+      }
+    }
+
     renderProspectosKanban();
   } catch (e) {
     $('prospectosContent').innerHTML = `<div class="card" style="border-color: var(--rojo);"><strong style="color: var(--rojo);">Error</strong><p>${esc(e.message)}</p></div>`;
