@@ -1598,13 +1598,18 @@ async function openClienteModal(id = null) {
           <input type="date" class="form-input" id="f_fecha_inicio_servicio" value="${esc(c.fecha_inicio_servicio || '')}">
         </div>
         <div>
-          <label class="form-label">Canal de comunicación</label>
-          <input type="text" class="form-input" id="f_canal_comunicacion" value="${esc(c.canal_comunicacion || '')}" placeholder="WhatsApp, Mail...">
+          <label class="form-label">Rondas de revisión incluidas</label>
+          <input type="number" class="form-input" id="f_rondas_revision" value="${esc(c.rondas_revision || '2')}" min="0" max="10">
         </div>
       </div>
       <div class="form-row">
-        <label class="form-label">Rondas de revisión incluidas</label>
-        <input type="number" class="form-input" id="f_rondas_revision" value="${esc(c.rondas_revision || '2')}" min="0" max="10">
+        <label class="form-label">Datos de contacto</label>
+        <textarea class="form-textarea" id="f_canal_comunicacion" placeholder="Ej:
+📱 WhatsApp: +54 9 261 555 5555
+📧 Email: contacto@cliente.com
+📷 Instagram: @cuenta.cliente
+💬 Prefiere comunicación por WhatsApp">${esc(c.canal_comunicacion || '')}</textarea>
+        <div class="form-help">Podés anotar todos los canales de contacto del cliente: email, teléfono, redes sociales, y qué prefiere para comunicarse.</div>
       </div>
       <div class="form-row">
         <label class="form-label">Notas</label>
@@ -1757,9 +1762,9 @@ async function renderClienteDetalle() {
     <div class="tabs-container">
       <div class="tabs-nav">
         <button class="tab-btn ${state.currentClienteTab === 'ficha' ? 'active' : ''}" onclick="switchTab('ficha')">📋 Ficha</button>
+        <button class="tab-btn ${state.currentClienteTab === 'onboarding' ? 'active' : ''}" onclick="switchTab('onboarding')">🚀 Onboarding</button>
         <button class="tab-btn ${state.currentClienteTab === 'brief' ? 'active' : ''}" onclick="switchTab('brief')">🎯 Brief</button>
         <button class="tab-btn ${state.currentClienteTab === 'estrategia' ? 'active' : ''}" onclick="switchTab('estrategia')">🧭 Estrategia</button>
-        <button class="tab-btn ${state.currentClienteTab === 'onboarding' ? 'active' : ''}" onclick="switchTab('onboarding')">🚀 Onboarding</button>
         <button class="tab-btn ${state.currentClienteTab === 'ideas' ? 'active' : ''}" onclick="switchTab('ideas')">💡 Ideas</button>
         <button class="tab-btn ${state.currentClienteTab === 'accesos' ? 'active' : ''}" onclick="switchTab('accesos')">🔐 Accesos</button>
         <button class="tab-btn ${state.currentClienteTab === 'calendario' ? 'active' : ''}" onclick="switchTab('calendario')">📅 Calendario</button>
@@ -1802,7 +1807,6 @@ function renderTabFicha() {
     ['Frecuencia', cliente.frecuencia_posts ? cliente.frecuencia_posts + ' posts/mes' : ''],
     ['Fecha de inicio', formatDateEs(cliente.fecha_inicio_servicio)],
     ['Fecha de alta', formatDateEs(cliente.fecha_alta)],
-    ['Canal de comunicación', cliente.canal_comunicacion],
     ['Rondas de revisión', cliente.rondas_revision],
     ['Notas', cliente.notas],
   ];
@@ -1811,12 +1815,27 @@ function renderTabFicha() {
       <div class="config-label">${esc(k)}</div>
       <div style="font-size: 14px; margin-top: 2px; ${!v ? 'color: var(--gris-text-muted); font-style: italic;' : ''}">${esc(v || '—')}</div>
     </div>`).join('');
+
+  // Datos de contacto: se muestran aparte con formato multilinea
+  const contactoHtml = cliente.canal_comunicacion ? `
+    <div class="config-item">
+      <div class="config-label">Datos de contacto</div>
+      <div style="font-size: 14px; margin-top: 4px; white-space: pre-wrap; line-height: 1.6;">${esc(cliente.canal_comunicacion)}</div>
+    </div>
+  ` : `
+    <div class="config-item">
+      <div class="config-label">Datos de contacto</div>
+      <div style="font-size: 14px; margin-top: 2px; color: var(--gris-text-muted); font-style: italic;">—</div>
+    </div>
+  `;
+
   $('tabContent').innerHTML = `
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
       <h3>Datos básicos</h3>
       <button class="btn btn-secondary btn-sm" onclick="openClienteModal('${esc(cliente.id)}')">✏️ Editar</button>
     </div>
-    ${html}`;
+    ${html}
+    ${contactoHtml}`;
 }
 
 // ===== TAB: BRIEF =====
@@ -7400,7 +7419,7 @@ async function confirmarPerdido(prospectoId) {
 // TAB: ONBOARDING (checklist de arranque por cliente)
 // ============================================================================
 
-// Checklist base: los 9 pasos por defecto cuando se crea un cliente nuevo
+// Checklist base: los 12 pasos por defecto cuando se crea un cliente nuevo
 const PASOS_ONBOARDING_BASE = [
   { emoji: '📝', texto: 'Firmar acuerdo de servicio', plantilla: 'acuerdo_servicio', accion: null },
   { emoji: '💳', texto: 'Recibir primer pago / seña', plantilla: 'solicitud_pago', accion: null },
@@ -7410,6 +7429,9 @@ const PASOS_ONBOARDING_BASE = [
   { emoji: '🎯', texto: 'Definir estrategia inicial', plantilla: null, accion: 'estrategia' },
   { emoji: '🎨', texto: 'Presentar branding / identidad visual (si aplica)', plantilla: null, accion: null },
   { emoji: '📊', texto: 'Presentar calendario del primer mes', plantilla: 'presentar_calendario', accion: 'calendario' },
+  { emoji: '📸', texto: 'Recibir material visual del cliente (fotos, videos, logos)', plantilla: 'solicitud_material', accion: null },
+  { emoji: '🎨', texto: 'Producir contenido del primer mes', plantilla: null, accion: 'calendario' },
+  { emoji: '👀', texto: 'Presentar y revisar contenido con el cliente', plantilla: 'presentar_contenido', accion: 'calendario' },
   { emoji: '🚀', texto: 'Publicar primer post', plantilla: null, accion: null },
 ];
 
@@ -7553,6 +7575,75 @@ Tenemos tiempo de ajustar antes de arrancar con la producción. ¡Comentame!
     variables: '{nombre_cliente}, {nombre_agencia}',
     orden: 6,
   },
+  {
+    id: 'solicitud_material',
+    nombre: 'Solicitud de material visual',
+    contenido: `Hola {nombre_cliente}!
+
+Con el calendario aprobado, el próximo paso es que me mandes el material visual para poder producir el contenido. Te paso el listado de lo que necesito:
+
+📸 Fotos / imágenes:
+- Del local, oficina o espacio de trabajo (si aplica)
+- De los productos / servicios (las mejores que tengas)
+- Del equipo / profesionales (retratos y trabajando)
+- "Detrás de escena": cómo hacés tu trabajo, procesos, momentos reales
+
+🎥 Videos cortos (si tenés):
+- Testimonios de clientes
+- Procesos en acción
+- Presentaciones del equipo
+- Cualquier material crudo de tus redes anteriores que te sirva
+
+🎨 Archivos de marca:
+- Logo en vectores (.ai, .eps, .svg) y PNG con fondo transparente
+- Paleta de colores exacta (códigos HEX si los tenés)
+- Tipografías usadas
+- Material gráfico anterior que te haya gustado
+
+💡 Tips para las fotos:
+- Mejor buena luz natural (cerca de una ventana)
+- Horizontales y verticales de cada cosa
+- No hace falta que sean profesionales, pero sí nítidas
+- Mandá más de las que creés que hacen falta, yo filtro después
+
+📂 ¿Cómo mandármelo?
+- Podés subir todo a una carpeta de Google Drive compartida conmigo
+- O mandarme por WhatsApp (mejor en tandas organizadas por tipo)
+
+¿Para cuándo calculás que podrías tener listo el material? Así organizo la producción.
+
+¡Gracias!
+
+{nombre_agencia}`,
+    variables: '{nombre_cliente}, {nombre_agencia}',
+    orden: 7,
+  },
+  {
+    id: 'presentar_contenido',
+    nombre: 'Presentación de contenido para revisión',
+    contenido: `Hola {nombre_cliente}!
+
+Ya tenemos el contenido del mes listo para que lo revises. Te paso todo lo preparado:
+
+🔗 Link a la carpeta con los diseños: [pegar link]
+
+📝 ¿Cómo revisarlo?
+1. Mirá cada pieza con su copy (el texto que va con el post)
+2. Si está todo bien, confirmame con un ✓
+3. Si hay algo para ajustar, dejame el comentario específico:
+   - Qué pieza es (fecha o número)
+   - Qué cambiarías (texto, imagen, color, orden de slides, etc.)
+
+⏱️ Tenemos {rondas_revision} rondas de revisión incluidas, así que podemos ajustar hasta dejarlo perfecto.
+
+📅 Necesito tus comentarios antes del [fecha] para poder aplicar los cambios y arrancar a publicar según el calendario.
+
+¡Cualquier duda que tengas me escribís!
+
+{nombre_agencia}`,
+    variables: '{nombre_cliente}, {rondas_revision}, {nombre_agencia}',
+    orden: 8,
+  },
 ];
 
 async function renderTabOnboarding() {
@@ -7583,10 +7674,54 @@ async function renderTabOnboarding() {
       // Recargar
       const { data } = await sheetRead('Plantillas_Onboarding');
       state.plantillasOnboarding = data;
+    } else {
+      // Agregar plantillas nuevas que no estén en la planilla (migración suave)
+      const idsExistentes = state.plantillasOnboarding.map(p => p.id);
+      const faltantes = PLANTILLAS_INICIALES.filter(p => !idsExistentes.includes(p.id));
+      if (faltantes.length > 0) {
+        for (const p of faltantes) {
+          await sheetAppend('Plantillas_Onboarding', {
+            id: p.id,
+            nombre: p.nombre,
+            contenido: p.contenido,
+            variables_disponibles: p.variables,
+            activa: 'Sí',
+            orden: String(p.orden),
+          });
+        }
+        const { data } = await sheetRead('Plantillas_Onboarding');
+        state.plantillasOnboarding = data;
+      }
     }
 
     // Buscar onboarding de este cliente
     let onboarding = state.onboardings.find(o => o.cliente_id === cliente.id);
+
+    // Migración suave: si el cliente tiene onboarding viejo de 9 pasos base sin modificar,
+    // insertar los 3 pasos nuevos (material, producción, revisión) en las posiciones correctas.
+    // Solo migra si detecta la estructura original exacta (no si el usuario editó los pasos).
+    if (onboarding) {
+      const pasosActuales = parseJsonSafe(onboarding.pasos_json) || [];
+      if (pasosActuales.length === 9) {
+        // Verificar si son los 9 originales buscando el emoji del paso final
+        const ultimoPaso = pasosActuales[pasosActuales.length - 1];
+        const octavoPaso = pasosActuales[7];
+        if (ultimoPaso && ultimoPaso.emoji === '🚀' && octavoPaso && octavoPaso.emoji === '📊') {
+          // Es la estructura vieja: insertamos los 3 nuevos pasos entre el 8 (calendario) y el 9 (primer post)
+          const nuevosPasos = [
+            { id: 'paso_8_mat', emoji: '📸', texto: 'Recibir material visual del cliente (fotos, videos, logos)', plantilla: 'solicitud_material', accion: null, completado: false, fecha_completado: '', fecha_limite: '', notas: '' },
+            { id: 'paso_9_prod', emoji: '🎨', texto: 'Producir contenido del primer mes', plantilla: null, accion: 'calendario', completado: false, fecha_completado: '', fecha_limite: '', notas: '' },
+            { id: 'paso_10_rev', emoji: '👀', texto: 'Presentar y revisar contenido con el cliente', plantilla: 'presentar_contenido', accion: 'calendario', completado: false, fecha_completado: '', fecha_limite: '', notas: '' },
+          ];
+          // Insertamos en posición 8 (después de "Presentar calendario")
+          const pasosMigrados = [...pasosActuales.slice(0, 8), ...nuevosPasos, ...pasosActuales.slice(8)];
+          onboarding.pasos_json = JSON.stringify(pasosMigrados);
+          try {
+            await sheetUpdate('Onboarding', onboarding.id, { pasos_json: onboarding.pasos_json });
+          } catch (e) { console.warn('No se pudo migrar el onboarding:', e); }
+        }
+      }
+    }
 
     // Si no tiene, crear uno nuevo con los pasos base
     if (!onboarding) {
@@ -7909,8 +8044,9 @@ function reemplazarVariables(texto, cliente) {
     '{nombre_cliente}': cliente ? (cliente.nombre || '[nombre del cliente]') : '[nombre del cliente]',
     '{servicio}': cliente ? (cliente.servicio_contratado || '[servicio]') : '[servicio]',
     '{rubro}': cliente ? (cliente.rubro || '[rubro]') : '[rubro]',
-    '{nombre_agencia}': 'Carrusel MKT', // Podría venir de config
-    '{email_agencia}': '[tu email]', // Podría venir de config
+    '{rondas_revision}': cliente ? (cliente.rondas_revision || '2') : '2',
+    '{nombre_agencia}': 'Carrusel MKT',
+    '{email_agencia}': '[tu email]',
   };
   let resultado = texto;
   Object.entries(vars).forEach(([k, v]) => {
@@ -8018,7 +8154,7 @@ async function renderConfig() {
       <div class="card-title">Plantillas de Onboarding</div>
       <div style="font-size: 13px; color: var(--gris-text-soft); margin-bottom: 14px;">
         Las plantillas se usan en la solapa "🚀 Onboarding" de cada cliente. Editalas una vez acá y se aplican a todos tus clientes.
-        <br>Variables disponibles: <span class="variable-badge">{nombre_cliente}</span> <span class="variable-badge">{servicio}</span> <span class="variable-badge">{rubro}</span> <span class="variable-badge">{nombre_agencia}</span> <span class="variable-badge">{email_agencia}</span>
+        <br>Variables disponibles: <span class="variable-badge">{nombre_cliente}</span> <span class="variable-badge">{servicio}</span> <span class="variable-badge">{rubro}</span> <span class="variable-badge">{rondas_revision}</span> <span class="variable-badge">{nombre_agencia}</span> <span class="variable-badge">{email_agencia}</span>
       </div>
       <div id="plantillasContainer"><div class="loading"><div class="spinner"></div>Cargando plantillas...</div></div>
     </div>
@@ -8095,6 +8231,7 @@ function editarPlantilla(plantillaId) {
           <span class="variable-badge">{nombre_cliente}</span>
           <span class="variable-badge">{servicio}</span>
           <span class="variable-badge">{rubro}</span>
+          <span class="variable-badge">{rondas_revision}</span>
           <span class="variable-badge">{nombre_agencia}</span>
           <span class="variable-badge">{email_agencia}</span>
           — se reemplazan al usar la plantilla con un cliente.
