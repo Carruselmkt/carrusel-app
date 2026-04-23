@@ -783,6 +783,151 @@
     border: 1px solid var(--gris-border); border-radius: 4px;
   }
 
+  /* ===== KANBAN DE PROSPECTOS ===== */
+  .kanban-container {
+    display: flex; gap: 12px; overflow-x: auto;
+    padding: 10px 4px 20px;
+    min-height: 70vh;
+  }
+  .kanban-column {
+    flex: 0 0 280px; background: var(--gris-bg);
+    border-radius: var(--radio); padding: 12px;
+    display: flex; flex-direction: column;
+    max-height: calc(100vh - 200px);
+  }
+  .kanban-column.drag-over {
+    background: #fde6f0; outline: 2px dashed var(--fucsia);
+  }
+  .kanban-column-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding-bottom: 10px; margin-bottom: 10px;
+    border-bottom: 1px solid var(--gris-border);
+  }
+  .kanban-column-title {
+    font-size: 13px; font-weight: 700; color: var(--gris-text);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .kanban-column-count {
+    background: #fff; color: var(--gris-text-soft);
+    padding: 2px 8px; border-radius: 10px;
+    font-size: 11px; font-weight: 700;
+  }
+  .kanban-cards {
+    flex: 1; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 8px;
+    padding-right: 4px;
+  }
+  .kanban-add-btn {
+    width: 100%; padding: 8px; border: 1px dashed var(--gris-border);
+    background: transparent; border-radius: 6px; color: var(--gris-text-soft);
+    font-size: 12px; cursor: pointer; margin-top: 8px;
+    transition: all 0.12s;
+  }
+  .kanban-add-btn:hover {
+    border-color: var(--fucsia); color: var(--fucsia);
+    background: rgba(255,255,255,0.5);
+  }
+
+  .prospecto-card {
+    background: #fff; border: 1px solid var(--gris-border);
+    border-radius: 8px; padding: 10px 12px;
+    cursor: grab; transition: all 0.12s;
+    border-left: 3px solid var(--petroleo);
+    user-select: none;
+  }
+  .prospecto-card:active { cursor: grabbing; }
+  .prospecto-card:hover {
+    box-shadow: var(--sombra);
+    transform: translateY(-1px);
+  }
+  .prospecto-card.dragging { opacity: 0.4; }
+  .prospecto-card.alerta-7 { border-left-color: #d99a1e; background: #fff9ec; }
+  .prospecto-card.alerta-14 { border-left-color: #c44545; background: #fef0ef; }
+  .prospecto-card-nombre {
+    font-weight: 700; font-size: 13.5px; line-height: 1.3;
+    margin-bottom: 4px;
+  }
+  .prospecto-card-rubro {
+    font-size: 11.5px; color: var(--gris-text-soft);
+    margin-bottom: 6px;
+  }
+  .prospecto-card-chips {
+    display: flex; gap: 4px; flex-wrap: wrap;
+    margin-top: 6px;
+  }
+  .prospecto-chip {
+    font-size: 10.5px; padding: 2px 6px; border-radius: 8px;
+    font-weight: 600;
+    background: var(--gris-bg); color: var(--gris-text-soft);
+  }
+  .prospecto-chip.presupuesto {
+    background: #e6f4ef; color: var(--verde);
+  }
+  .prospecto-chip.canal { background: #e6f0fb; color: var(--petroleo); }
+  .prospecto-proximo-paso {
+    font-size: 11.5px; color: var(--fucsia);
+    margin-top: 6px; padding: 5px 8px;
+    background: #fef8fb; border-radius: 4px;
+    font-weight: 500;
+  }
+  .prospecto-alerta-dias {
+    font-size: 10.5px; font-weight: 700;
+    margin-top: 6px; display: flex; align-items: center; gap: 3px;
+  }
+  .prospecto-alerta-dias.warn { color: #d99a1e; }
+  .prospecto-alerta-dias.danger { color: #c44545; }
+
+  /* Stats de prospectos */
+  .prospectos-stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px; margin-bottom: 20px;
+  }
+  .stat-card {
+    background: #fff; border: 1px solid var(--gris-border);
+    border-radius: var(--radio); padding: 14px 16px;
+  }
+  .stat-card-label {
+    font-size: 11.5px; color: var(--gris-text-muted);
+    text-transform: uppercase; font-weight: 600;
+    letter-spacing: 0.03em;
+  }
+  .stat-card-value {
+    font-size: 26px; font-weight: 700; color: var(--gris-text);
+    font-family: 'Fraunces', serif; margin-top: 4px;
+  }
+  .stat-card-sub {
+    font-size: 11.5px; color: var(--gris-text-soft);
+    margin-top: 4px;
+  }
+  .stat-card.alerta { border-color: #d99a1e; background: #fff9ec; }
+  .stat-card.alerta .stat-card-value { color: #a87414; }
+
+  /* Historial / Timeline de interacciones */
+  .historial-timeline {
+    position: relative; padding-left: 20px;
+    margin: 10px 0;
+  }
+  .historial-timeline:before {
+    content: ''; position: absolute; left: 6px; top: 6px; bottom: 6px;
+    width: 2px; background: var(--gris-border);
+  }
+  .historial-item {
+    position: relative; padding: 8px 0 8px 0;
+  }
+  .historial-item:before {
+    content: ''; position: absolute; left: -17px; top: 12px;
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--fucsia); border: 2px solid #fff;
+  }
+  .historial-fecha {
+    font-size: 11px; color: var(--gris-text-muted);
+    font-weight: 600;
+  }
+  .historial-texto {
+    font-size: 13px; color: var(--gris-text);
+    margin-top: 2px; line-height: 1.4;
+  }
+
   /* ===== RESPONSIVE ===== */
   @media (max-width: 900px) {
     .app.active { grid-template-columns: 1fr; }
@@ -834,8 +979,8 @@
       <button class="nav-item active" data-page="clientes">
         <span class="nav-icon">👥</span><span>Clientes</span>
       </button>
-      <button class="nav-item disabled" disabled>
-        <span class="nav-icon">🎯</span><span>Prospectos</span><span class="nav-badge">Fase 3</span>
+      <button class="nav-item" data-page="prospectos">
+        <span class="nav-icon">🎯</span><span>Prospectos</span>
       </button>
       <button class="nav-item disabled" disabled>
         <span class="nav-icon">💡</span><span>Ideas</span><span class="nav-badge">x cliente</span>
@@ -906,6 +1051,7 @@ let state = {
   calendario: [],
   ideas: [],
   servicios: [],
+  prospectos: [],
 };
 
 let tokenClient = null;
@@ -1023,7 +1169,7 @@ function handleLogout() {
     localStorage.removeItem('carrusel_token');
     localStorage.removeItem('carrusel_token_expires');
   } catch (e) {}
-  state = { ...state, user: null, accessToken: null, clientes: [], briefs: [], estrategias: [], accesos: [], calendario: [], ideas: [], servicios: [] };
+  state = { ...state, user: null, accessToken: null, clientes: [], briefs: [], estrategias: [], accesos: [], calendario: [], ideas: [], servicios: [], prospectos: [] };
   $('loginScreen').style.display = 'flex';
   $('app').classList.remove('active');
 }
@@ -1154,6 +1300,7 @@ function navigateTo(page) {
     b.classList.toggle('active', b.dataset.page === page);
   });
   if (page === 'clientes') renderClientes();
+  else if (page === 'prospectos') renderProspectos();
   else if (page === 'servicios') renderServicios();
   else if (page === 'generadores') renderGeneradores();
   else if (page === 'config') renderConfig();
@@ -6147,6 +6294,7 @@ function renderServicioCard(s) {
       ${clientesConEsteServicio > 0 ? `<div class="servicio-stat">👥 ${clientesConEsteServicio} cliente${clientesConEsteServicio > 1 ? 's' : ''} con este servicio</div>` : ''}
       <div class="servicio-actions">
         <button class="btn btn-secondary btn-sm" onclick="openServicioModal('${esc(s.id)}')">✏️ Editar</button>
+        <button class="btn-ghost btn-sm" onclick="duplicarServicio('${esc(s.id)}')" title="Crear uno nuevo basado en este">📋 Duplicar</button>
         <button class="btn-ghost btn-sm" onclick="toggleActivoServicio('${esc(s.id)}')">${activo ? '⏸ Desactivar' : '▶ Reactivar'}</button>
         ${clientesConEsteServicio === 0 ? `<button class="btn-ghost btn-danger btn-sm" onclick="confirmDeleteServicio('${esc(s.id)}', '${esc((s.nombre || '').replace(/'/g, "\\'"))}')">🗑</button>` : ''}
       </div>
@@ -6326,12 +6474,788 @@ function confirmDeleteServicio(id, nombre) {
   $('modalOverlay').classList.add('active');
 }
 
+// Duplica un servicio: abre el modal como "Nuevo servicio" pre-cargado con los datos del original
+function duplicarServicio(id) {
+  const original = state.servicios.find(s => s.id === id);
+  if (!original) return;
+
+  // Abrimos el modal de nuevo servicio con los datos precargados
+  const incluye = parseIncluye(original.incluye || '');
+
+  $('modal').className = 'modal modal-lg';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>📋 Duplicar servicio</h2>
+      <button class="btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="padding: 10px 14px; background: #fef8fb; border: 1px solid var(--fucsia-light); border-radius: 6px; margin-bottom: 14px; font-size: 12.5px; color: var(--gris-text-soft);">
+        💡 Estás creando un nuevo servicio basado en <strong>${esc(original.nombre)}</strong>. Ajustá lo que necesites y guardá.
+      </div>
+      <div class="form-row">
+        <label class="form-label">Nombre del servicio *</label>
+        <input type="text" class="form-input" id="f_nombre" value="${esc(original.nombre)} (copia)" placeholder="Ej: Gestión mensual completa">
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">Descripción corta</label>
+        <textarea class="form-textarea" id="f_descripcion" placeholder="En 1-2 líneas, qué es este servicio.">${esc(original.descripcion || '')}</textarea>
+      </div>
+
+      <div class="form-row-grid">
+        <div>
+          <label class="form-label">Duración</label>
+          <select class="form-select" id="f_duracion">
+            <option value="">—</option>
+            ${DURACIONES_SERVICIO.map(d => `<option value="${d}" ${original.duracion === d ? 'selected' : ''}>${d}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Estado</label>
+          <select class="form-select" id="f_activo">
+            <option value="Sí" selected>Activo</option>
+            <option value="No">Inactivo</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row-grid">
+        <div>
+          <label class="form-label">Precio ARS</label>
+          <input type="number" class="form-input" id="f_precio_ars" value="${esc(String(original.precio_ars || ''))}" placeholder="Ej: 150000">
+        </div>
+        <div>
+          <label class="form-label">Precio USD (opcional)</label>
+          <input type="number" class="form-input" id="f_precio_usd" value="${esc(String(original.precio_usd || ''))}" placeholder="Ej: 150">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">¿Qué incluye el servicio?</label>
+        <div class="form-help">Agregá los items uno a uno. Cada línea será un punto del paquete.</div>
+        <div id="incluyeContainer" style="margin-top: 8px;">
+          ${incluye.map((item, i) => `
+            <div class="incluye-item-row" data-incluye-idx="${i}">
+              <input type="text" value="${esc(item)}" placeholder="Ej: 8 posts al mes">
+              <button type="button" class="btn-ghost btn-danger btn-sm" onclick="this.parentElement.remove()" style="padding: 4px 10px;">🗑</button>
+            </div>
+          `).join('')}
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="agregarIncluyeItem()" style="margin-top: 6px;">+ Agregar item</button>
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">Notas internas (opcional)</label>
+        <textarea class="form-textarea" id="f_notas" placeholder="Notas para vos.">${esc(original.notas || '')}</textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveServicio('')">Crear servicio</button>
+    </div>`;
+  $('modalOverlay').classList.add('active');
+  setTimeout(() => {
+    $('f_nombre').focus();
+    $('f_nombre').select();
+  }, 100);
+}
+
 async function deleteServicio(id) {
   try {
     await sheetDelete('Servicios', id);
     closeModal();
     showToast('Servicio eliminado', 'success');
     renderServicios();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+// ============================================================================
+// MÓDULO: PROSPECTOS (pipeline kanban)
+// ============================================================================
+
+const ETAPAS_PROSPECTO = [
+  { id: 'Primer contacto', icon: '📥', color: '#176b87' },
+  { id: 'En conversación', icon: '💬', color: '#0f6b8e' },
+  { id: 'Brief enviado', icon: '📋', color: '#2e7a9e' },
+  { id: 'Propuesta enviada', icon: '💰', color: '#c06a3d' },
+  { id: 'Esperando decisión', icon: '⏳', color: '#8a6a20' },
+  { id: 'Ganado', icon: '✅', color: '#1e7a5e' },
+  { id: 'Perdido', icon: '❌', color: '#a83a3a' },
+];
+
+const CANALES_CONTACTO = ['WhatsApp', 'Instagram', 'Email', 'Teléfono', 'Referido', 'Web', 'Evento', 'Otro'];
+const MOTIVOS_PERDIDO = [
+  'Presupuesto no alcanza',
+  'Timing no es el adecuado',
+  'Eligió otra agencia',
+  'No necesitaba lo que ofrezco',
+  'Dejó de responder',
+  'Decidió hacerlo internamente',
+  'Otro',
+];
+
+async function renderProspectos() {
+  const main = $('mainContent');
+  main.innerHTML = `
+    <div class="page-header">
+      <div class="page-title-area">
+        <h1 class="page-title">Prospectos</h1>
+        <div class="page-subtitle">Pipeline de potenciales clientes. Arrastrá las tarjetas entre columnas para cambiar de etapa.</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-primary" onclick="openProspectoModal()">+ Nuevo prospecto</button>
+      </div>
+    </div>
+    <div id="prospectosContent"><div class="loading"><div class="spinner"></div>Cargando prospectos...</div></div>
+  `;
+
+  try {
+    const [prospRes, servRes, clientesRes] = await Promise.all([
+      sheetRead('Prospectos'),
+      sheetRead('Servicios'),
+      sheetRead('Clientes'),
+    ]);
+    state.prospectos = prospRes.data;
+    state.servicios = servRes.data;
+    state.clientes = clientesRes.data;
+    renderProspectosKanban();
+  } catch (e) {
+    $('prospectosContent').innerHTML = `<div class="card" style="border-color: var(--rojo);"><strong style="color: var(--rojo);">Error</strong><p>${esc(e.message)}</p></div>`;
+  }
+}
+
+function renderProspectosKanban() {
+  const prospectos = state.prospectos;
+
+  // Agrupar por etapa
+  const porEtapa = {};
+  ETAPAS_PROSPECTO.forEach(e => { porEtapa[e.id] = []; });
+  prospectos.forEach(p => {
+    const estado = p.estado || 'Primer contacto';
+    if (porEtapa[estado]) porEtapa[estado].push(p);
+    else porEtapa['Primer contacto'].push(p);
+  });
+
+  // Stats
+  const activos = prospectos.filter(p => !['Ganado', 'Perdido'].includes(p.estado)).length;
+  const ganados = prospectos.filter(p => p.estado === 'Ganado').length;
+  const perdidos = prospectos.filter(p => p.estado === 'Perdido').length;
+  const cerrados = ganados + perdidos;
+  const tasaConversion = cerrados > 0 ? Math.round((ganados / cerrados) * 100) : 0;
+
+  // Alertas de inactividad (solo prospectos activos)
+  const hoy = new Date();
+  const sinActividad7 = prospectos.filter(p => {
+    if (['Ganado', 'Perdido'].includes(p.estado)) return false;
+    const ult = p.fecha_ultimo_contacto || p.fecha_primer_contacto || p.fecha_creacion;
+    if (!ult) return false;
+    const dias = diasDesde(ult, hoy);
+    return dias >= 7;
+  }).length;
+
+  const statsHtml = `
+    <div class="prospectos-stats">
+      <div class="stat-card">
+        <div class="stat-card-label">Activos</div>
+        <div class="stat-card-value">${activos}</div>
+        <div class="stat-card-sub">prospectos en proceso</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">Ganados</div>
+        <div class="stat-card-value" style="color: var(--verde);">${ganados}</div>
+        <div class="stat-card-sub">convertidos en clientes</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">Tasa de conversión</div>
+        <div class="stat-card-value">${tasaConversion}%</div>
+        <div class="stat-card-sub">${ganados} de ${cerrados} cerrados</div>
+      </div>
+      ${sinActividad7 > 0 ? `
+        <div class="stat-card alerta">
+          <div class="stat-card-label">⚠️ Sin actividad +7 días</div>
+          <div class="stat-card-value">${sinActividad7}</div>
+          <div class="stat-card-sub">requieren seguimiento</div>
+        </div>
+      ` : ''}
+    </div>
+  `;
+
+  // Kanban
+  const kanbanHtml = `
+    <div class="kanban-container">
+      ${ETAPAS_PROSPECTO.map(etapa => `
+        <div class="kanban-column"
+             data-etapa="${esc(etapa.id)}"
+             ondragover="onKanbanDragOver(event)"
+             ondragleave="onKanbanDragLeave(event)"
+             ondrop="onKanbanDrop(event, '${esc(etapa.id)}')">
+          <div class="kanban-column-header">
+            <div class="kanban-column-title">
+              <span>${etapa.icon}</span>
+              <span>${esc(etapa.id)}</span>
+            </div>
+            <div class="kanban-column-count">${porEtapa[etapa.id].length}</div>
+          </div>
+          <div class="kanban-cards">
+            ${porEtapa[etapa.id].map(p => renderProspectoCard(p)).join('')}
+          </div>
+          <button class="kanban-add-btn" onclick="openProspectoModal(null, '${esc(etapa.id)}')">+ Agregar en ${esc(etapa.id)}</button>
+        </div>
+      `).join('')}
+    </div>
+  `;
+
+  const empty = prospectos.length === 0 ? `
+    <div class="empty-state">
+      <p>Todavía no cargaste ningún prospecto.</p>
+      <p style="font-size: 12.5px; margin-top: 8px;">Los prospectos son potenciales clientes que todavía no firmaron. A medida que avanzás con cada uno, arrastrás la tarjeta entre columnas para ver en qué etapa están.</p>
+      <button class="btn btn-primary" onclick="openProspectoModal()" style="margin-top: 16px;">+ Cargar primer prospecto</button>
+    </div>
+  ` : '';
+
+  $('prospectosContent').innerHTML = prospectos.length > 0 ? statsHtml + kanbanHtml : empty;
+}
+
+function diasDesde(fechaStr, ahora) {
+  try {
+    const d = new Date(fechaStr);
+    const diff = ahora - d;
+    return Math.floor(diff / (1000 * 60 * 60 * 24));
+  } catch { return 0; }
+}
+
+function renderProspectoCard(p) {
+  const ultimaFecha = p.fecha_ultimo_contacto || p.fecha_primer_contacto || p.fecha_creacion;
+  const dias = ultimaFecha ? diasDesde(ultimaFecha, new Date()) : 0;
+  const estadoActivo = !['Ganado', 'Perdido'].includes(p.estado);
+
+  let alertaClase = '';
+  let alertaHtml = '';
+  if (estadoActivo && dias >= 14) {
+    alertaClase = 'alerta-14';
+    alertaHtml = `<div class="prospecto-alerta-dias danger">🔴 ${dias} días sin actividad</div>`;
+  } else if (estadoActivo && dias >= 7) {
+    alertaClase = 'alerta-7';
+    alertaHtml = `<div class="prospecto-alerta-dias warn">🟡 ${dias} días sin actividad</div>`;
+  }
+
+  const presupuestoChip = p.presupuesto_ars
+    ? `<span class="prospecto-chip presupuesto">$${formatMiles(p.presupuesto_ars)}</span>`
+    : '';
+  const canalChip = p.canal_contacto
+    ? `<span class="prospecto-chip canal">${esc(p.canal_contacto)}</span>`
+    : '';
+  const servicioChip = p.servicio_interes
+    ? `<span class="prospecto-chip">💼 ${esc(truncar(p.servicio_interes, 24))}</span>`
+    : '';
+
+  return `
+    <div class="prospecto-card ${alertaClase}"
+         draggable="true"
+         data-prospecto-id="${esc(p.id)}"
+         ondragstart="onProspectoDragStart(event, '${esc(p.id)}')"
+         ondragend="onProspectoDragEnd(event)"
+         onclick="openProspectoModal('${esc(p.id)}')">
+      <div class="prospecto-card-nombre">${esc(p.nombre || '(sin nombre)')}</div>
+      ${p.rubro ? `<div class="prospecto-card-rubro">${esc(p.rubro)}</div>` : ''}
+      <div class="prospecto-card-chips">
+        ${canalChip}
+        ${presupuestoChip}
+        ${servicioChip}
+      </div>
+      ${p.proximo_paso ? `<div class="prospecto-proximo-paso">→ ${esc(truncar(p.proximo_paso, 60))}</div>` : ''}
+      ${alertaHtml}
+    </div>
+  `;
+}
+
+function truncar(s, max) {
+  if (!s) return '';
+  s = String(s);
+  return s.length > max ? s.substring(0, max - 1) + '…' : s;
+}
+
+// ============================================================================
+// DRAG & DROP
+// ============================================================================
+function onProspectoDragStart(e, prospectoId) {
+  e.dataTransfer.setData('text/plain', prospectoId);
+  e.dataTransfer.effectAllowed = 'move';
+  e.currentTarget.classList.add('dragging');
+  // Evitar que el click abra el modal al soltar
+  window._dragEnCurso = true;
+}
+
+function onProspectoDragEnd(e) {
+  e.currentTarget.classList.remove('dragging');
+  document.querySelectorAll('.kanban-column').forEach(c => c.classList.remove('drag-over'));
+  // Permitir clicks de nuevo después de un tick
+  setTimeout(() => { window._dragEnCurso = false; }, 100);
+}
+
+function onKanbanDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  e.currentTarget.classList.add('drag-over');
+}
+
+function onKanbanDragLeave(e) {
+  // Solo quitar la clase si realmente salió de la columna (no si entró a un hijo)
+  if (e.currentTarget.contains(e.relatedTarget)) return;
+  e.currentTarget.classList.remove('drag-over');
+}
+
+async function onKanbanDrop(e, nuevaEtapa) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  const prospectoId = e.dataTransfer.getData('text/plain');
+  if (!prospectoId) return;
+
+  const prospecto = state.prospectos.find(p => p.id === prospectoId);
+  if (!prospecto) return;
+  if (prospecto.estado === nuevaEtapa) return;
+
+  // Casos especiales
+  if (nuevaEtapa === 'Ganado') {
+    preguntarConvertirACliente(prospectoId);
+    return;
+  }
+  if (nuevaEtapa === 'Perdido') {
+    preguntarMotivoPerdido(prospectoId);
+    return;
+  }
+
+  // Cambio normal de etapa
+  try {
+    await sheetUpdate('Prospectos', prospectoId, {
+      estado: nuevaEtapa,
+      fecha_ultimo_contacto: todayISO(),
+    });
+    prospecto.estado = nuevaEtapa;
+    prospecto.fecha_ultimo_contacto = todayISO();
+    showToast(`Movido a "${nuevaEtapa}"`, 'success');
+    renderProspectosKanban();
+  } catch (err) { showToast('Error: ' + err.message, 'error'); }
+}
+
+// Al click en una card, abrir modal (pero solo si no fue un drag)
+// Esto se maneja con _dragEnCurso y el timeout
+
+// ============================================================================
+// MODAL CREAR / EDITAR PROSPECTO
+// ============================================================================
+function openProspectoModal(id = null, etapaDefault = null) {
+  if (window._dragEnCurso) return; // evitar abrir modal al soltar un drag
+
+  const p = id ? state.prospectos.find(x => x.id === id) : {};
+  const esNuevo = !id;
+  const serviciosActivos = (state.servicios || []).filter(s => (s.activo || 'Sí') === 'Sí');
+  const historial = parseJsonSafe(p.historial) || [];
+
+  $('modal').className = 'modal modal-lg';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>${esNuevo ? '🎯 Nuevo prospecto' : '✏️ Editar prospecto'}</h2>
+      <button class="btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row-grid">
+        <div>
+          <label class="form-label">Nombre (persona o empresa) *</label>
+          <input type="text" class="form-input" id="f_nombre" value="${esc(p.nombre || '')}" placeholder="Ej: Sofía López / Panadería La Esquina">
+        </div>
+        <div>
+          <label class="form-label">Rubro</label>
+          <input type="text" class="form-input" id="f_rubro" value="${esc(p.rubro || '')}" placeholder="Ej: Gastronomía, Salud, Inmobiliaria">
+        </div>
+      </div>
+
+      <div class="form-row-grid">
+        <div>
+          <label class="form-label">Canal de contacto</label>
+          <select class="form-select" id="f_canal_contacto">
+            <option value="">—</option>
+            ${CANALES_CONTACTO.map(c => `<option value="${c}" ${p.canal_contacto === c ? 'selected' : ''}>${c}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Contacto (tel/mail/@)</label>
+          <input type="text" class="form-input" id="f_contacto" value="${esc(p.contacto || '')}" placeholder="+54 9 261 ... / mail / @usuario">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">Origen (¿cómo llegó?)</label>
+        <input type="text" class="form-input" id="f_origen" value="${esc(p.origen || '')}" placeholder="Ej: Referido de Colmena, vino de Instagram, lo conocí en un evento">
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">¿Qué necesita?</label>
+        <textarea class="form-textarea" id="f_necesidad" placeholder="Descripción de la necesidad del prospecto">${esc(p.necesidad || '')}</textarea>
+      </div>
+
+      <div class="form-row-grid">
+        <div>
+          <label class="form-label">Presupuesto estimado (ARS)</label>
+          <input type="number" class="form-input" id="f_presupuesto_ars" value="${esc(String(p.presupuesto_ars || ''))}" placeholder="Ej: 150000">
+        </div>
+        <div>
+          <label class="form-label">Servicio de interés</label>
+          <select class="form-select" id="f_servicio_interes">
+            <option value="">—</option>
+            ${serviciosActivos.map(s => `<option value="${esc(s.nombre)}" ${p.servicio_interes === s.nombre ? 'selected' : ''}>${esc(s.nombre)}</option>`).join('')}
+            ${p.servicio_interes && !serviciosActivos.some(s => s.nombre === p.servicio_interes) ? `<option value="${esc(p.servicio_interes)}" selected>${esc(p.servicio_interes)}</option>` : ''}
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row-grid">
+        <div>
+          <label class="form-label">Fecha primer contacto</label>
+          <input type="date" class="form-input" id="f_fecha_primer_contacto" value="${esc(p.fecha_primer_contacto || (esNuevo ? todayISO() : ''))}">
+        </div>
+        <div>
+          <label class="form-label">Fecha último contacto</label>
+          <input type="date" class="form-input" id="f_fecha_ultimo_contacto" value="${esc(p.fecha_ultimo_contacto || (esNuevo ? todayISO() : ''))}">
+        </div>
+      </div>
+
+      <div class="form-row-grid">
+        <div>
+          <label class="form-label">Etapa</label>
+          <select class="form-select" id="f_estado">
+            ${ETAPAS_PROSPECTO.map(e => `<option value="${e.id}" ${(p.estado || etapaDefault || 'Primer contacto') === e.id ? 'selected' : ''}>${e.icon} ${e.id}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Próximo paso</label>
+          <input type="text" class="form-input" id="f_proximo_paso" value="${esc(p.proximo_paso || '')}" placeholder="Ej: Mandar propuesta el lunes">
+        </div>
+      </div>
+
+      ${!esNuevo ? `
+        <div class="form-row">
+          <label class="form-label">📝 Historial de interacciones</label>
+          <div style="padding: 12px; background: var(--gris-bg); border-radius: 6px; margin-top: 4px;">
+            <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+              <input type="text" class="form-input" id="f_nueva_nota" placeholder="Ej: Le mandé propuesta por WhatsApp" style="flex: 1;">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="agregarNotaHistorial('${esc(id)}')">+ Agregar nota</button>
+            </div>
+            ${historial.length > 0 ? `
+              <div class="historial-timeline">
+                ${historial.slice().reverse().map(h => `
+                  <div class="historial-item">
+                    <div class="historial-fecha">${esc(formatDateEs(h.fecha))}${h.hora ? ' · ' + esc(h.hora) : ''}</div>
+                    <div class="historial-texto">${esc(h.texto)}</div>
+                  </div>
+                `).join('')}
+              </div>
+            ` : '<div style="font-size: 12px; color: var(--gris-text-muted); font-style: italic;">Aún no hay notas. Agregá la primera arriba.</div>'}
+          </div>
+        </div>
+      ` : ''}
+
+      ${(p.estado === 'Perdido') ? `
+        <div class="form-row">
+          <label class="form-label">Motivo (si se perdió)</label>
+          <input type="text" class="form-input" id="f_motivo_perdido" value="${esc(p.motivo_perdido || '')}">
+        </div>
+      ` : ''}
+    </div>
+    <div class="modal-footer" style="justify-content: space-between;">
+      ${!esNuevo ? `<button class="btn-ghost btn-danger" onclick="confirmDeleteProspecto('${esc(id)}', '${esc((p.nombre || '').replace(/'/g, "\\'"))}')">🗑 Eliminar</button>` : '<div></div>'}
+      <div style="display: flex; gap: 10px;">
+        <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveProspecto('${id || ''}')">${esNuevo ? 'Crear' : 'Guardar'}</button>
+      </div>
+    </div>`;
+  $('modalOverlay').classList.add('active');
+  setTimeout(() => $('f_nombre').focus(), 100);
+}
+
+async function saveProspecto(id) {
+  const nombre = $('f_nombre').value.trim();
+  if (!nombre) { showToast('El nombre es obligatorio', 'error'); return; }
+
+  const data = {
+    nombre,
+    rubro: $('f_rubro').value.trim(),
+    canal_contacto: $('f_canal_contacto').value,
+    contacto: $('f_contacto').value.trim(),
+    origen: $('f_origen').value.trim(),
+    necesidad: $('f_necesidad').value.trim(),
+    presupuesto_ars: $('f_presupuesto_ars').value.trim(),
+    servicio_interes: $('f_servicio_interes').value,
+    estado: $('f_estado').value,
+    fecha_primer_contacto: $('f_fecha_primer_contacto').value,
+    fecha_ultimo_contacto: $('f_fecha_ultimo_contacto').value,
+    proximo_paso: $('f_proximo_paso').value.trim(),
+  };
+  if ($('f_motivo_perdido')) data.motivo_perdido = $('f_motivo_perdido').value.trim();
+
+  try {
+    if (id) {
+      await sheetUpdate('Prospectos', id, data);
+      showToast('Prospecto actualizado', 'success');
+    } else {
+      data.id = genId('prosp');
+      data.fecha_creacion = todayISO();
+      data.historial = JSON.stringify([]);
+      await sheetAppend('Prospectos', data);
+      showToast('Prospecto creado', 'success');
+    }
+    closeModal();
+    renderProspectos();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+async function agregarNotaHistorial(prospectoId) {
+  const texto = $('f_nueva_nota').value.trim();
+  if (!texto) { showToast('Escribí la nota', 'error'); return; }
+
+  const prospecto = state.prospectos.find(p => p.id === prospectoId);
+  if (!prospecto) return;
+
+  const historial = parseJsonSafe(prospecto.historial) || [];
+  const nueva = {
+    fecha: todayISO(),
+    hora: new Date().toTimeString().substring(0, 5),
+    texto,
+  };
+  historial.push(nueva);
+
+  try {
+    await sheetUpdate('Prospectos', prospectoId, {
+      historial: JSON.stringify(historial),
+      fecha_ultimo_contacto: todayISO(),
+    });
+    prospecto.historial = JSON.stringify(historial);
+    prospecto.fecha_ultimo_contacto = todayISO();
+    showToast('Nota agregada', 'success');
+    // Reabrir el modal con el historial actualizado
+    openProspectoModal(prospectoId);
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+function confirmDeleteProspecto(id, nombre) {
+  $('modal').className = 'modal';
+  $('modal').innerHTML = `
+    <div class="modal-header"><h2>Eliminar prospecto</h2><button class="btn-ghost" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <p>¿Eliminar el prospecto <strong>${esc(nombre)}</strong>?</p>
+      <p style="color: var(--gris-text-soft); font-size: 12.5px; margin-top: 8px;">Esta acción no se puede deshacer.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" style="background: var(--rojo);" onclick="deleteProspecto('${id}')">Eliminar</button>
+    </div>`;
+  $('modalOverlay').classList.add('active');
+}
+
+async function deleteProspecto(id) {
+  try {
+    await sheetDelete('Prospectos', id);
+    closeModal();
+    showToast('Prospecto eliminado', 'success');
+    renderProspectos();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+// ============================================================================
+// CASO ESPECIAL: ARRASTRAR A "GANADO" → CONVERTIR A CLIENTE
+// ============================================================================
+function preguntarConvertirACliente(prospectoId) {
+  const prospecto = state.prospectos.find(p => p.id === prospectoId);
+  if (!prospecto) return;
+
+  $('modal').className = 'modal';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>✅ Prospecto ganado</h2>
+      <button class="btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="margin-bottom: 12px;">¡Felicitaciones! 🎉 <strong>${esc(prospecto.nombre)}</strong> aceptó tus servicios.</p>
+      <p style="color: var(--gris-text-soft); font-size: 13px;">¿Querés convertir este prospecto en cliente ahora? Los datos que ya tenés se van a pre-cargar en el formulario de nuevo cliente.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="soloMarcarGanado('${prospectoId}')">Solo marcar como ganado</button>
+      <button class="btn btn-primary" onclick="convertirAProspectoACliente('${prospectoId}')">✨ Convertir en cliente</button>
+    </div>`;
+  $('modalOverlay').classList.add('active');
+}
+
+async function soloMarcarGanado(prospectoId) {
+  try {
+    await sheetUpdate('Prospectos', prospectoId, {
+      estado: 'Ganado',
+      fecha_ultimo_contacto: todayISO(),
+    });
+    const p = state.prospectos.find(x => x.id === prospectoId);
+    if (p) { p.estado = 'Ganado'; p.fecha_ultimo_contacto = todayISO(); }
+    closeModal();
+    showToast('Marcado como Ganado', 'success');
+    renderProspectosKanban();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+async function convertirAProspectoACliente(prospectoId) {
+  const prospecto = state.prospectos.find(p => p.id === prospectoId);
+  if (!prospecto) return;
+
+  closeModal();
+
+  // Abrir modal de nuevo cliente con datos pre-cargados
+  await openClienteModal(null);
+
+  // Pre-cargar los campos con los datos del prospecto
+  setTimeout(() => {
+    if ($('f_nombre')) $('f_nombre').value = prospecto.nombre || '';
+    if ($('f_rubro')) $('f_rubro').value = prospecto.rubro || '';
+    if ($('f_canal_comunicacion')) $('f_canal_comunicacion').value = prospecto.canal_contacto || '';
+    if ($('f_notas')) {
+      $('f_notas').value = `Convertido desde prospecto. ${prospecto.origen ? 'Origen: ' + prospecto.origen + '. ' : ''}${prospecto.necesidad ? 'Necesidad inicial: ' + prospecto.necesidad : ''}`;
+    }
+    // Seleccionar el servicio si existe
+    const servicioSelect = $('f_servicio_select');
+    if (servicioSelect && prospecto.servicio_interes) {
+      // Buscar la opción que coincida
+      const options = Array.from(servicioSelect.options);
+      const match = options.find(o => o.value === prospecto.servicio_interes);
+      if (match) {
+        servicioSelect.value = prospecto.servicio_interes;
+      } else {
+        // No está en el catálogo, usar custom
+        servicioSelect.value = '__custom__';
+        toggleServicioCustom();
+        setTimeout(() => {
+          if ($('f_servicio_custom')) $('f_servicio_custom').value = prospecto.servicio_interes;
+        }, 60);
+      }
+    }
+
+    // Guardar el prospectoId para vincular después
+    window._prospectoAConvertir = prospectoId;
+
+    // Reemplazar el botón de guardar para que también marque el prospecto como ganado
+    const footer = $('modal').querySelector('.modal-footer');
+    if (footer) {
+      footer.innerHTML = `
+        <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveClienteYConvertir()">✨ Crear cliente y cerrar prospecto</button>
+      `;
+    }
+
+    // Info banner arriba
+    const body = $('modal').querySelector('.modal-body');
+    if (body) {
+      const banner = document.createElement('div');
+      banner.style.cssText = 'padding: 10px 14px; background: #f6faf8; border: 1px solid var(--verde); border-radius: 6px; margin-bottom: 14px; font-size: 12.5px; color: #1a6447;';
+      banner.innerHTML = `✅ <strong>Convirtiendo prospecto en cliente.</strong> Los datos se pre-cargaron desde el prospecto. Ajustá lo que falte y guardá.`;
+      body.insertBefore(banner, body.firstChild);
+    }
+  }, 200);
+}
+
+async function saveClienteYConvertir() {
+  const prospectoId = window._prospectoAConvertir;
+  const nombre = $('f_nombre').value.trim();
+  if (!nombre) { showToast('El nombre es obligatorio', 'error'); return; }
+
+  // Leer servicio desde select o custom
+  let servicioContratado = '';
+  const servicioSelect = $('f_servicio_select');
+  if (servicioSelect) {
+    servicioContratado = servicioSelect.value === '__custom__'
+      ? ($('f_servicio_custom') ? $('f_servicio_custom').value.trim() : '')
+      : servicioSelect.value;
+  } else if ($('f_servicio_contratado')) {
+    servicioContratado = $('f_servicio_contratado').value.trim();
+  }
+
+  const data = {
+    id: genId('cli'),
+    nombre,
+    tipo_cliente: $('f_tipo_cliente').value,
+    rubro: $('f_rubro').value.trim(),
+    estado: $('f_estado').value,
+    servicio_contratado: servicioContratado,
+    frecuencia_posts: $('f_frecuencia_posts').value,
+    fecha_inicio_servicio: $('f_fecha_inicio_servicio').value,
+    canal_comunicacion: $('f_canal_comunicacion').value.trim(),
+    rondas_revision: $('f_rondas_revision').value,
+    notas: $('f_notas').value.trim(),
+    fecha_alta: todayISO(),
+  };
+
+  try {
+    await sheetAppend('Clientes', data);
+    // Marcar el prospecto como Ganado con vínculo al cliente
+    await sheetUpdate('Prospectos', prospectoId, {
+      estado: 'Ganado',
+      fecha_ultimo_contacto: todayISO(),
+      cliente_id_convertido: data.id,
+    });
+    window._prospectoAConvertir = null;
+    closeModal();
+    showToast('Cliente creado y prospecto cerrado 🎉', 'success');
+    // Volver al módulo de prospectos
+    navigateTo('prospectos');
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+// ============================================================================
+// CASO ESPECIAL: ARRASTRAR A "PERDIDO" → PEDIR MOTIVO
+// ============================================================================
+function preguntarMotivoPerdido(prospectoId) {
+  const prospecto = state.prospectos.find(p => p.id === prospectoId);
+  if (!prospecto) return;
+
+  $('modal').className = 'modal';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>❌ Prospecto perdido</h2>
+      <button class="btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="margin-bottom: 14px;">¿Por qué se perdió <strong>${esc(prospecto.nombre)}</strong>? Registrar el motivo te ayuda a aprender para los próximos.</p>
+
+      <div class="form-row">
+        <label class="form-label">Motivo (elegí o escribí uno)</label>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px;">
+          ${MOTIVOS_PERDIDO.map(m => `
+            <button type="button" class="idea-filter" onclick="$('f_motivo_perdido_input').value = '${esc(m.replace(/'/g, "\\'"))}'">${esc(m)}</button>
+          `).join('')}
+        </div>
+        <input type="text" class="form-input" id="f_motivo_perdido_input" placeholder="Motivo específico...">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarPerdido('${prospectoId}')">Marcar como perdido</button>
+    </div>`;
+  $('modalOverlay').classList.add('active');
+}
+
+async function confirmarPerdido(prospectoId) {
+  const motivo = $('f_motivo_perdido_input').value.trim();
+  if (!motivo) { showToast('Ingresá el motivo', 'error'); return; }
+
+  try {
+    await sheetUpdate('Prospectos', prospectoId, {
+      estado: 'Perdido',
+      motivo_perdido: motivo,
+      fecha_ultimo_contacto: todayISO(),
+    });
+    const p = state.prospectos.find(x => x.id === prospectoId);
+    if (p) {
+      p.estado = 'Perdido';
+      p.motivo_perdido = motivo;
+      p.fecha_ultimo_contacto = todayISO();
+    }
+    closeModal();
+    showToast('Marcado como perdido', 'success');
+    renderProspectosKanban();
   } catch (e) { showToast('Error: ' + e.message, 'error'); }
 }
 
@@ -6394,10 +7318,10 @@ async function renderConfig() {
     <div class="card" style="margin-top: 20px;">
       <div class="card-title">Versión de la app</div>
       <div class="config-item">
-        <div class="config-label">Fase 3 — Sub-entrega A (Servicios)</div>
+        <div class="config-label">Fase 3 — Sub-entrega B (Prospectos)</div>
         <div style="font-size: 13px; color: var(--gris-text-soft); margin-top: 4px;">
-          Módulos activos: Clientes · Brief · Estrategia con IA · Ideas con IA · Calendario completo · Generadores IA · <strong>Catálogo de Servicios</strong> · Accesos<br>
-          Próximas sub-entregas: Pipeline de Prospectos (Sub-B) · Onboarding con checklists (Sub-C)
+          Módulos activos: Clientes · Brief · Estrategia con IA · Ideas con IA · Calendario completo · Generadores IA · Catálogo de Servicios · <strong>Pipeline de Prospectos</strong> · Accesos<br>
+          Próxima sub-entrega: Onboarding con checklists (Sub-C)
         </div>
       </div>
     </div>`;
