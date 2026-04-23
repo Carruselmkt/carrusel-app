@@ -711,6 +711,78 @@
     min-width: 70px; text-align: center; flex-shrink: 0;
   }
 
+  /* ===== MÓDULO SERVICIOS ===== */
+  .servicios-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px; margin-top: 20px;
+  }
+  .servicio-card {
+    background: #fff; border: 1px solid var(--gris-border);
+    border-radius: var(--radio); padding: 20px;
+    transition: all 0.15s; position: relative;
+    border-top: 4px solid var(--fucsia);
+  }
+  .servicio-card.inactivo {
+    opacity: 0.65; border-top-color: var(--gris-text-muted);
+    background: var(--gris-bg);
+  }
+  .servicio-card:hover { box-shadow: var(--sombra); }
+  .servicio-card-header {
+    display: flex; justify-content: space-between;
+    align-items: flex-start; gap: 10px; margin-bottom: 10px;
+  }
+  .servicio-nombre {
+    font-size: 17px; font-weight: 700; line-height: 1.3;
+    font-family: 'Fraunces', serif; color: var(--gris-text);
+  }
+  .servicio-descripcion {
+    color: var(--gris-text-soft); font-size: 13px;
+    line-height: 1.5; margin-bottom: 14px;
+  }
+  .servicio-precio {
+    font-size: 22px; font-weight: 700; color: var(--fucsia);
+    font-family: 'Fraunces', serif;
+    margin: 10px 0 4px;
+  }
+  .servicio-precio-usd {
+    font-size: 13px; color: var(--gris-text-soft);
+    font-weight: 500;
+  }
+  .servicio-duracion {
+    display: inline-block; padding: 3px 10px;
+    background: #e6f0fb; color: var(--petroleo);
+    border-radius: 12px; font-size: 11.5px; font-weight: 600;
+    margin-bottom: 12px;
+  }
+  .servicio-incluye {
+    list-style: none; padding: 10px 0 12px; margin: 10px 0;
+    border-top: 1px solid var(--gris-border);
+  }
+  .servicio-incluye li {
+    padding: 4px 0; font-size: 13px; color: var(--gris-text);
+    padding-left: 20px; position: relative;
+  }
+  .servicio-incluye li:before {
+    content: '✓'; position: absolute; left: 0;
+    color: var(--verde); font-weight: 700;
+  }
+  .servicio-actions {
+    display: flex; gap: 6px; padding-top: 12px;
+    border-top: 1px solid var(--gris-border);
+    flex-wrap: wrap;
+  }
+  .servicio-stat {
+    font-size: 11.5px; color: var(--gris-text-muted);
+    margin-top: 8px;
+  }
+  .incluye-item-row {
+    display: flex; gap: 8px; margin-bottom: 6px;
+  }
+  .incluye-item-row input {
+    flex: 1; padding: 6px 10px; font-size: 13px;
+    border: 1px solid var(--gris-border); border-radius: 4px;
+  }
+
   /* ===== RESPONSIVE ===== */
   @media (max-width: 900px) {
     .app.active { grid-template-columns: 1fr; }
@@ -771,6 +843,9 @@
       <button class="nav-item disabled" disabled>
         <span class="nav-icon">📊</span><span>Métricas</span><span class="nav-badge">Fase 2</span>
       </button>
+      <button class="nav-item" data-page="servicios">
+        <span class="nav-icon">💼</span><span>Servicios</span>
+      </button>
       <button class="nav-item" data-page="generadores">
         <span class="nav-icon">✨</span><span>Generadores IA</span>
       </button>
@@ -830,6 +905,7 @@ let state = {
   accesos: [],
   calendario: [],
   ideas: [],
+  servicios: [],
 };
 
 let tokenClient = null;
@@ -947,7 +1023,7 @@ function handleLogout() {
     localStorage.removeItem('carrusel_token');
     localStorage.removeItem('carrusel_token_expires');
   } catch (e) {}
-  state = { ...state, user: null, accessToken: null, clientes: [], briefs: [], estrategias: [], accesos: [], calendario: [], ideas: [] };
+  state = { ...state, user: null, accessToken: null, clientes: [], briefs: [], estrategias: [], accesos: [], calendario: [], ideas: [], servicios: [] };
   $('loginScreen').style.display = 'flex';
   $('app').classList.remove('active');
 }
@@ -1078,6 +1154,7 @@ function navigateTo(page) {
     b.classList.toggle('active', b.dataset.page === page);
   });
   if (page === 'clientes') renderClientes();
+  else if (page === 'servicios') renderServicios();
   else if (page === 'generadores') renderGeneradores();
   else if (page === 'config') renderConfig();
 }
@@ -1165,9 +1242,21 @@ function renderClientesList() {
 // ============================================================================
 // MODAL DE CLIENTE (crear rápido o editar básicos)
 // ============================================================================
-function openClienteModal(id = null) {
+async function openClienteModal(id = null) {
   const c = id ? state.clientes.find(x => x.id === id) : {};
   const esNuevo = !id;
+
+  // Cargar servicios si no están en memoria
+  if (!state.servicios || state.servicios.length === 0) {
+    try {
+      const { data } = await sheetRead('Servicios');
+      state.servicios = data;
+    } catch (e) { console.warn('No se pudieron cargar servicios:', e); }
+  }
+  const serviciosActivos = state.servicios.filter(s => (s.activo || 'Sí') === 'Sí');
+  // Verificar si el servicio actual del cliente está en la lista (o es custom)
+  const servicioActualEsCatalogo = c.servicio_contratado && serviciosActivos.some(s => s.nombre === c.servicio_contratado);
+  const usarCustomInicial = c.servicio_contratado && !servicioActualEsCatalogo;
 
   $('modal').className = 'modal';
   $('modal').innerHTML = `
@@ -1214,7 +1303,25 @@ function openClienteModal(id = null) {
       </div>
       <div class="form-row">
         <label class="form-label">Servicio contratado</label>
-        <input type="text" class="form-input" id="f_servicio_contratado" value="${esc(c.servicio_contratado || '')}" placeholder="Ej: Gestión mensual completa">
+        ${serviciosActivos.length > 0 ? `
+          <select class="form-select" id="f_servicio_select" onchange="toggleServicioCustom()">
+            <option value="">— Sin servicio asignado —</option>
+            ${serviciosActivos.map(s => `
+              <option value="${esc(s.nombre)}" ${c.servicio_contratado === s.nombre ? 'selected' : ''}>
+                ${esc(s.nombre)}${s.precio_ars ? ' · $' + formatMiles(s.precio_ars) : ''}${s.duracion ? ' · ' + esc(s.duracion) : ''}
+              </option>
+            `).join('')}
+            <option value="__custom__" ${usarCustomInicial ? 'selected' : ''}>✏️ Otro (a medida, escribir a mano)</option>
+          </select>
+          <div id="servicio_custom_container" style="margin-top: 8px; ${usarCustomInicial ? '' : 'display: none;'}">
+            <input type="text" class="form-input" id="f_servicio_custom" value="${esc(usarCustomInicial ? c.servicio_contratado : '')}" placeholder="Describí el servicio a medida">
+          </div>
+        ` : `
+          <input type="text" class="form-input" id="f_servicio_contratado" value="${esc(c.servicio_contratado || '')}" placeholder="Ej: Gestión mensual completa">
+          <div class="form-help" style="font-size: 11.5px; margin-top: 6px;">
+            💡 Creá servicios en <a href="#" onclick="closeModal(); navigateTo('servicios'); return false;" style="color: var(--fucsia);">Servicios</a> para elegirlos desde un desplegable.
+          </div>
+        `}
       </div>
       <div class="form-row-grid">
         <div>
@@ -1243,16 +1350,43 @@ function openClienteModal(id = null) {
   setTimeout(() => $('f_nombre').focus(), 100);
 }
 
+function toggleServicioCustom() {
+  const select = $('f_servicio_select');
+  const container = $('servicio_custom_container');
+  if (!select || !container) return;
+  if (select.value === '__custom__') {
+    container.style.display = 'block';
+    setTimeout(() => $('f_servicio_custom') && $('f_servicio_custom').focus(), 50);
+  } else {
+    container.style.display = 'none';
+  }
+}
+
 async function saveCliente(id) {
   const nombre = $('f_nombre').value.trim();
   if (!nombre) { showToast('El nombre es obligatorio', 'error'); return; }
+
+  // Leer servicio desde select (catálogo) o custom (texto libre)
+  let servicioContratado = '';
+  const servicioSelect = $('f_servicio_select');
+  if (servicioSelect) {
+    const val = servicioSelect.value;
+    if (val === '__custom__') {
+      servicioContratado = ($('f_servicio_custom') ? $('f_servicio_custom').value.trim() : '');
+    } else {
+      servicioContratado = val;
+    }
+  } else if ($('f_servicio_contratado')) {
+    // Fallback: input de texto libre cuando no hay servicios creados
+    servicioContratado = $('f_servicio_contratado').value.trim();
+  }
 
   const data = {
     nombre,
     tipo_cliente: $('f_tipo_cliente').value,
     rubro: $('f_rubro').value.trim(),
     estado: $('f_estado').value,
-    servicio_contratado: $('f_servicio_contratado').value.trim(),
+    servicio_contratado: servicioContratado,
     frecuencia_posts: $('f_frecuencia_posts').value,
     fecha_inicio_servicio: $('f_fecha_inicio_servicio').value,
     canal_comunicacion: $('f_canal_comunicacion').value.trim(),
@@ -5912,6 +6046,295 @@ async function aceptarPostsMensual() {
   }
 }
 
+// ============================================================================
+// MÓDULO: SERVICIOS (catálogo)
+// ============================================================================
+
+const DURACIONES_SERVICIO = ['Mensual', 'Trimestral', 'Semestral', 'Anual', 'Por proyecto', 'Única vez'];
+
+let serviciosFilter = 'activos'; // 'activos', 'inactivos', 'todos'
+
+async function renderServicios() {
+  const main = $('mainContent');
+  main.innerHTML = `
+    <div class="page-header">
+      <div class="page-title-area">
+        <h1 class="page-title">Servicios</h1>
+        <div class="page-subtitle">Catálogo de paquetes y servicios que ofrecés a tus clientes.</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-primary" onclick="openServicioModal()">+ Nuevo servicio</button>
+      </div>
+    </div>
+    <div id="serviciosContent"><div class="loading"><div class="spinner"></div>Cargando servicios...</div></div>
+  `;
+
+  try {
+    const { data } = await sheetRead('Servicios');
+    state.servicios = data;
+    renderServiciosList();
+  } catch (e) {
+    $('serviciosContent').innerHTML = `<div class="card" style="border-color: var(--rojo);"><strong style="color: var(--rojo);">Error</strong><p>${esc(e.message)}</p></div>`;
+  }
+}
+
+function renderServiciosList() {
+  let servicios = [...state.servicios];
+
+  // Filtro
+  if (serviciosFilter === 'activos') servicios = servicios.filter(s => (s.activo || 'Sí') === 'Sí');
+  else if (serviciosFilter === 'inactivos') servicios = servicios.filter(s => s.activo === 'No');
+
+  // Ordenar por precio descendente
+  servicios.sort((a, b) => (Number(b.precio_ars) || 0) - (Number(a.precio_ars) || 0));
+
+  const activos = state.servicios.filter(s => (s.activo || 'Sí') === 'Sí').length;
+  const inactivos = state.servicios.filter(s => s.activo === 'No').length;
+
+  const contenido = servicios.length === 0 ? `
+    <div class="empty-state">
+      <p>${state.servicios.length === 0 ? 'Todavía no creaste ningún servicio.' : 'No hay servicios con este filtro.'}</p>
+      ${state.servicios.length === 0 ? `
+        <p style="font-size: 12.5px; margin-top: 8px;">
+          Empezá creando los paquetes básicos que ofrecés. Ejemplo: "Gestión mensual completa", "Branding inicial", "Asesoría por hora".
+        </p>
+        <button class="btn btn-primary" onclick="openServicioModal()" style="margin-top: 16px;">+ Crear primer servicio</button>
+      ` : ''}
+    </div>
+  ` : `
+    <div class="servicios-grid">
+      ${servicios.map(s => renderServicioCard(s)).join('')}
+    </div>
+  `;
+
+  $('serviciosContent').innerHTML = `
+    <div style="display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;">
+      <button class="idea-filter ${serviciosFilter === 'activos' ? 'active' : ''}" onclick="setServiciosFilter('activos')">Activos (${activos})</button>
+      <button class="idea-filter ${serviciosFilter === 'inactivos' ? 'active' : ''}" onclick="setServiciosFilter('inactivos')">Inactivos (${inactivos})</button>
+      <button class="idea-filter ${serviciosFilter === 'todos' ? 'active' : ''}" onclick="setServiciosFilter('todos')">Todos (${state.servicios.length})</button>
+    </div>
+    ${contenido}
+  `;
+}
+
+function setServiciosFilter(val) {
+  serviciosFilter = val;
+  renderServiciosList();
+}
+
+function renderServicioCard(s) {
+  const activo = (s.activo || 'Sí') === 'Sí';
+  const incluye = parseIncluye(s.incluye);
+  const clientesConEsteServicio = state.clientes.filter(c => c.servicio_contratado === s.nombre).length;
+
+  const precioArs = s.precio_ars ? `$${formatMiles(s.precio_ars)}` : 'A convenir';
+  const precioUsd = s.precio_usd ? ` · USD ${formatMiles(s.precio_usd)}` : '';
+
+  return `
+    <div class="servicio-card ${activo ? '' : 'inactivo'}">
+      <div class="servicio-card-header">
+        <div class="servicio-nombre">${esc(s.nombre || '(sin nombre)')}</div>
+        ${!activo ? '<span class="badge" style="background: var(--gris-bg); color: var(--gris-text-muted);">Inactivo</span>' : ''}
+      </div>
+      ${s.duracion ? `<span class="servicio-duracion">⏱ ${esc(s.duracion)}</span>` : ''}
+      ${s.descripcion ? `<div class="servicio-descripcion">${esc(s.descripcion)}</div>` : ''}
+      <div class="servicio-precio">${esc(precioArs)} <span class="servicio-precio-usd">ARS${precioUsd}</span></div>
+      ${incluye.length > 0 ? `
+        <ul class="servicio-incluye">
+          ${incluye.map(i => `<li>${esc(i)}</li>`).join('')}
+        </ul>
+      ` : ''}
+      ${clientesConEsteServicio > 0 ? `<div class="servicio-stat">👥 ${clientesConEsteServicio} cliente${clientesConEsteServicio > 1 ? 's' : ''} con este servicio</div>` : ''}
+      <div class="servicio-actions">
+        <button class="btn btn-secondary btn-sm" onclick="openServicioModal('${esc(s.id)}')">✏️ Editar</button>
+        <button class="btn-ghost btn-sm" onclick="toggleActivoServicio('${esc(s.id)}')">${activo ? '⏸ Desactivar' : '▶ Reactivar'}</button>
+        ${clientesConEsteServicio === 0 ? `<button class="btn-ghost btn-danger btn-sm" onclick="confirmDeleteServicio('${esc(s.id)}', '${esc((s.nombre || '').replace(/'/g, "\\'"))}')">🗑</button>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+function formatMiles(n) {
+  const num = Number(n);
+  if (isNaN(num)) return String(n);
+  return num.toLocaleString('es-AR');
+}
+
+function parseIncluye(str) {
+  if (!str) return [];
+  // Separadores: saltos de línea o "|"
+  return String(str).split(/\n|\|/).map(s => s.trim()).filter(s => s);
+}
+
+// ============================================================================
+// MODAL CREAR / EDITAR SERVICIO
+// ============================================================================
+function openServicioModal(id = null) {
+  const servicio = id ? state.servicios.find(s => s.id === id) : {};
+  const esNuevo = !id;
+  const incluye = parseIncluye(servicio.incluye || '');
+
+  $('modal').className = 'modal modal-lg';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>${esNuevo ? '💼 Nuevo servicio' : '✏️ Editar servicio'}</h2>
+      <button class="btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label class="form-label">Nombre del servicio *</label>
+        <input type="text" class="form-input" id="f_nombre" value="${esc(servicio.nombre || '')}" placeholder="Ej: Gestión mensual completa">
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">Descripción corta</label>
+        <textarea class="form-textarea" id="f_descripcion" placeholder="En 1-2 líneas, qué es este servicio y a quién le sirve.">${esc(servicio.descripcion || '')}</textarea>
+      </div>
+
+      <div class="form-row-grid">
+        <div>
+          <label class="form-label">Duración</label>
+          <select class="form-select" id="f_duracion">
+            <option value="">—</option>
+            ${DURACIONES_SERVICIO.map(d => `<option value="${d}" ${servicio.duracion === d ? 'selected' : ''}>${d}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Estado</label>
+          <select class="form-select" id="f_activo">
+            <option value="Sí" ${(servicio.activo || 'Sí') === 'Sí' ? 'selected' : ''}>Activo</option>
+            <option value="No" ${servicio.activo === 'No' ? 'selected' : ''}>Inactivo</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row-grid">
+        <div>
+          <label class="form-label">Precio ARS</label>
+          <input type="number" class="form-input" id="f_precio_ars" value="${esc(String(servicio.precio_ars || ''))}" placeholder="Ej: 150000">
+        </div>
+        <div>
+          <label class="form-label">Precio USD (opcional)</label>
+          <input type="number" class="form-input" id="f_precio_usd" value="${esc(String(servicio.precio_usd || ''))}" placeholder="Ej: 150">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">¿Qué incluye el servicio?</label>
+        <div class="form-help">Agregá los items uno a uno. Cada línea será un punto del paquete.</div>
+        <div id="incluyeContainer" style="margin-top: 8px;">
+          ${incluye.map((item, i) => `
+            <div class="incluye-item-row" data-incluye-idx="${i}">
+              <input type="text" value="${esc(item)}" placeholder="Ej: 8 posts al mes">
+              <button type="button" class="btn-ghost btn-danger btn-sm" onclick="this.parentElement.remove()" style="padding: 4px 10px;">🗑</button>
+            </div>
+          `).join('')}
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="agregarIncluyeItem()" style="margin-top: 6px;">+ Agregar item</button>
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">Notas internas (opcional)</label>
+        <textarea class="form-textarea" id="f_notas" placeholder="Notas para vos: cláusulas especiales, condiciones, etc.">${esc(servicio.notas || '')}</textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveServicio('${id || ''}')">${esNuevo ? 'Crear servicio' : 'Guardar cambios'}</button>
+    </div>`;
+  $('modalOverlay').classList.add('active');
+  setTimeout(() => $('f_nombre').focus(), 100);
+}
+
+function agregarIncluyeItem() {
+  const container = $('incluyeContainer');
+  const idx = container.querySelectorAll('.incluye-item-row').length;
+  const div = document.createElement('div');
+  div.className = 'incluye-item-row';
+  div.setAttribute('data-incluye-idx', idx);
+  div.innerHTML = `
+    <input type="text" placeholder="Ej: 8 posts al mes">
+    <button type="button" class="btn-ghost btn-danger btn-sm" onclick="this.parentElement.remove()" style="padding: 4px 10px;">🗑</button>
+  `;
+  container.appendChild(div);
+  div.querySelector('input').focus();
+}
+
+function recolectarIncluye() {
+  const inputs = document.querySelectorAll('#incluyeContainer input[type="text"]');
+  const items = [];
+  inputs.forEach(inp => {
+    const val = inp.value.trim();
+    if (val) items.push(val);
+  });
+  return items.join('\n'); // separamos por saltos de línea
+}
+
+async function saveServicio(id) {
+  const nombre = $('f_nombre').value.trim();
+  if (!nombre) { showToast('El nombre es obligatorio', 'error'); return; }
+
+  const data = {
+    nombre,
+    descripcion: $('f_descripcion').value.trim(),
+    duracion: $('f_duracion').value,
+    precio_ars: $('f_precio_ars').value.trim(),
+    precio_usd: $('f_precio_usd').value.trim(),
+    incluye: recolectarIncluye(),
+    activo: $('f_activo').value,
+    notas: $('f_notas').value.trim(),
+  };
+
+  try {
+    if (id) {
+      await sheetUpdate('Servicios', id, data);
+      showToast('Servicio actualizado', 'success');
+    } else {
+      data.id = genId('serv');
+      data.fecha_creacion = todayISO();
+      await sheetAppend('Servicios', data);
+      showToast('Servicio creado', 'success');
+    }
+    closeModal();
+    renderServicios();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+async function toggleActivoServicio(id) {
+  const servicio = state.servicios.find(s => s.id === id);
+  if (!servicio) return;
+  const nuevoEstado = (servicio.activo || 'Sí') === 'Sí' ? 'No' : 'Sí';
+  try {
+    await sheetUpdate('Servicios', id, { activo: nuevoEstado });
+    showToast(`Servicio ${nuevoEstado === 'Sí' ? 'reactivado' : 'desactivado'}`, 'success');
+    renderServicios();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+function confirmDeleteServicio(id, nombre) {
+  $('modal').className = 'modal';
+  $('modal').innerHTML = `
+    <div class="modal-header"><h2>Eliminar servicio</h2><button class="btn-ghost" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <p>¿Eliminar el servicio <strong>${esc(nombre)}</strong>?</p>
+      <p style="color: var(--gris-text-soft); font-size: 12.5px; margin-top: 8px;">Esta acción no se puede deshacer. Si querés conservarlo por las dudas, usá "Desactivar" en vez de eliminar.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" style="background: var(--rojo);" onclick="deleteServicio('${id}')">Eliminar</button>
+    </div>`;
+  $('modalOverlay').classList.add('active');
+}
+
+async function deleteServicio(id) {
+  try {
+    await sheetDelete('Servicios', id);
+    closeModal();
+    showToast('Servicio eliminado', 'success');
+    renderServicios();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
 async function renderConfig() {
   const main = $('mainContent');
   main.innerHTML = `
@@ -5971,10 +6394,10 @@ async function renderConfig() {
     <div class="card" style="margin-top: 20px;">
       <div class="card-title">Versión de la app</div>
       <div class="config-item">
-        <div class="config-label">Fase 2 completa 🎉</div>
+        <div class="config-label">Fase 3 — Sub-entrega A (Servicios)</div>
         <div style="font-size: 13px; color: var(--gris-text-soft); margin-top: 4px;">
-          Módulos activos: Clientes · Brief · Estrategia con IA · Ideas con IA · Calendario con generadores de <strong>Copy + Carrusel + Reel</strong> · <strong>Calendario mensual completo</strong> · <strong>Módulo Generadores</strong> · Accesos<br>
-          Próxima fase (3): Pipeline de prospectos · Onboarding · Catálogo de servicios
+          Módulos activos: Clientes · Brief · Estrategia con IA · Ideas con IA · Calendario completo · Generadores IA · <strong>Catálogo de Servicios</strong> · Accesos<br>
+          Próximas sub-entregas: Pipeline de Prospectos (Sub-B) · Onboarding con checklists (Sub-C)
         </div>
       </div>
     </div>`;
