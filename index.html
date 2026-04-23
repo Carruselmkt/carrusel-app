@@ -932,6 +932,122 @@
     margin-top: 2px; line-height: 1.4;
   }
 
+  /* ===== ONBOARDING ===== */
+  .onboarding-header {
+    background: linear-gradient(135deg, #fef8fb 0%, #fefbf7 100%);
+    border: 1px solid var(--fucsia-light);
+    border-radius: var(--radio); padding: 18px 20px;
+    margin-bottom: 20px;
+  }
+  .progress-bar-container {
+    background: #fff; border-radius: 20px;
+    height: 10px; overflow: hidden;
+    margin-top: 10px; border: 1px solid var(--gris-border);
+  }
+  .progress-bar-fill {
+    height: 100%; background: linear-gradient(90deg, var(--fucsia) 0%, var(--salmon) 100%);
+    border-radius: 20px; transition: width 0.4s;
+  }
+  .progress-label {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 13px; color: var(--gris-text-soft);
+  }
+  .progress-label strong {
+    color: var(--fucsia); font-size: 16px;
+  }
+
+  .onb-item {
+    background: #fff; border: 1px solid var(--gris-border);
+    border-radius: var(--radio-sm); padding: 14px 16px;
+    margin-bottom: 8px; transition: all 0.12s;
+    border-left: 4px solid var(--gris-border);
+  }
+  .onb-item:hover { box-shadow: var(--sombra); }
+  .onb-item.completado {
+    border-left-color: var(--verde);
+    background: #f6faf8;
+  }
+  .onb-item.completado .onb-texto { color: var(--gris-text-soft); }
+  .onb-item-row {
+    display: flex; align-items: flex-start; gap: 12px;
+  }
+  .onb-checkbox {
+    width: 22px; height: 22px; flex-shrink: 0;
+    margin-top: 2px; cursor: pointer;
+    accent-color: var(--verde);
+  }
+  .onb-contenido { flex: 1; min-width: 0; }
+  .onb-emoji {
+    font-size: 17px; margin-right: 6px;
+  }
+  .onb-texto {
+    font-size: 14px; font-weight: 600; color: var(--gris-text);
+    line-height: 1.4;
+    cursor: text; padding: 2px 4px; border-radius: 3px;
+  }
+  .onb-texto:hover { background: var(--gris-bg); }
+  .onb-texto:focus {
+    outline: 2px solid var(--fucsia); outline-offset: 1px;
+    background: #fff;
+  }
+  .onb-meta {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    font-size: 11.5px; color: var(--gris-text-muted);
+    margin-top: 6px;
+  }
+  .onb-fecha-limite, .onb-fecha-completado {
+    display: flex; align-items: center; gap: 3px;
+  }
+  .onb-actions {
+    display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap;
+  }
+  .onb-notas {
+    margin-top: 10px; padding: 10px 12px;
+    background: var(--gris-bg); border-radius: 6px;
+    font-size: 12.5px; color: var(--gris-text);
+    display: none;
+  }
+  .onb-notas.activo { display: block; }
+  .onb-notas textarea {
+    width: 100%; min-height: 60px; font-family: inherit;
+    font-size: 13px; padding: 8px; border: 1px solid var(--gris-border);
+    border-radius: 4px; background: #fff;
+  }
+
+  /* Modal plantilla */
+  .plantilla-preview {
+    background: var(--crema); padding: 16px 18px;
+    border-radius: var(--radio); white-space: pre-wrap;
+    font-size: 13.5px; line-height: 1.6;
+    border: 1px dashed #d9c9a6;
+    max-height: 400px; overflow-y: auto;
+  }
+  .plantilla-copy-success {
+    display: inline-block; color: var(--verde);
+    font-weight: 600; font-size: 12.5px;
+    margin-left: 8px; opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .plantilla-copy-success.visible { opacity: 1; }
+
+  .variable-badge {
+    display: inline-block; padding: 1px 6px;
+    background: var(--fucsia); color: #fff;
+    border-radius: 3px; font-size: 10.5px;
+    font-family: 'Courier New', monospace;
+    margin: 0 2px;
+  }
+
+  /* Config plantillas */
+  .plantilla-config-card {
+    background: #fff; border: 1px solid var(--gris-border);
+    border-radius: var(--radio-sm); padding: 14px 16px;
+    margin-bottom: 10px;
+  }
+  .plantilla-config-card.inactiva {
+    opacity: 0.6; background: var(--gris-bg);
+  }
+
   /* ===== RESPONSIVE ===== */
   @media (max-width: 900px) {
     .app.active { grid-template-columns: 1fr; }
@@ -1002,7 +1118,7 @@
         <span class="nav-icon">💰</span><span>Finanzas</span><span class="nav-badge">Fase 4</span>
       </button>
       <button class="nav-item disabled" disabled>
-        <span class="nav-icon">🚀</span><span>Onboarding</span><span class="nav-badge">Fase 3</span>
+        <span class="nav-icon">🚀</span><span>Onboarding</span><span class="nav-badge">x cliente</span>
       </button>
       <button class="nav-item" data-page="config">
         <span class="nav-icon">⚙️</span><span>Configuración</span>
@@ -1056,6 +1172,8 @@ let state = {
   ideas: [],
   servicios: [],
   prospectos: [],
+  onboardings: [],
+  plantillasOnboarding: [],
 };
 
 let tokenClient = null;
@@ -1173,7 +1291,7 @@ function handleLogout() {
     localStorage.removeItem('carrusel_token');
     localStorage.removeItem('carrusel_token_expires');
   } catch (e) {}
-  state = { ...state, user: null, accessToken: null, clientes: [], briefs: [], estrategias: [], accesos: [], calendario: [], ideas: [], servicios: [], prospectos: [] };
+  state = { ...state, user: null, accessToken: null, clientes: [], briefs: [], estrategias: [], accesos: [], calendario: [], ideas: [], servicios: [], prospectos: [], onboardings: [], plantillasOnboarding: [] };
   $('loginScreen').style.display = 'flex';
   $('app').classList.remove('active');
 }
@@ -1641,6 +1759,7 @@ async function renderClienteDetalle() {
         <button class="tab-btn ${state.currentClienteTab === 'ficha' ? 'active' : ''}" onclick="switchTab('ficha')">📋 Ficha</button>
         <button class="tab-btn ${state.currentClienteTab === 'brief' ? 'active' : ''}" onclick="switchTab('brief')">🎯 Brief</button>
         <button class="tab-btn ${state.currentClienteTab === 'estrategia' ? 'active' : ''}" onclick="switchTab('estrategia')">🧭 Estrategia</button>
+        <button class="tab-btn ${state.currentClienteTab === 'onboarding' ? 'active' : ''}" onclick="switchTab('onboarding')">🚀 Onboarding</button>
         <button class="tab-btn ${state.currentClienteTab === 'ideas' ? 'active' : ''}" onclick="switchTab('ideas')">💡 Ideas</button>
         <button class="tab-btn ${state.currentClienteTab === 'accesos' ? 'active' : ''}" onclick="switchTab('accesos')">🔐 Accesos</button>
         <button class="tab-btn ${state.currentClienteTab === 'calendario' ? 'active' : ''}" onclick="switchTab('calendario')">📅 Calendario</button>
@@ -1665,6 +1784,7 @@ function renderCurrentTab() {
   if (t === 'ficha') renderTabFicha();
   else if (t === 'brief') renderTabBrief();
   else if (t === 'estrategia') renderTabEstrategia();
+  else if (t === 'onboarding') renderTabOnboarding();
   else if (t === 'ideas') renderTabIdeas();
   else if (t === 'accesos') renderTabAccesos();
   else if (t === 'calendario') renderTabCalendario();
@@ -7276,6 +7396,568 @@ async function confirmarPerdido(prospectoId) {
   } catch (e) { showToast('Error: ' + e.message, 'error'); }
 }
 
+// ============================================================================
+// TAB: ONBOARDING (checklist de arranque por cliente)
+// ============================================================================
+
+// Checklist base: los 9 pasos por defecto cuando se crea un cliente nuevo
+const PASOS_ONBOARDING_BASE = [
+  { emoji: '📝', texto: 'Firmar acuerdo de servicio', plantilla: 'acuerdo_servicio', accion: null },
+  { emoji: '💳', texto: 'Recibir primer pago / seña', plantilla: 'solicitud_pago', accion: null },
+  { emoji: '🔐', texto: 'Pedir accesos a redes sociales', plantilla: 'solicitud_accesos', accion: 'accesos' },
+  { emoji: '📋', texto: 'Completar brief con el cliente', plantilla: 'solicitud_brief', accion: 'brief' },
+  { emoji: '📅', texto: 'Agendar reunión de kickoff', plantilla: 'kickoff', accion: null },
+  { emoji: '🎯', texto: 'Definir estrategia inicial', plantilla: null, accion: 'estrategia' },
+  { emoji: '🎨', texto: 'Presentar branding / identidad visual (si aplica)', plantilla: null, accion: null },
+  { emoji: '📊', texto: 'Presentar calendario del primer mes', plantilla: 'presentar_calendario', accion: 'calendario' },
+  { emoji: '🚀', texto: 'Publicar primer post', plantilla: null, accion: null },
+];
+
+// Plantillas iniciales que se cargan si la hoja está vacía
+const PLANTILLAS_INICIALES = [
+  {
+    id: 'acuerdo_servicio',
+    nombre: 'Envío de acuerdo de servicio',
+    contenido: `Hola {nombre_cliente}!
+
+¡Qué alegría empezar a trabajar juntos! Te paso el acuerdo de servicio para que lo revises:
+
+📎 [adjuntar documento]
+
+En el documento vas a encontrar detallado:
+- Servicio contratado: {servicio}
+- Duración y condiciones
+- Forma de pago y cronograma
+- Mis compromisos y los tuyos
+
+Cualquier duda que te surja, me escribís y lo charlamos sin problema. Una vez revisado, si está todo ok, firmás y me devolvés una copia.
+
+¡Gracias por la confianza!
+
+{nombre_agencia}`,
+    variables: '{nombre_cliente}, {servicio}, {nombre_agencia}',
+    orden: 1,
+  },
+  {
+    id: 'solicitud_pago',
+    nombre: 'Solicitud de primer pago / seña',
+    contenido: `Hola {nombre_cliente}!
+
+Con el acuerdo firmado, el próximo paso es el pago inicial para arrancar con todo.
+
+💰 Datos para la transferencia:
+- Alias: [tu alias]
+- CBU: [tu CBU]
+- Titular: [tu nombre]
+- Monto: [monto correspondiente]
+
+Una vez que recibas la transferencia, mandame el comprobante por acá y arrancamos con los siguientes pasos.
+
+¡Cualquier duda me avisás!
+
+{nombre_agencia}`,
+    variables: '{nombre_cliente}, {nombre_agencia}',
+    orden: 2,
+  },
+  {
+    id: 'solicitud_accesos',
+    nombre: 'Solicitud de accesos a redes sociales',
+    contenido: `Hola {nombre_cliente}!
+
+Para empezar a trabajar con tus redes necesito tener acceso. Hay dos opciones igual de válidas, elegí la que te quede más cómoda:
+
+🔐 Opción 1 (más segura): agregarme como administradora/editora
+- Instagram/Facebook: agregame como admin en Meta Business Suite con el mail {email_agencia}
+- TikTok: agregame como admin desde la configuración de la cuenta
+
+🔑 Opción 2: pasarme usuario y contraseña
+Si preferís esta opción, mandame los datos por un canal privado y seguro.
+
+Una vez que tenga acceso, te confirmo y seguimos.
+
+¡Gracias!
+
+{nombre_agencia}`,
+    variables: '{nombre_cliente}, {email_agencia}, {nombre_agencia}',
+    orden: 3,
+  },
+  {
+    id: 'solicitud_brief',
+    nombre: 'Envío de brief para completar',
+    contenido: `Hola {nombre_cliente}!
+
+Para armar una estrategia a tu medida, necesito conocerte a fondo. Te voy a pedir que completes este brief con tus respuestas.
+
+📋 Link al brief: [link o te mando por acá]
+
+Son preguntas sobre:
+- Tu marca y tu historia
+- A quién le hablás (tu público)
+- Qué querés lograr
+- Qué te diferencia de la competencia
+- Qué te gusta y qué no en términos de estilo
+
+Tomate el tiempo que necesites. Cuanto más específica seas, mejor va a salir todo lo que hagamos.
+
+Si tenés dudas con alguna pregunta, avisame y la charlamos.
+
+¡Gracias!
+
+{nombre_agencia}`,
+    variables: '{nombre_cliente}, {nombre_agencia}',
+    orden: 4,
+  },
+  {
+    id: 'kickoff',
+    nombre: 'Invitación a reunión de kickoff',
+    contenido: `Hola {nombre_cliente}!
+
+Ya tenemos todo listo para arrancar oficialmente. Te propongo agendar una reunión de kickoff (arranque) donde:
+
+📅 Agenda de la reunión (30-45 min):
+1. Repasamos los objetivos para los próximos meses
+2. Veo tus expectativas y aclaramos dudas
+3. Te presento cómo vamos a trabajar día a día
+4. Definimos canales de comunicación y tiempos de respuesta
+5. Te muestro los primeros pasos que vengo preparando
+
+¿Qué día y horario te viene mejor esta semana? Podemos hacerla por Meet o Zoom.
+
+¡Nos vemos!
+
+{nombre_agencia}`,
+    variables: '{nombre_cliente}, {nombre_agencia}',
+    orden: 5,
+  },
+  {
+    id: 'presentar_calendario',
+    nombre: 'Presentación del calendario del primer mes',
+    contenido: `Hola {nombre_cliente}!
+
+Te mando el calendario del primer mes para que lo revises. Está armado tomando en cuenta el brief, la estrategia y los pilares que definimos.
+
+📊 Lo que vas a ver:
+- Cantidad de publicaciones y distribución en el mes
+- Formato de cada una (post, carrusel, reel)
+- Temática por pilar
+- Breve descripción de cada idea
+
+Miralo con tiempo y anotame:
+✓ Qué te parece
+✓ Si hay algo que quieras cambiar
+✓ Fechas especiales que no hayamos considerado
+
+Tenemos tiempo de ajustar antes de arrancar con la producción. ¡Comentame!
+
+{nombre_agencia}`,
+    variables: '{nombre_cliente}, {nombre_agencia}',
+    orden: 6,
+  },
+];
+
+async function renderTabOnboarding() {
+  const cliente = state.clientes.find(c => c.id === state.currentClienteId);
+  $('tabContent').innerHTML = `<div class="loading"><div class="spinner"></div>Cargando onboarding...</div>`;
+
+  try {
+    // Cargar onboardings y plantillas
+    const [onbRes, plantRes] = await Promise.all([
+      sheetRead('Onboarding'),
+      sheetRead('Plantillas_Onboarding'),
+    ]);
+    state.onboardings = onbRes.data;
+    state.plantillasOnboarding = plantRes.data;
+
+    // Si no hay plantillas en la planilla, cargamos las iniciales
+    if (state.plantillasOnboarding.length === 0) {
+      for (const p of PLANTILLAS_INICIALES) {
+        await sheetAppend('Plantillas_Onboarding', {
+          id: p.id,
+          nombre: p.nombre,
+          contenido: p.contenido,
+          variables_disponibles: p.variables,
+          activa: 'Sí',
+          orden: String(p.orden),
+        });
+      }
+      // Recargar
+      const { data } = await sheetRead('Plantillas_Onboarding');
+      state.plantillasOnboarding = data;
+    }
+
+    // Buscar onboarding de este cliente
+    let onboarding = state.onboardings.find(o => o.cliente_id === cliente.id);
+
+    // Si no tiene, crear uno nuevo con los pasos base
+    if (!onboarding) {
+      const pasosIniciales = PASOS_ONBOARDING_BASE.map((p, i) => ({
+        id: 'paso_' + i,
+        emoji: p.emoji,
+        texto: p.texto,
+        plantilla: p.plantilla,
+        accion: p.accion,
+        completado: false,
+        fecha_completado: '',
+        fecha_limite: '',
+        notas: '',
+      }));
+
+      onboarding = {
+        id: genId('onb'),
+        cliente_id: cliente.id,
+        pasos_json: JSON.stringify(pasosIniciales),
+        fecha_creacion: todayISO(),
+      };
+      await sheetAppend('Onboarding', onboarding);
+      state.onboardings.push(onboarding);
+    }
+
+    renderOnboardingUI(onboarding);
+  } catch (e) {
+    $('tabContent').innerHTML = `<div class="card" style="border-color: var(--rojo);"><strong style="color: var(--rojo);">Error</strong><p>${esc(e.message)}</p></div>`;
+  }
+}
+
+function renderOnboardingUI(onboarding) {
+  const pasos = parseJsonSafe(onboarding.pasos_json) || [];
+  const completados = pasos.filter(p => p.completado).length;
+  const total = pasos.length;
+  const porcentaje = total > 0 ? Math.round((completados / total) * 100) : 0;
+  const onboardingCompleto = porcentaje === 100;
+
+  const itemsHtml = pasos.map((paso, idx) => renderOnboardingPaso(paso, idx, onboarding.id)).join('');
+
+  $('tabContent').innerHTML = `
+    <div class="onboarding-header">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; flex-wrap: wrap;">
+        <div>
+          <h3 style="margin: 0 0 4px;">${onboardingCompleto ? '🎉 Onboarding completo' : '🚀 Onboarding en curso'}</h3>
+          <div style="color: var(--gris-text-soft); font-size: 13px;">
+            ${onboardingCompleto ? 'Todos los pasos están completos, el cliente está listo.' : 'Marcá los pasos a medida que los completás.'}
+          </div>
+        </div>
+        <div style="text-align: right;">
+          <div class="progress-label">
+            <strong>${completados} de ${total}</strong><span style="margin-left: 6px;">(${porcentaje}%)</span>
+          </div>
+        </div>
+      </div>
+      <div class="progress-bar-container">
+        <div class="progress-bar-fill" style="width: ${porcentaje}%;"></div>
+      </div>
+    </div>
+
+    <div id="onbList">${itemsHtml}</div>
+
+    <button class="btn btn-secondary btn-sm" onclick="agregarPasoCustom('${esc(onboarding.id)}')" style="margin-top: 12px;">+ Agregar paso personalizado</button>
+  `;
+}
+
+function renderOnboardingPaso(paso, idx, onboardingId) {
+  const tienePlantilla = !!paso.plantilla;
+  const tieneAccion = !!paso.accion;
+  const accionLabels = {
+    brief: { label: '📋 Ir al Brief', tab: 'brief' },
+    estrategia: { label: '🧭 Ir a Estrategia', tab: 'estrategia' },
+    accesos: { label: '🔐 Ir a Accesos', tab: 'accesos' },
+    calendario: { label: '📅 Ir al Calendario', tab: 'calendario' },
+  };
+  const accion = accionLabels[paso.accion];
+
+  return `
+    <div class="onb-item ${paso.completado ? 'completado' : ''}" data-paso-idx="${idx}">
+      <div class="onb-item-row">
+        <input type="checkbox" class="onb-checkbox"
+               ${paso.completado ? 'checked' : ''}
+               onchange="togglePasoCompletado('${onboardingId}', ${idx}, this.checked)">
+        <div class="onb-contenido">
+          <div>
+            <span class="onb-emoji">${esc(paso.emoji || '•')}</span>
+            <span class="onb-texto" contenteditable="true" onblur="guardarTextoPaso('${onboardingId}', ${idx}, this.innerText)">${esc(paso.texto)}</span>
+          </div>
+          <div class="onb-meta">
+            <div class="onb-fecha-limite">
+              📅 Fecha límite:
+              <input type="date" value="${esc(paso.fecha_limite || '')}"
+                     onchange="guardarFechaLimite('${onboardingId}', ${idx}, this.value)"
+                     style="border: 1px solid var(--gris-border); padding: 2px 6px; border-radius: 4px; font-size: 11.5px;">
+            </div>
+            ${paso.completado && paso.fecha_completado ? `
+              <div class="onb-fecha-completado" style="color: var(--verde);">
+                ✓ Completado el ${esc(formatDateEs(paso.fecha_completado))}
+              </div>
+            ` : ''}
+          </div>
+          <div class="onb-actions">
+            ${tienePlantilla ? `<button class="btn btn-secondary btn-sm" onclick="verPlantilla('${esc(paso.plantilla)}')">📋 Ver plantilla</button>` : ''}
+            ${accion ? `<button class="btn btn-secondary btn-sm" style="background: var(--petroleo); color: #fff; border: none;" onclick="state.currentClienteTab = '${accion.tab}'; renderClienteDetalle();">${accion.label}</button>` : ''}
+            <button class="btn-ghost btn-sm" onclick="toggleNotasPaso(${idx})">💬 Notas</button>
+            <button class="btn-ghost btn-danger btn-sm" onclick="confirmDeletePaso('${onboardingId}', ${idx})" title="Eliminar paso">🗑</button>
+          </div>
+          <div class="onb-notas ${paso.notas ? 'activo' : ''}" id="onb_notas_${idx}">
+            <textarea placeholder="Notas de este paso para este cliente..."
+                      onblur="guardarNotasPaso('${onboardingId}', ${idx}, this.value)">${esc(paso.notas || '')}</textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function toggleNotasPaso(idx) {
+  const el = $('onb_notas_' + idx);
+  if (el) el.classList.toggle('activo');
+}
+
+// ============================================================================
+// ACCIONES SOBRE PASOS
+// ============================================================================
+
+async function togglePasoCompletado(onboardingId, pasoIdx, checked) {
+  const onb = state.onboardings.find(o => o.id === onboardingId);
+  if (!onb) return;
+  const pasos = parseJsonSafe(onb.pasos_json) || [];
+  if (!pasos[pasoIdx]) return;
+
+  pasos[pasoIdx].completado = checked;
+  pasos[pasoIdx].fecha_completado = checked ? todayISO() : '';
+
+  onb.pasos_json = JSON.stringify(pasos);
+  try {
+    await sheetUpdate('Onboarding', onboardingId, { pasos_json: onb.pasos_json });
+    // Si se completó todo, registrar fecha
+    const todosCompletos = pasos.every(p => p.completado);
+    if (todosCompletos && !onb.fecha_completado) {
+      await sheetUpdate('Onboarding', onboardingId, { fecha_completado: todayISO() });
+      onb.fecha_completado = todayISO();
+      showToast('🎉 ¡Onboarding completado!', 'success');
+    }
+    renderOnboardingUI(onb);
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+async function guardarTextoPaso(onboardingId, pasoIdx, nuevoTexto) {
+  const onb = state.onboardings.find(o => o.id === onboardingId);
+  if (!onb) return;
+  const pasos = parseJsonSafe(onb.pasos_json) || [];
+  if (!pasos[pasoIdx]) return;
+  const textoLimpio = nuevoTexto.trim();
+  if (!textoLimpio || pasos[pasoIdx].texto === textoLimpio) return;
+
+  pasos[pasoIdx].texto = textoLimpio;
+  onb.pasos_json = JSON.stringify(pasos);
+  try {
+    await sheetUpdate('Onboarding', onboardingId, { pasos_json: onb.pasos_json });
+    showAutosave('saved', 'Guardado');
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+async function guardarFechaLimite(onboardingId, pasoIdx, fecha) {
+  const onb = state.onboardings.find(o => o.id === onboardingId);
+  if (!onb) return;
+  const pasos = parseJsonSafe(onb.pasos_json) || [];
+  if (!pasos[pasoIdx]) return;
+
+  pasos[pasoIdx].fecha_limite = fecha;
+  onb.pasos_json = JSON.stringify(pasos);
+  try {
+    await sheetUpdate('Onboarding', onboardingId, { pasos_json: onb.pasos_json });
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+async function guardarNotasPaso(onboardingId, pasoIdx, notas) {
+  const onb = state.onboardings.find(o => o.id === onboardingId);
+  if (!onb) return;
+  const pasos = parseJsonSafe(onb.pasos_json) || [];
+  if (!pasos[pasoIdx]) return;
+
+  pasos[pasoIdx].notas = notas.trim();
+  onb.pasos_json = JSON.stringify(pasos);
+  try {
+    await sheetUpdate('Onboarding', onboardingId, { pasos_json: onb.pasos_json });
+    showAutosave('saved', 'Notas guardadas');
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+function confirmDeletePaso(onboardingId, pasoIdx) {
+  const onb = state.onboardings.find(o => o.id === onboardingId);
+  const paso = parseJsonSafe(onb.pasos_json)[pasoIdx];
+  if (!paso) return;
+
+  if (!confirm(`¿Eliminar el paso "${paso.texto}" de este onboarding?`)) return;
+  eliminarPaso(onboardingId, pasoIdx);
+}
+
+async function eliminarPaso(onboardingId, pasoIdx) {
+  const onb = state.onboardings.find(o => o.id === onboardingId);
+  if (!onb) return;
+  const pasos = parseJsonSafe(onb.pasos_json) || [];
+  pasos.splice(pasoIdx, 1);
+  onb.pasos_json = JSON.stringify(pasos);
+  try {
+    await sheetUpdate('Onboarding', onboardingId, { pasos_json: onb.pasos_json });
+    showToast('Paso eliminado', 'success');
+    renderOnboardingUI(onb);
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+function agregarPasoCustom(onboardingId) {
+  $('modal').className = 'modal';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>+ Agregar paso al onboarding</h2>
+      <button class="btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row-grid">
+        <div>
+          <label class="form-label">Emoji</label>
+          <input type="text" class="form-input" id="f_paso_emoji" value="✅" maxlength="4">
+        </div>
+        <div>
+          <label class="form-label">Fecha límite (opcional)</label>
+          <input type="date" class="form-input" id="f_paso_fecha_limite">
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Descripción del paso *</label>
+        <input type="text" class="form-input" id="f_paso_texto" placeholder="Ej: Coordinar sesión de fotos">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarPasoCustom('${onboardingId}')">Agregar paso</button>
+    </div>`;
+  $('modalOverlay').classList.add('active');
+  setTimeout(() => $('f_paso_texto').focus(), 100);
+}
+
+async function guardarPasoCustom(onboardingId) {
+  const texto = $('f_paso_texto').value.trim();
+  if (!texto) { showToast('Poné una descripción', 'error'); return; }
+
+  const onb = state.onboardings.find(o => o.id === onboardingId);
+  if (!onb) return;
+  const pasos = parseJsonSafe(onb.pasos_json) || [];
+
+  const nuevo = {
+    id: 'paso_custom_' + Date.now(),
+    emoji: $('f_paso_emoji').value.trim() || '✅',
+    texto,
+    plantilla: null,
+    accion: null,
+    completado: false,
+    fecha_completado: '',
+    fecha_limite: $('f_paso_fecha_limite').value,
+    notas: '',
+  };
+  pasos.push(nuevo);
+  onb.pasos_json = JSON.stringify(pasos);
+
+  try {
+    await sheetUpdate('Onboarding', onboardingId, { pasos_json: onb.pasos_json });
+    closeModal();
+    showToast('Paso agregado', 'success');
+    renderOnboardingUI(onb);
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+// ============================================================================
+// PLANTILLAS (ver + copiar con variables)
+// ============================================================================
+
+function verPlantilla(plantillaId) {
+  const plantilla = state.plantillasOnboarding.find(p => p.id === plantillaId);
+  if (!plantilla) {
+    showToast('Plantilla no encontrada', 'error');
+    return;
+  }
+
+  const cliente = state.clientes.find(c => c.id === state.currentClienteId);
+  const textoConVariables = reemplazarVariables(plantilla.contenido, cliente);
+
+  $('modal').className = 'modal modal-lg';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>📋 ${esc(plantilla.nombre)}</h2>
+      <button class="btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+        <div style="font-size: 12.5px; color: var(--gris-text-soft);">
+          💡 Las variables se reemplazaron con los datos de <strong>${esc(cliente.nombre)}</strong>.
+        </div>
+        <div>
+          <button class="btn btn-primary btn-sm" onclick="copiarPlantilla(this)">📋 Copiar texto</button>
+          <span class="plantilla-copy-success" id="copy_success">✓ Copiado</span>
+        </div>
+      </div>
+      <div class="plantilla-preview" id="plantilla_contenido">${esc(textoConVariables)}</div>
+      <div style="margin-top: 10px; font-size: 11.5px; color: var(--gris-text-muted);">
+        ¿Querés editar el texto de esta plantilla para el futuro? Podés hacerlo desde <a href="#" onclick="closeModal(); navigateTo('config'); setTimeout(() => document.getElementById('config_plantillas') && document.getElementById('config_plantillas').scrollIntoView({behavior: 'smooth'}), 300); return false;" style="color: var(--fucsia);">Configuración → Plantillas</a>.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cerrar</button>
+    </div>`;
+  $('modalOverlay').classList.add('active');
+}
+
+function reemplazarVariables(texto, cliente) {
+  if (!texto) return '';
+  const vars = {
+    '{nombre_cliente}': cliente ? (cliente.nombre || '[nombre del cliente]') : '[nombre del cliente]',
+    '{servicio}': cliente ? (cliente.servicio_contratado || '[servicio]') : '[servicio]',
+    '{rubro}': cliente ? (cliente.rubro || '[rubro]') : '[rubro]',
+    '{nombre_agencia}': 'Carrusel MKT', // Podría venir de config
+    '{email_agencia}': '[tu email]', // Podría venir de config
+  };
+  let resultado = texto;
+  Object.entries(vars).forEach(([k, v]) => {
+    resultado = resultado.split(k).join(v);
+  });
+  return resultado;
+}
+
+function copiarPlantilla(btn) {
+  const contenido = $('plantilla_contenido');
+  if (!contenido) return;
+  const texto = contenido.innerText;
+
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(texto).then(() => {
+      mostrarCopiadoOk();
+    }).catch(() => copiarFallback(texto));
+  } else {
+    copiarFallback(texto);
+  }
+}
+
+function copiarFallback(texto) {
+  // Fallback con textarea invisible
+  const textarea = document.createElement('textarea');
+  textarea.value = texto;
+  textarea.style.position = 'fixed';
+  textarea.style.opacity = '0';
+  document.body.appendChild(textarea);
+  textarea.select();
+  try {
+    document.execCommand('copy');
+    mostrarCopiadoOk();
+  } catch (e) {
+    showToast('No se pudo copiar. Seleccioná y copiá manualmente.', 'error');
+  }
+  document.body.removeChild(textarea);
+}
+
+function mostrarCopiadoOk() {
+  const el = $('copy_success');
+  if (el) {
+    el.classList.add('visible');
+    setTimeout(() => el.classList.remove('visible'), 2000);
+  }
+}
+
 async function renderConfig() {
   const main = $('mainContent');
   main.innerHTML = `
@@ -7332,20 +8014,119 @@ async function renderConfig() {
       </div>
     </div>
 
+    <div class="card" style="margin-top: 20px;" id="config_plantillas">
+      <div class="card-title">Plantillas de Onboarding</div>
+      <div style="font-size: 13px; color: var(--gris-text-soft); margin-bottom: 14px;">
+        Las plantillas se usan en la solapa "🚀 Onboarding" de cada cliente. Editalas una vez acá y se aplican a todos tus clientes.
+        <br>Variables disponibles: <span class="variable-badge">{nombre_cliente}</span> <span class="variable-badge">{servicio}</span> <span class="variable-badge">{rubro}</span> <span class="variable-badge">{nombre_agencia}</span> <span class="variable-badge">{email_agencia}</span>
+      </div>
+      <div id="plantillasContainer"><div class="loading"><div class="spinner"></div>Cargando plantillas...</div></div>
+    </div>
+
     <div class="card" style="margin-top: 20px;">
       <div class="card-title">Versión de la app</div>
       <div class="config-item">
-        <div class="config-label">Fase 3 — Sub-entrega B (Prospectos)</div>
+        <div class="config-label">Fase 3 completa 🎉</div>
         <div style="font-size: 13px; color: var(--gris-text-soft); margin-top: 4px;">
-          Módulos activos: Clientes · Brief · Estrategia con IA · Ideas con IA · Calendario completo · Generadores IA · Catálogo de Servicios · <strong>Pipeline de Prospectos</strong> · Accesos<br>
-          Próxima sub-entrega: Onboarding con checklists (Sub-C)
+          Módulos activos: Clientes · Brief · Estrategia con IA · Ideas con IA · Calendario completo · Generadores IA · Catálogo de Servicios · Pipeline de Prospectos · <strong>Onboarding con checklists</strong> · <strong>Plantillas copiables</strong> · Accesos<br>
+          Próxima fase (4): Dashboard · Finanzas · Métricas · Reportes mensuales
         </div>
       </div>
     </div>`;
+
+  // Cargar plantillas de onboarding
+  renderPlantillasConfig();
+}
+
+async function renderPlantillasConfig() {
+  const container = $('plantillasContainer');
+  if (!container) return;
+  try {
+    const { data } = await sheetRead('Plantillas_Onboarding');
+    state.plantillasOnboarding = data;
+    // Ordenar
+    data.sort((a, b) => (Number(a.orden) || 99) - (Number(b.orden) || 99));
+
+    if (data.length === 0) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 20px; color: var(--gris-text-soft); font-size: 13px;">
+          Aún no hay plantillas. Se crean automáticamente la primera vez que abrís la solapa Onboarding de un cliente.
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = data.map(p => `
+      <div class="plantilla-config-card ${(p.activa || 'Sí') === 'No' ? 'inactiva' : ''}">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <div style="font-weight: 600; font-size: 14px;">${esc(p.nombre)}</div>
+          <button class="btn btn-secondary btn-sm" onclick="editarPlantilla('${esc(p.id)}')">✏️ Editar</button>
+        </div>
+        <div style="font-size: 12px; color: var(--gris-text-muted); font-family: monospace;">ID: ${esc(p.id)}</div>
+        <details style="margin-top: 8px;">
+          <summary style="cursor: pointer; font-size: 12.5px; color: var(--petroleo);">Ver contenido</summary>
+          <pre style="background: var(--gris-bg); padding: 10px 12px; border-radius: 4px; margin-top: 6px; font-size: 12px; white-space: pre-wrap; font-family: inherit; max-height: 200px; overflow-y: auto;">${esc(p.contenido)}</pre>
+        </details>
+      </div>
+    `).join('');
+  } catch (e) {
+    container.innerHTML = `<div style="color: var(--rojo); font-size: 13px;">Error cargando plantillas: ${esc(e.message)}</div>`;
+  }
+}
+
+function editarPlantilla(plantillaId) {
+  const p = state.plantillasOnboarding.find(pl => pl.id === plantillaId);
+  if (!p) return;
+
+  $('modal').className = 'modal modal-lg';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>✏️ Editar plantilla: ${esc(p.nombre)}</h2>
+      <button class="btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label class="form-label">Nombre de la plantilla</label>
+        <input type="text" class="form-input" id="f_plantilla_nombre" value="${esc(p.nombre)}">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Contenido</label>
+        <div class="form-help" style="font-size: 11.5px; margin-bottom: 6px;">
+          Variables disponibles:
+          <span class="variable-badge">{nombre_cliente}</span>
+          <span class="variable-badge">{servicio}</span>
+          <span class="variable-badge">{rubro}</span>
+          <span class="variable-badge">{nombre_agencia}</span>
+          <span class="variable-badge">{email_agencia}</span>
+          — se reemplazan al usar la plantilla con un cliente.
+        </div>
+        <textarea class="form-textarea" id="f_plantilla_contenido" style="min-height: 300px; font-family: inherit;">${esc(p.contenido)}</textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarPlantilla('${esc(plantillaId)}')">Guardar cambios</button>
+    </div>`;
+  $('modalOverlay').classList.add('active');
+}
+
+async function guardarPlantilla(plantillaId) {
+  const nombre = $('f_plantilla_nombre').value.trim();
+  const contenido = $('f_plantilla_contenido').value.trim();
+  if (!nombre || !contenido) { showToast('Completá nombre y contenido', 'error'); return; }
+
+  try {
+    await sheetUpdate('Plantillas_Onboarding', plantillaId, { nombre, contenido });
+    // Actualizar en memoria
+    const p = state.plantillasOnboarding.find(pl => pl.id === plantillaId);
+    if (p) { p.nombre = nombre; p.contenido = contenido; }
+    closeModal();
+    showToast('Plantilla actualizada', 'success');
+    renderPlantillasConfig();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
 }
 
 async function verificarHojas() {
-  const hojas = ['Clientes','Prospectos','Briefs','Accesos','Estrategias','Calendario','Ideas','Servicios','Metricas','Onboarding','Finanzas_Ingresos','Finanzas_Egresos','Config'];
+  const hojas = ['Clientes','Prospectos','Briefs','Accesos','Estrategias','Calendario','Ideas','Servicios','Metricas','Onboarding','Plantillas_Onboarding','Finanzas_Ingresos','Finanzas_Egresos','Config'];
   const result = $('verifyResult');
   result.innerHTML = '<div class="loading"><div class="spinner"></div>Verificando...</div>';
   try {
