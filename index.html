@@ -1419,11 +1419,25 @@ function showAutosave(estado, msg) {
 
 function formatDateEs(dateStr) {
   if (!dateStr) return '';
+  // Si viene en formato ISO "YYYY-MM-DD" (sin hora), parseamos como fecha LOCAL, no UTC
+  // Sino, JS lo interpreta como UTC 00:00 y en zona horaria Argentina (UTC-3) queda un día antes
+  if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const date = new Date(y, m - 1, d);
+    return date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
   const d = new Date(dateStr);
   if (isNaN(d)) return dateStr;
   return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
-function todayISO() { return new Date().toISOString().split('T')[0]; }
+function todayISO() {
+  // Devuelve la fecha de HOY en zona horaria local (Argentina), no UTC
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
 function genId(prefix = 'id') { return prefix + '_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5); }
 
 // ============================================================================
@@ -10149,6 +10163,15 @@ PRINCIPIOS CLAVE:
 2. Sé honesta: si algo bajó o no se logró, decilo sin rodeos pero con empatía.
 3. Adaptá el análisis al CONTEXTO REAL del período (duración, tipo de contenido, limitaciones).
 4. Español rioplatense (vos, ustedes). Tono conversacional pero profesional.
+5. ⚠️ CRÍTICO — NO INVENTES: usá EXCLUSIVAMENTE los datos que te paso en el contexto. NO inventes:
+   - Metas numéricas que no estén en los KPIs definidos
+   - Nombres de personas (dueño/a, responsable) que no estén en el brief
+   - Títulos de publicaciones futuras que no estén en el calendario
+   - Benchmarks de industria o comparaciones con otras marcas
+   - Porcentajes "esperados" que no estén explícitamente definidos como meta
+   - Datos de meses anteriores si no te los pasé
+   Si necesitás un dato que no tenés, decí "no hay datos disponibles" o "sin información de referencia" en lugar de inventarlo.
+6. Para los KPIs: usá SOLO los KPIs de la lista que te paso, con las metas exactas que te indico. Si un KPI no tiene meta definida, no le inventes una. Si la métrica_asociada es "otro", decí que requiere medición manual.
 
 ESTRUCTURA DEL REPORTE (markdown):
 
@@ -10173,6 +10196,9 @@ ${kpis.length > 0 ? `## 🎯 Cumplimiento de KPIs
 REGLAS FIRMES:
 - Si no tenés datos para una sección, decilo ("En este período no tuvimos métricas suficientes para evaluar X") en vez de inventar.
 - Nunca exageres ("¡impresionante crecimiento!" si apenas creció 2 seguidores).
+- NO inventes benchmarks de industria ni porcentajes "esperables". Solo mencioná los números que te pasé.
+- NO inventes títulos de publicaciones que no estén en la lista del calendario. Si querés sugerir contenido nuevo, usá lenguaje como "sugiero publicar contenido sobre X" sin ponerle título específico.
+- NO inventes nombres de personas. Si no te paso nombre del responsable, usá "el cliente" o el nombre de la marca.
 - Devolvés SOLO el markdown del reporte, sin preámbulo, sin cierre tipo "espero que te sirva".`;
 
   const userPrompt = `Generá el reporte mensual para:
