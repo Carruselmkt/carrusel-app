@@ -9881,6 +9881,7 @@ function renderReportesList() {
           </div>
           <div style="display: flex; gap: 6px; flex-wrap: wrap;">
             <button class="btn btn-primary btn-sm" onclick="descargarReportePdf('${esc(r.id)}')" style="background: var(--fucsia);">📄 PDF</button>
+            <button class="btn btn-secondary btn-sm" onclick="verReporteImprimible('${esc(r.id)}')">🖨️ Imprimible</button>
             <button class="btn btn-secondary btn-sm" onclick="copiarReporte('${esc(r.id)}')">📋 Copiar</button>
             <button class="btn btn-secondary btn-sm" onclick="editarReporte('${esc(r.id)}')">✏️ Editar</button>
             <button class="btn-ghost btn-sm btn-danger" onclick="deleteReporte('${esc(r.id)}')">🗑</button>
@@ -10277,36 +10278,54 @@ function descargarReportePdf(id) {
   const periodo = `${nombresMeses[Number(r.mes) - 1]} ${r.anio}`;
 
   if (typeof html2pdf === 'undefined') {
-    showToast('Todavía está cargando la librería PDF. Probá de nuevo en 2 segundos.', 'error');
+    showToast('Todavía está cargando la librería PDF. Probá de nuevo en unos segundos o usá "Vista imprimible".', 'error');
     return;
   }
 
-  showToast('Generando PDF...', 'success');
+  // Crear overlay de "Generando PDF..." que cubre toda la pantalla
+  const overlay = document.createElement('div');
+  overlay.id = 'pdf_overlay';
+  overlay.style.cssText = `
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(255, 255, 255, 0.95); z-index: 9999;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 16px;
+  `;
+  overlay.innerHTML = `
+    <div class="spinner" style="width: 48px; height: 48px; border-width: 4px;"></div>
+    <div style="font-size: 15px; font-weight: 600; color: var(--fucsia); font-family: 'Fraunces', serif;">Generando PDF...</div>
+    <div style="font-size: 12px; color: var(--gris-text-muted);">Puede tardar unos segundos</div>
+  `;
+  document.body.appendChild(overlay);
 
-  // Crear contenedor oculto con el reporte estilizado
+  // Contenedor visible (dentro del viewport) pero tapado por el overlay
   const container = document.createElement('div');
-  container.style.cssText = 'position: absolute; left: -9999px; top: 0; width: 210mm; background: white;';
+  container.id = 'pdf_render_container';
+  container.style.cssText = `
+    position: fixed; top: 0; left: 0; width: 210mm; background: white;
+    z-index: 9998; overflow: visible;
+  `;
   container.innerHTML = `
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@500;700&family=Inter:wght@400;500;600;700&display=swap');
-      .pdf-doc { font-family: 'Inter', sans-serif; color: #2a2a2a; padding: 25mm 20mm 20mm 20mm; font-size: 11pt; line-height: 1.55; }
-      .pdf-header { border-bottom: 3px solid #ba0d66; padding-bottom: 14px; margin-bottom: 24px; }
-      .pdf-brand { font-family: 'Fraunces', serif; font-size: 16pt; color: #ba0d66; font-weight: 700; letter-spacing: -0.3px; }
-      .pdf-brand-tag { font-size: 9pt; color: #888; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 2px; }
-      .pdf-title-block { margin-top: 16px; }
-      .pdf-cliente { font-family: 'Fraunces', serif; font-size: 24pt; color: #2a2a2a; font-weight: 700; line-height: 1.1; }
-      .pdf-periodo { font-size: 11pt; color: #f79f6f; font-weight: 600; margin-top: 4px; text-transform: uppercase; letter-spacing: 1px; }
-      .pdf-body { margin-top: 10px; }
-      .pdf-body h1 { font-family: 'Fraunces', serif; font-size: 18pt; color: #ba0d66; margin: 18px 0 10px; page-break-after: avoid; }
-      .pdf-body h2 { font-family: 'Fraunces', serif; font-size: 14pt; color: #176b87; margin: 16px 0 8px; padding-left: 10px; border-left: 3px solid #f79f6f; page-break-after: avoid; }
-      .pdf-body h3 { font-family: 'Fraunces', serif; font-size: 12pt; color: #2a2a2a; margin: 12px 0 6px; page-break-after: avoid; }
-      .pdf-body p { margin: 6px 0; text-align: justify; }
-      .pdf-body ul { padding-left: 20px; margin: 6px 0; }
-      .pdf-body li { margin-bottom: 4px; }
-      .pdf-body strong { color: #ba0d66; font-weight: 600; }
-      .pdf-body em { color: #176b87; }
-      .pdf-footer { border-top: 1px solid #e5e5e5; padding-top: 12px; margin-top: 36px; font-size: 8.5pt; color: #888; display: flex; justify-content: space-between; }
-      .pdf-footer-brand { color: #ba0d66; font-weight: 600; }
+      #pdf_render_container { font-family: 'Inter', sans-serif; color: #2a2a2a; font-size: 11pt; line-height: 1.55; }
+      #pdf_render_container .pdf-doc { padding: 25mm 20mm 20mm 20mm; }
+      #pdf_render_container .pdf-header { border-bottom: 3px solid #ba0d66; padding-bottom: 14px; margin-bottom: 24px; }
+      #pdf_render_container .pdf-brand { font-family: 'Fraunces', serif; font-size: 22px; color: #ba0d66; font-weight: 700; letter-spacing: -0.3px; }
+      #pdf_render_container .pdf-brand-tag { font-size: 10px; color: #888; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 2px; }
+      #pdf_render_container .pdf-title-block { margin-top: 16px; }
+      #pdf_render_container .pdf-cliente { font-family: 'Fraunces', serif; font-size: 32px; color: #2a2a2a; font-weight: 700; line-height: 1.1; }
+      #pdf_render_container .pdf-periodo { font-size: 13px; color: #f79f6f; font-weight: 600; margin-top: 6px; text-transform: uppercase; letter-spacing: 1.5px; }
+      #pdf_render_container .pdf-body { margin-top: 10px; }
+      #pdf_render_container .pdf-body h1 { font-family: 'Fraunces', serif; font-size: 22px; color: #ba0d66; margin: 20px 0 10px; }
+      #pdf_render_container .pdf-body h2 { font-family: 'Fraunces', serif; font-size: 17px; color: #176b87; margin: 18px 0 8px; padding-left: 10px; border-left: 3px solid #f79f6f; }
+      #pdf_render_container .pdf-body h3 { font-family: 'Fraunces', serif; font-size: 14px; color: #2a2a2a; margin: 14px 0 6px; }
+      #pdf_render_container .pdf-body p { margin: 6px 0; text-align: justify; }
+      #pdf_render_container .pdf-body ul { padding-left: 22px; margin: 8px 0; }
+      #pdf_render_container .pdf-body li { margin-bottom: 4px; }
+      #pdf_render_container .pdf-body strong { color: #ba0d66; font-weight: 600; }
+      #pdf_render_container .pdf-body em { color: #176b87; font-style: italic; }
+      #pdf_render_container .pdf-footer { border-top: 1px solid #e5e5e5; padding-top: 12px; margin-top: 36px; font-size: 10px; color: #888; display: flex; justify-content: space-between; }
+      #pdf_render_container .pdf-footer-brand { color: #ba0d66; font-weight: 600; }
     </style>
     <div class="pdf-doc">
       <div class="pdf-header">
@@ -10317,7 +10336,7 @@ function descargarReportePdf(id) {
           <div class="pdf-periodo">Reporte · ${esc(periodo)}</div>
         </div>
       </div>
-      <div class="pdf-body">${renderMarkdownParaPdf(r.contenido_md || '')}</div>
+      <div class="pdf-body">${renderMarkdown(r.contenido_md || '')}</div>
       <div class="pdf-footer">
         <div><span class="pdf-footer-brand">@carrusel.mkt</span> · Mendoza, Argentina</div>
         <div>Generado el ${esc(formatDateEs(r.fecha_generacion))}</div>
@@ -10332,24 +10351,137 @@ function descargarReportePdf(id) {
     margin: 0,
     filename: nombreArchivo,
     image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true, logging: false },
+    html2canvas: {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      backgroundColor: '#ffffff',
+      windowWidth: container.offsetWidth,
+    },
     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
     pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
   };
 
-  html2pdf().set(opciones).from(container).save().then(() => {
-    document.body.removeChild(container);
-    showToast('PDF descargado ✓', 'success');
-  }).catch(err => {
-    document.body.removeChild(container);
-    showToast('Error generando PDF: ' + err.message, 'error');
-  });
+  // Damos un tick para que el DOM termine de renderizar + cargar fuentes
+  setTimeout(() => {
+    html2pdf().set(opciones).from(container).save().then(() => {
+      if (document.body.contains(container)) document.body.removeChild(container);
+      if (document.body.contains(overlay)) document.body.removeChild(overlay);
+      showToast('PDF descargado ✓', 'success');
+    }).catch(err => {
+      if (document.body.contains(container)) document.body.removeChild(container);
+      if (document.body.contains(overlay)) document.body.removeChild(overlay);
+      showToast('Error generando PDF: ' + err.message + '. Probá con "Vista imprimible".', 'error');
+    });
+  }, 300);
 }
 
-// Versión del renderMarkdown adaptada para el PDF (remueve el wrapper exterior)
-function renderMarkdownParaPdf(md) {
-  return renderMarkdown(md);
+// Opción B: vista imprimible en ventana nueva (más confiable, mejor calidad)
+function verReporteImprimible(id) {
+  const r = state.reportes.find(x => x.id === id);
+  if (!r) return;
+  const cliente = state.clientes.find(c => c.id === r.cliente_id);
+  const nombresMeses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const periodo = `${nombresMeses[Number(r.mes) - 1]} ${r.anio}`;
+  const nombreCliente = cliente ? cliente.nombre : 'Cliente';
+
+  const html = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Reporte ${nombreCliente} - ${periodo}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #f1f1f1; font-family: 'Inter', sans-serif; color: #2a2a2a; }
+  .print-bar {
+    position: sticky; top: 0; z-index: 10;
+    background: #fff; border-bottom: 1px solid #e5e5e5;
+    padding: 14px 20px;
+    display: flex; justify-content: space-between; align-items: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+  .print-bar-info { font-size: 13px; color: #888; }
+  .print-bar-info strong { color: #ba0d66; font-family: 'Fraunces', serif; }
+  .print-bar button {
+    background: #ba0d66; color: #fff; border: none;
+    padding: 10px 20px; border-radius: 6px;
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    font-family: 'Inter', sans-serif;
+  }
+  .print-bar button:hover { background: #9c0b57; }
+
+  .pdf-doc {
+    max-width: 210mm; margin: 20px auto 40px;
+    background: white; padding: 25mm 20mm 20mm 20mm;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    font-size: 11pt; line-height: 1.55;
+  }
+  .pdf-header { border-bottom: 3px solid #ba0d66; padding-bottom: 14px; margin-bottom: 24px; }
+  .pdf-brand { font-family: 'Fraunces', serif; font-size: 22px; color: #ba0d66; font-weight: 700; letter-spacing: -0.3px; }
+  .pdf-brand-tag { font-size: 10px; color: #888; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 2px; }
+  .pdf-title-block { margin-top: 16px; }
+  .pdf-cliente { font-family: 'Fraunces', serif; font-size: 32px; color: #2a2a2a; font-weight: 700; line-height: 1.1; }
+  .pdf-periodo { font-size: 13px; color: #f79f6f; font-weight: 600; margin-top: 6px; text-transform: uppercase; letter-spacing: 1.5px; }
+  .pdf-body { margin-top: 10px; }
+  .pdf-body h1 { font-family: 'Fraunces', serif; font-size: 22px; color: #ba0d66; margin: 20px 0 10px; }
+  .pdf-body h2 { font-family: 'Fraunces', serif; font-size: 17px; color: #176b87; margin: 18px 0 8px; padding-left: 10px; border-left: 3px solid #f79f6f; }
+  .pdf-body h3 { font-family: 'Fraunces', serif; font-size: 14px; color: #2a2a2a; margin: 14px 0 6px; }
+  .pdf-body p { margin: 6px 0; text-align: justify; }
+  .pdf-body ul { padding-left: 22px; margin: 8px 0; }
+  .pdf-body li { margin-bottom: 4px; }
+  .pdf-body strong { color: #ba0d66; font-weight: 600; }
+  .pdf-body em { color: #176b87; font-style: italic; }
+  .pdf-footer { border-top: 1px solid #e5e5e5; padding-top: 12px; margin-top: 36px; font-size: 10px; color: #888; display: flex; justify-content: space-between; }
+  .pdf-footer-brand { color: #ba0d66; font-weight: 600; }
+
+  @media print {
+    body { background: white; }
+    .print-bar { display: none; }
+    .pdf-doc { max-width: none; margin: 0; box-shadow: none; padding: 20mm 15mm; }
+    @page { size: A4; margin: 0; }
+  }
+</style>
+</head>
+<body>
+  <div class="print-bar">
+    <div class="print-bar-info">
+      Reporte de <strong>${nombreCliente}</strong> · ${periodo}
+    </div>
+    <button onclick="window.print()">🖨️ Imprimir / Guardar como PDF</button>
+  </div>
+  <div class="pdf-doc">
+    <div class="pdf-header">
+      <div class="pdf-brand">Carrusel MKT 🎠</div>
+      <div class="pdf-brand-tag">Estrategia · Contenido · Diseño</div>
+      <div class="pdf-title-block">
+        <div class="pdf-cliente">${esc(nombreCliente)}</div>
+        <div class="pdf-periodo">Reporte · ${esc(periodo)}</div>
+      </div>
+    </div>
+    <div class="pdf-body">${renderMarkdown(r.contenido_md || '')}</div>
+    <div class="pdf-footer">
+      <div><span class="pdf-footer-brand">@carrusel.mkt</span> · Mendoza, Argentina</div>
+      <div>Generado el ${esc(formatDateEs(r.fecha_generacion))}</div>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  // Abrir en ventana nueva
+  const w = window.open('', '_blank');
+  if (!w) {
+    showToast('Tu navegador bloqueó la ventana emergente. Habilitala y probá de nuevo.', 'error');
+    return;
+  }
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
 }
+
 
 async function deleteReporte(id) {
   if (!confirm('¿Eliminar este reporte?')) return;
