@@ -1186,6 +1186,18 @@
   .badge-estado-pago.Pendiente { background: #fff4e0; color: #8a6a20; }
   .badge-estado-pago.Vencido { background: #fef0ef; color: var(--rojo); }
 
+  .tooltip-icon {
+    display: inline-block;
+    width: 15px; height: 15px;
+    line-height: 15px; text-align: center;
+    background: var(--gris-bg); color: var(--petroleo);
+    border-radius: 50%; font-size: 10px;
+    cursor: help; user-select: none;
+    border: 1px solid var(--gris-border);
+    vertical-align: middle;
+  }
+  .tooltip-icon:hover { background: var(--petroleo); color: #fff; }
+
   /* ===== MÉTRICAS ===== */
   .metricas-cliente-card {
     background: #fff; border: 1px solid var(--gris-border);
@@ -1268,6 +1280,7 @@
     .tab-btn { padding: 10px 14px; font-size: 12.5px; }
   }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
 
@@ -2576,7 +2589,7 @@ function renderEstrategiaCard(e) {
 
         <div class="estrategia-section">
           <div class="estrategia-section-title" style="display: flex; justify-content: space-between; align-items: center;">
-            <span>📈 KPIs sugeridos ${kpisSugeridos.length > 0 ? `(${kpisSugeridos.length})` : ''}</span>
+            <span>📈 KPIs ${kpisSugeridos.length > 0 ? `(${kpisSugeridos.length})` : ''}</span>
             ${esActiva ? `
               <div style="display: flex; gap: 6px;">
                 ${kpisSugeridos.length > 0 ? `<button class="btn btn-secondary btn-sm" onclick="editarKpis('${esc(e.id)}')">✏️ Editar</button>` : ''}
@@ -2586,13 +2599,11 @@ function renderEstrategiaCard(e) {
           </div>
           ${!kpisSugeridos || kpisSugeridos.length === 0 ? `
             <div class="estrategia-ai-placeholder">
-              ${esActiva ? '✨ Click en "Generar con IA" para que proponga KPIs según el momento y los objetivos.' : 'No hay KPIs cargados.'}
+              ${esActiva ? '✨ Click en "Generar con IA" para que proponga KPIs con metas numéricas según el momento y los objetivos.' : 'No hay KPIs cargados.'}
             </div>
           ` : `
-            <div style="background: #fff; padding: 12px 14px; border-radius: 6px; border: 1px solid var(--gris-border);">
-              <ul style="font-size: 13px; padding-left: 18px; margin: 0;">
-                ${kpisSugeridos.map(k => `<li style="margin-bottom: 4px;">${esc(k)}</li>`).join('')}
-              </ul>
+            <div style="background: #fff; padding: 10px; border-radius: 6px; border: 1px solid var(--gris-border);">
+              ${renderKpisVistaLectura(normalizarKpis(kpisSugeridos))}
             </div>
           `}
         </div>
@@ -3289,26 +3300,40 @@ async function generarKpis(estrategiaId) {
 
   const systemPrompt = `Sos una analista de marketing digital. Trabajás para Carrusel MKT, agencia argentina.
 
-Tu tarea: proponer KPIs (indicadores clave) accionables para una estrategia de redes sociales.
+Tu tarea: proponer KPIs (indicadores clave) accionables para una estrategia de redes sociales, con METAS NUMÉRICAS concretas.
 
 REGLAS:
 - Los KPIs deben ser MEDIBLES en redes sociales (IG, FB, TikTok) sin herramientas pagas.
-- Deben alinear con el momento del cliente:
+- Alineá con el momento del cliente:
   - Pre-lanzamiento / Lanzamiento: foco en alcance, reconocimiento, crecimiento de seguidores.
   - Crecimiento: alcance + interacción (saves, compartidos, comentarios).
   - Consolidación: conversión (clicks al link, mensajes directos, turnos/ventas).
-- Incluí entre 5 y 8 KPIs.
-- Cada KPI debe ser específico y accionable (no vago como "buena interacción").
-- Si es posible, sugerí metas numéricas basadas en las metas que ya definió el cliente.
+- Incluí entre 4 y 6 KPIs (pocos y bien enfocados es mejor que muchos).
+- Cada KPI debe ser específico y tener una meta numérica razonable.
+- Asigná prioridad: "alta" para 2-3 KPIs clave, "media" para el resto.
+- La métrica asociada debe ser UNA de estas opciones exactas:
+  visualizaciones, cuentas_alcanzadas, interacciones, seguidores_fin,
+  empezaron_seguir, me_gusta, respuestas, veces_compartido, guardados,
+  visitas_perfil, toques_enlace_externo, toques_direccion, otro
 - Usá español rioplatense.
 
-FORMATO DE SALIDA: devolvés SOLO un JSON válido (un array de strings). Formato exacto:
+FORMATO DE SALIDA: devolvés SOLO un JSON válido (array de objetos). Formato exacto:
 
 [
-  "KPI 1 específico con meta si es posible (ej: 'Alcance mensual: llegar a 5.000 cuentas únicas')",
-  "KPI 2",
-  "KPI 3"
-]`;
+  {
+    "nombre": "Nombre corto y claro del KPI (ej: 'Alcance mensual')",
+    "meta": 5000,
+    "unidad": "cuentas" o "%" o "por mes" o similar (string corto),
+    "metrica_asociada": "cuentas_alcanzadas",
+    "prioridad": "alta"
+  }
+]
+
+EJEMPLOS BUENOS:
+- {"nombre": "Alcance mensual", "meta": 5000, "unidad": "cuentas", "metrica_asociada": "cuentas_alcanzadas", "prioridad": "alta"}
+- {"nombre": "Nuevos seguidores", "meta": 100, "unidad": "por mes", "metrica_asociada": "empezaron_seguir", "prioridad": "alta"}
+- {"nombre": "Guardados", "meta": 80, "unidad": "por mes", "metrica_asociada": "guardados", "prioridad": "media"}
+- {"nombre": "Clicks al link", "meta": 50, "unidad": "por mes", "metrica_asociada": "toques_enlace_externo", "prioridad": "alta"}`;
 
   const userPrompt = `Información del cliente:
 
@@ -3318,10 +3343,10 @@ Información de la estrategia:
 
 ${buildEstrategiaContext(estrategia)}
 
-Proponé KPIs concretos y medibles para esta estrategia.`;
+Proponé KPIs estructurados con metas numéricas concretas para esta estrategia.`;
 
   try {
-    const raw = await callClaude(systemPrompt, userPrompt, { maxTokens: 1500 });
+    const raw = await callClaude(systemPrompt, userPrompt, { maxTokens: 1800 });
     const kpis = extractJson(raw);
     if (!Array.isArray(kpis) || kpis.length === 0) throw new Error('La IA no devolvió KPIs válidos');
     mostrarPreviewKpis(estrategiaId, kpis);
@@ -3330,20 +3355,80 @@ Proponé KPIs concretos y medibles para esta estrategia.`;
   }
 }
 
+const METRICAS_ASOCIADAS = [
+  { v: 'visualizaciones', l: 'Visualizaciones' },
+  { v: 'cuentas_alcanzadas', l: 'Cuentas alcanzadas' },
+  { v: 'interacciones', l: 'Interacciones' },
+  { v: 'seguidores_fin', l: 'Seguidores totales' },
+  { v: 'empezaron_seguir', l: 'Nuevos seguidores' },
+  { v: 'me_gusta', l: 'Me gusta' },
+  { v: 'respuestas', l: 'Respuestas / Comentarios' },
+  { v: 'veces_compartido', l: 'Veces compartido' },
+  { v: 'guardados', l: 'Guardados' },
+  { v: 'visitas_perfil', l: 'Visitas al perfil' },
+  { v: 'toques_enlace_externo', l: 'Toques en link bio' },
+  { v: 'toques_direccion', l: 'Toques en dirección' },
+  { v: 'otro', l: 'Otro (manual)' },
+];
+
+// Normaliza KPIs viejos (strings) al formato nuevo (objetos)
+function normalizarKpis(kpis) {
+  if (!Array.isArray(kpis)) return [];
+  return kpis.map(k => {
+    if (typeof k === 'string') {
+      // KPI viejo: solo texto
+      return { nombre: k, meta: '', unidad: '', metrica_asociada: 'otro', prioridad: 'media' };
+    }
+    // KPI nuevo (objeto)
+    return {
+      nombre: k.nombre || '',
+      meta: k.meta || '',
+      unidad: k.unidad || '',
+      metrica_asociada: k.metrica_asociada || 'otro',
+      prioridad: k.prioridad || 'media',
+    };
+  });
+}
+
+// Renderiza los KPIs en modo lectura (para la vista de estrategia)
+function renderKpisVistaLectura(kpis) {
+  const prioridadColor = { alta: 'var(--fucsia)', media: 'var(--petroleo)', baja: 'var(--gris-text-muted)' };
+  const prioridadLabel = { alta: '⭐ Alta', media: 'Media', baja: 'Baja' };
+
+  return kpis.map(k => {
+    const tieneMetaNumerica = k.meta && !isNaN(Number(k.meta));
+    const metricaLabel = (METRICAS_ASOCIADAS.find(m => m.v === k.metrica_asociada) || {}).l || 'Manual';
+    return `
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-left: 3px solid ${prioridadColor[k.prioridad] || prioridadColor.media}; background: #fafafa; border-radius: 0 4px 4px 0; margin-bottom: 6px;">
+        <div style="flex: 1; min-width: 0;">
+          <div style="font-weight: 600; font-size: 13.5px; color: var(--gris-text);">${esc(k.nombre)}</div>
+          <div style="font-size: 11.5px; color: var(--gris-text-muted); margin-top: 2px;">
+            📊 ${esc(metricaLabel)} · ${esc(prioridadLabel[k.prioridad] || 'Media')}
+          </div>
+        </div>
+        ${tieneMetaNumerica ? `
+          <div style="text-align: right; padding-left: 10px;">
+            <div style="font-size: 17px; font-weight: 700; color: var(--fucsia); font-family: 'Fraunces', serif;">${formatMilesCompacto(k.meta)}</div>
+            ${k.unidad ? `<div style="font-size: 10.5px; color: var(--gris-text-muted);">${esc(k.unidad)}</div>` : ''}
+          </div>
+        ` : `
+          <div style="font-size: 11px; color: var(--gris-text-muted); font-style: italic;">sin meta</div>
+        `}
+      </div>
+    `;
+  }).join('');
+}
+
 function mostrarPreviewKpis(estrategiaId, kpis) {
-  const itemsHtml = kpis.map((k, i) => `
-    <div data-kpi-idx="${i}" style="display: flex; gap: 8px; align-items: flex-start; margin-bottom: 8px;">
-      <div style="color: var(--fucsia); font-weight: 600; padding-top: 6px; min-width: 20px;">•</div>
-      <div class="editable-field" contenteditable="true" data-field="kpi" style="flex: 1; min-height: 24px;" data-placeholder="KPI con meta numérica">${esc(k)}</div>
-      <button class="btn-ghost btn-danger btn-sm" onclick="removePreviewCard(this, 'kpi-idx')" style="padding: 4px 8px; font-size: 14px;" title="Eliminar">🗑</button>
-    </div>
-  `).join('');
+  const kpisNormalizados = normalizarKpis(kpis);
+
+  const itemsHtml = kpisNormalizados.map((k, i) => renderKpiEditRow(k, i)).join('');
 
   $('genModalBody').innerHTML = `
     <div class="gen-preview">
       <div class="gen-preview-header">✨ KPIs sugeridos — editables</div>
       <div class="editable-hint">
-        💡 Click en cualquier KPI para editarlo. Podés eliminar los que no te gusten o agregar nuevos.
+        💡 Cada KPI tiene una meta numérica, una métrica asociada (para poder medirlo) y una prioridad. Editá lo que necesites.
       </div>
       <div id="kpisPreview" style="background: #fff; padding: 14px; border-radius: 6px; border: 1px solid var(--gris-border);">
         ${itemsHtml}
@@ -3360,29 +3445,69 @@ function mostrarPreviewKpis(estrategiaId, kpis) {
   `;
 }
 
+function renderKpiEditRow(k, i) {
+  const metricasOptions = METRICAS_ASOCIADAS.map(m =>
+    `<option value="${m.v}" ${k.metrica_asociada === m.v ? 'selected' : ''}>${m.l}</option>`
+  ).join('');
+
+  return `
+    <div data-kpi-idx="${i}" style="background: #fafafa; border: 1px solid var(--gris-border); border-radius: 6px; padding: 10px 12px; margin-bottom: 8px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px;">
+        <input type="text" class="form-input kpi-nombre" value="${esc(k.nombre || '')}" placeholder="Nombre del KPI (ej: Alcance mensual)" style="flex: 1; font-weight: 600; padding: 6px 10px; font-size: 13.5px;">
+        <button class="btn-ghost btn-danger btn-sm" onclick="removePreviewCard(this, 'kpi-idx')" style="padding: 4px 8px; font-size: 14px;" title="Eliminar">🗑</button>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; font-size: 12px;">
+        <div>
+          <div style="font-size: 10.5px; color: var(--gris-text-muted); text-transform: uppercase; font-weight: 600; margin-bottom: 2px;">Meta</div>
+          <input type="number" class="form-input kpi-meta" value="${esc(String(k.meta || ''))}" placeholder="100" style="padding: 5px 8px; font-size: 12.5px;">
+        </div>
+        <div>
+          <div style="font-size: 10.5px; color: var(--gris-text-muted); text-transform: uppercase; font-weight: 600; margin-bottom: 2px;">Unidad</div>
+          <input type="text" class="form-input kpi-unidad" value="${esc(k.unidad || '')}" placeholder="ej: cuentas, %, por mes" style="padding: 5px 8px; font-size: 12.5px;">
+        </div>
+        <div>
+          <div style="font-size: 10.5px; color: var(--gris-text-muted); text-transform: uppercase; font-weight: 600; margin-bottom: 2px;">Métrica asociada</div>
+          <select class="form-select kpi-metrica" style="padding: 5px 8px; font-size: 12.5px;">
+            ${metricasOptions}
+          </select>
+        </div>
+        <div>
+          <div style="font-size: 10.5px; color: var(--gris-text-muted); text-transform: uppercase; font-weight: 600; margin-bottom: 2px;">Prioridad</div>
+          <select class="form-select kpi-prioridad" style="padding: 5px 8px; font-size: 12.5px;">
+            <option value="alta" ${k.prioridad === 'alta' ? 'selected' : ''}>Alta</option>
+            <option value="media" ${(k.prioridad || 'media') === 'media' ? 'selected' : ''}>Media</option>
+            <option value="baja" ${k.prioridad === 'baja' ? 'selected' : ''}>Baja</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function agregarKpiManual() {
   const container = $('kpisPreview');
   const btn = container.querySelector('button');
   const existing = container.querySelectorAll('[data-kpi-idx]');
   const newIdx = existing.length;
   const div = document.createElement('div');
-  div.setAttribute('data-kpi-idx', newIdx);
-  div.style.cssText = 'display: flex; gap: 8px; align-items: flex-start; margin-bottom: 8px;';
-  div.innerHTML = `
-    <div style="color: var(--fucsia); font-weight: 600; padding-top: 6px; min-width: 20px;">•</div>
-    <div class="editable-field" contenteditable="true" data-field="kpi" style="flex: 1; min-height: 24px;" data-placeholder="Nuevo KPI"></div>
-    <button class="btn-ghost btn-danger btn-sm" onclick="removePreviewCard(this, 'kpi-idx')" style="padding: 4px 8px; font-size: 14px;" title="Eliminar">🗑</button>
-  `;
-  container.insertBefore(div, btn);
-  div.querySelector('[data-field]').focus();
+  div.innerHTML = renderKpiEditRow({}, newIdx);
+  container.insertBefore(div.firstElementChild, btn);
+  container.querySelector(`[data-kpi-idx="${newIdx}"] .kpi-nombre`).focus();
 }
 
 function extractKpisFromDOM() {
-  const items = document.querySelectorAll('#kpisPreview [data-kpi-idx] [data-field]');
+  const cards = document.querySelectorAll('#kpisPreview [data-kpi-idx]');
   const kpis = [];
-  items.forEach(item => {
-    const val = item.innerText.trim();
-    if (val) kpis.push(val);
+  cards.forEach(card => {
+    const nombre = card.querySelector('.kpi-nombre').value.trim();
+    if (!nombre) return;
+    kpis.push({
+      nombre,
+      meta: card.querySelector('.kpi-meta').value.trim(),
+      unidad: card.querySelector('.kpi-unidad').value.trim(),
+      metrica_asociada: card.querySelector('.kpi-metrica').value,
+      prioridad: card.querySelector('.kpi-prioridad').value,
+    });
   });
   return kpis;
 }
@@ -9202,10 +9327,33 @@ function renderFinanzasProyeccion() {
 
 
 // ============================================================================
-// MÓDULO: MÉTRICAS
+// MÓDULO: MÉTRICAS (rediseñado · período flexible + KPIs destacados)
 // ============================================================================
 
 const REDES_SOCIALES = ['Instagram', 'Facebook', 'TikTok', 'LinkedIn', 'YouTube'];
+const TIPOS_CONTENIDO = [
+  { v: 'historias', l: '📖 Historias' },
+  { v: 'reels', l: '🎬 Reels' },
+  { v: 'publicaciones', l: '📷 Publicaciones' },
+  { v: 'en_vivo', l: '🔴 En vivo' },
+];
+
+// Ayudas: dónde encontrar cada métrica en Meta Business Suite
+const AYUDAS_META = {
+  visualizaciones: '📍 En el Panel profesional de Instagram → "Visualizaciones"',
+  cuentas_alcanzadas: '📍 En Visualizaciones → tocás el círculo → "Cuentas alcanzadas"',
+  interacciones: '📍 En el Panel profesional → "Interacciones"',
+  seguidores_fin: '📍 El número que aparece en tu perfil al final del período',
+  empezaron_seguir: '📍 En Panel profesional → Seguidores → Crecimiento → "Empezaron a seguirte"',
+  dejaron_seguir: '📍 En Panel profesional → Seguidores → Crecimiento → "Dejaron de seguirte"',
+  me_gusta: '📍 Sumá los Me gusta del período (Insights de cada publicación/historia)',
+  respuestas: '📍 Respuestas de historias o comentarios en publicaciones',
+  veces_compartido: '📍 En Panel profesional → "Contenido que compartiste"',
+  guardados: '📍 Insights de cada publicación/reel (solo aplica a posts)',
+  visitas_perfil: '📍 En Visualizaciones → scroll abajo → "Actividad del perfil" → "Visitas al perfil"',
+  toques_enlace_externo: '📍 En Visualizaciones → scroll abajo → "Actividad del perfil" → "Toques en el enlace externo"',
+  toques_direccion: '📍 En Visualizaciones → "Actividad del perfil" → "Toques en la dirección del negocio"',
+};
 
 async function renderMetricas() {
   const main = $('mainContent');
@@ -9213,22 +9361,24 @@ async function renderMetricas() {
     <div class="page-header">
       <div class="page-title-area">
         <h1 class="page-title">Métricas</h1>
-        <div class="page-subtitle">Carga y visualización de resultados de las redes sociales de tus clientes.</div>
+        <div class="page-subtitle">Cargá métricas por período y seguí el cumplimiento de los KPIs de cada cliente.</div>
       </div>
       <div class="page-actions">
-        <button class="btn btn-primary" onclick="openMetricasModal()">+ Cargar métricas del mes</button>
+        <button class="btn btn-primary" onclick="openMetricasModal()">+ Cargar métricas</button>
       </div>
     </div>
     <div id="metricasContent"><div class="loading"><div class="spinner"></div>Cargando...</div></div>
   `;
 
   try {
-    const [metRes, cliRes] = await Promise.all([
+    const [metRes, cliRes, estRes] = await Promise.all([
       sheetRead('Metricas'),
       sheetRead('Clientes'),
+      sheetRead('Estrategias'),
     ]);
     state.metricas = metRes.data;
     state.clientes = cliRes.data;
+    state.estrategias = estRes.data;
     renderMetricasList();
   } catch (e) {
     $('metricasContent').innerHTML = `<div class="card" style="border-color: var(--rojo);"><strong style="color: var(--rojo);">Error</strong><p>${esc(e.message)}</p></div>`;
@@ -9243,7 +9393,8 @@ function renderMetricasList() {
       <div class="empty-state">
         <p>Todavía no cargaste métricas de ningún cliente.</p>
         <p style="font-size: 12.5px; margin-top: 8px;">
-          Cargá los números mensuales de cada red social para ver la evolución y generar reportes automáticos con IA.
+          Cargá métricas por período (de los últimos 3 días, una semana, un mes completo, lo que te sirva).
+          <br>La app te va a mostrar el cumplimiento de los KPIs que definiste en la estrategia.
         </p>
         <button class="btn btn-primary" onclick="openMetricasModal()" style="margin-top: 16px;">+ Cargar primeras métricas</button>
       </div>
@@ -9259,9 +9410,9 @@ function renderMetricasList() {
   });
 
   const cards = clientesActivos.map(c => {
-    const metricasCliente = (porCliente[c.id] || []).sort((a, b) => {
-      return (Number(b.anio) * 12 + Number(b.mes)) - (Number(a.anio) * 12 + Number(a.mes));
-    });
+    const metricasCliente = (porCliente[c.id] || []).sort((a, b) =>
+      (b.fecha_hasta || '').localeCompare(a.fecha_hasta || '')
+    );
     if (metricasCliente.length === 0) {
       return `
         <div class="metricas-cliente-card">
@@ -9274,72 +9425,161 @@ function renderMetricasList() {
       `;
     }
 
-    // Tomar la más reciente y comparar con anterior si existe
     const ultima = metricasCliente[0];
-    const anterior = metricasCliente[1];
-    const nombresMeses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-    const labelMes = `${nombresMeses[Number(ultima.mes) - 1]} ${ultima.anio}`;
-
-    const metricasMostrar = [
-      { key: 'seguidores_fin', label: 'Seguidores', icon: '👥' },
-      { key: 'alcance', label: 'Alcance', icon: '📡' },
-      { key: 'interacciones', label: 'Interacciones', icon: '❤️' },
-      { key: 'visitas_perfil', label: 'Visitas perfil', icon: '👀' },
-    ];
-
-    return `
-      <div class="metricas-cliente-card">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-          <div>
-            <h3 style="margin: 0;">${esc(c.nombre)}</h3>
-            <div style="font-size: 12px; color: var(--gris-text-soft);">${esc(ultima.red_social || 'Instagram')} · ${labelMes}</div>
-          </div>
-          <div style="display: flex; gap: 6px;">
-            <button class="btn btn-secondary btn-sm" onclick="verHistorialMetricas('${esc(c.id)}')">📊 Ver historial</button>
-            <button class="btn btn-secondary btn-sm" onclick="openMetricasModal(null, '${esc(c.id)}')">+ Nuevo mes</button>
-          </div>
-        </div>
-        <div class="metricas-kpis">
-          ${metricasMostrar.map(m => {
-            const valor = Number(ultima[m.key]) || 0;
-            const valorAnt = anterior ? (Number(anterior[m.key]) || 0) : null;
-            let delta = '';
-            if (valorAnt !== null && valorAnt > 0) {
-              const cambio = ((valor - valorAnt) / valorAnt) * 100;
-              const up = cambio >= 0;
-              delta = `<span class="metrica-delta ${up ? 'up' : 'down'}">${up ? '↑' : '↓'} ${Math.abs(cambio).toFixed(1)}%</span>`;
-            }
-            return `
-              <div class="metrica-mini">
-                <div class="metrica-mini-label">${m.icon} ${m.label}</div>
-                <div class="metrica-mini-value">${formatMilesCompacto(valor)}${delta}</div>
-              </div>
-            `;
-          }).join('')}
-        </div>
-      </div>
-    `;
+    return renderMetricaCard(c, ultima, metricasCliente);
   }).join('');
 
   $('metricasContent').innerHTML = cards;
 }
 
+function renderMetricaCard(cliente, ultima, historial) {
+  // Buscar KPIs del cliente
+  const estrategiaActiva = state.estrategias.find(e =>
+    e.cliente_id === cliente.id && e.tipo === 'Principal' && (e.estado || 'Activa') === 'Activa'
+  );
+  const kpis = estrategiaActiva ? normalizarKpis(parseJsonSafe(estrategiaActiva.kpis_sugeridos_json)) : [];
+
+  const tiposContenido = parseJsonSafe(ultima.tipos_contenido) || [];
+  const tiposLabel = tiposContenido.length > 0
+    ? tiposContenido.map(t => (TIPOS_CONTENIDO.find(x => x.v === t) || {}).l || t).join(' · ')
+    : 'sin especificar';
+
+  // KPIs del cliente vs métricas cargadas
+  const kpisHtml = kpis.length > 0 ? `
+    <div style="margin-top: 14px; background: linear-gradient(135deg, #fef8fb 0%, #fefbf7 100%); border: 1px solid var(--fucsia-light); border-radius: 8px; padding: 12px 14px;">
+      <div style="font-size: 12px; font-weight: 700; color: var(--fucsia); text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 8px;">
+        🎯 Cumplimiento de KPIs del período
+      </div>
+      ${kpis.map(kpi => renderKpiCumplimiento(kpi, ultima)).join('')}
+    </div>
+  ` : `
+    <div style="margin-top: 10px; padding: 8px 12px; background: var(--gris-bg); border-radius: 6px; font-size: 12px; color: var(--gris-text-muted);">
+      💡 Este cliente no tiene KPIs definidos en su estrategia. <a href="#" onclick="openCliente('${esc(cliente.id)}', 'estrategia'); return false;" style="color: var(--fucsia);">Definir KPIs</a>
+    </div>
+  `;
+
+  // Métricas básicas
+  const metricasMostrar = [
+    { key: 'visualizaciones', label: 'Visualizaciones', icon: '👁️' },
+    { key: 'cuentas_alcanzadas', label: 'Cuentas alcanzadas', icon: '📡' },
+    { key: 'interacciones', label: 'Interacciones', icon: '❤️' },
+    { key: 'seguidores_fin', label: 'Seguidores', icon: '👥' },
+  ];
+
+  return `
+    <div class="metricas-cliente-card">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">
+        <div style="flex: 1; min-width: 0;">
+          <h3 style="margin: 0 0 4px;">${esc(cliente.nombre)}</h3>
+          <div style="font-size: 12.5px; color: var(--gris-text-soft);">
+            ${esc(ultima.red_social || 'Instagram')} · ${formatDateEs(ultima.fecha_desde)} → ${formatDateEs(ultima.fecha_hasta)}
+          </div>
+          <div style="font-size: 11.5px; color: var(--gris-text-muted); margin-top: 2px;">
+            Formatos: ${esc(tiposLabel)}
+          </div>
+        </div>
+        <div style="display: flex; gap: 6px;">
+          <button class="btn btn-secondary btn-sm" onclick="verHistorialMetricas('${esc(cliente.id)}')">📊 Historial (${historial.length})</button>
+          <button class="btn btn-secondary btn-sm" onclick="openMetricasModal(null, '${esc(cliente.id)}')">+ Nuevo período</button>
+        </div>
+      </div>
+
+      <div class="metricas-kpis">
+        ${metricasMostrar.map(m => {
+          const valor = Number(ultima[m.key]) || 0;
+          return `
+            <div class="metrica-mini">
+              <div class="metrica-mini-label">${m.icon} ${m.label}</div>
+              <div class="metrica-mini-value">${formatMilesCompacto(valor)}</div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+
+      ${kpisHtml}
+
+      <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
+        <button class="btn-ghost btn-sm" onclick="openMetricasModal('${esc(ultima.id)}')" style="font-size: 12px;">✏️ Editar este período</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderKpiCumplimiento(kpi, metrica) {
+  const metaNum = Number(kpi.meta);
+  const tieneMeta = !isNaN(metaNum) && metaNum > 0;
+  const valorActual = Number(metrica[kpi.metrica_asociada]) || 0;
+
+  let estadoIcon = '🎯';
+  let estadoColor = 'var(--petroleo)';
+  let estadoLabel = '';
+  let porcentaje = 0;
+
+  if (kpi.metrica_asociada === 'otro' || !tieneMeta) {
+    estadoIcon = '📋';
+    estadoColor = 'var(--gris-text-muted)';
+    estadoLabel = 'medición manual';
+  } else {
+    porcentaje = Math.round((valorActual / metaNum) * 100);
+    if (porcentaje >= 100) {
+      estadoIcon = '✅';
+      estadoColor = 'var(--verde)';
+      estadoLabel = '¡Cumplido!';
+    } else if (porcentaje >= 70) {
+      estadoIcon = '🟡';
+      estadoColor = '#c47d1a';
+      estadoLabel = 'Cerca (' + porcentaje + '%)';
+    } else {
+      estadoIcon = '⚠️';
+      estadoColor = 'var(--rojo)';
+      estadoLabel = 'Por debajo (' + porcentaje + '%)';
+    }
+  }
+
+  const prioridadBadge = kpi.prioridad === 'alta' ? '<span style="font-size: 10px; padding: 1px 5px; background: var(--fucsia); color: #fff; border-radius: 3px; margin-left: 4px; font-weight: 700;">ALTA</span>' : '';
+
+  return `
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px dashed var(--gris-border);">
+      <div style="flex: 1; min-width: 0;">
+        <div style="font-size: 13px; font-weight: 600;">${estadoIcon} ${esc(kpi.nombre)} ${prioridadBadge}</div>
+        ${tieneMeta ? `
+          <div style="font-size: 11px; color: var(--gris-text-muted); margin-top: 1px;">
+            Actual: <strong>${formatMiles(valorActual)}</strong> ${esc(kpi.unidad || '')} · Meta: <strong>${formatMiles(metaNum)}</strong>
+          </div>
+        ` : `
+          <div style="font-size: 11px; color: var(--gris-text-muted); margin-top: 1px;">
+            ${esc(kpi.unidad || '')}
+          </div>
+        `}
+      </div>
+      <div style="font-size: 11.5px; font-weight: 600; color: ${estadoColor}; text-align: right; padding-left: 8px;">
+        ${esc(estadoLabel)}
+      </div>
+    </div>
+  `;
+}
+
 function openMetricasModal(id = null, clienteIdPredef = null) {
   const m = id ? state.metricas.find(x => x.id === id) : {};
   const esNuevo = !id;
-  const hoy = new Date();
-  const mes = m.mes || (hoy.getMonth() + 1);
-  const anio = m.anio || hoy.getFullYear();
+  const hoy = todayISO();
   const clienteId = m.cliente_id || clienteIdPredef || '';
   const clientesActivos = state.clientes.filter(c => (c.estado || 'Activo') === 'Activo');
+  const tiposActuales = parseJsonSafe(m.tipos_contenido) || [];
+
+  // Helper para tooltips
+  const ayuda = (campo) => `<span class="tooltip-icon" title="${esc(AYUDAS_META[campo] || '')}" style="cursor: help; color: var(--petroleo); font-size: 12px; margin-left: 4px;">ⓘ</span>`;
 
   $('modal').className = 'modal modal-lg';
   $('modal').innerHTML = `
     <div class="modal-header">
-      <h2>${esNuevo ? '📊 Cargar métricas' : '✏️ Editar métricas'}</h2>
+      <h2>${esNuevo ? '📊 Cargar métricas del período' : '✏️ Editar métricas'}</h2>
       <button class="btn-ghost" onclick="closeModal()">✕</button>
     </div>
     <div class="modal-body">
+
+      <!-- BLOQUE 1: IDENTIFICACIÓN -->
+      <div class="card-title" style="margin-top: 0; font-size: 14px; color: var(--fucsia);">🔹 Período y cliente</div>
       <div class="form-row-grid">
         <div>
           <label class="form-label">Cliente *</label>
@@ -9351,104 +9591,161 @@ function openMetricasModal(id = null, clienteIdPredef = null) {
         <div>
           <label class="form-label">Red social</label>
           <select class="form-select" id="f_red_social">
-            ${REDES_SOCIALES.map(r => `<option value="${r}" ${m.red_social === r ? 'selected' : ''}>${r}</option>`).join('')}
+            ${REDES_SOCIALES.map(r => `<option value="${r}" ${(m.red_social || 'Instagram') === r ? 'selected' : ''}>${r}</option>`).join('')}
           </select>
         </div>
       </div>
       <div class="form-row-grid">
         <div>
-          <label class="form-label">Mes</label>
-          <select class="form-select" id="f_mes">
-            ${['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'].map((mn, idx) => `<option value="${idx+1}" ${Number(mes) === idx+1 ? 'selected' : ''}>${mn}</option>`).join('')}
-          </select>
+          <label class="form-label">Fecha desde *</label>
+          <input type="date" class="form-input" id="f_fecha_desde" value="${esc(m.fecha_desde || hoy)}">
         </div>
         <div>
-          <label class="form-label">Año</label>
-          <input type="number" class="form-input" id="f_anio" value="${anio}" min="2024" max="2030">
-        </div>
-      </div>
-
-      <div class="card-title" style="margin-top: 12px; font-size: 14px;">👥 Seguidores</div>
-      <div class="form-row-grid">
-        <div>
-          <label class="form-label">Inicio del mes</label>
-          <input type="number" class="form-input" id="f_seguidores_inicio" value="${esc(String(m.seguidores_inicio || ''))}">
-        </div>
-        <div>
-          <label class="form-label">Fin del mes *</label>
-          <input type="number" class="form-input" id="f_seguidores_fin" value="${esc(String(m.seguidores_fin || ''))}">
-        </div>
-      </div>
-
-      <div class="card-title" style="margin-top: 12px; font-size: 14px;">📡 Alcance y visibilidad</div>
-      <div class="form-row-grid">
-        <div>
-          <label class="form-label">Alcance</label>
-          <input type="number" class="form-input" id="f_alcance" value="${esc(String(m.alcance || ''))}">
-        </div>
-        <div>
-          <label class="form-label">Impresiones</label>
-          <input type="number" class="form-input" id="f_impresiones" value="${esc(String(m.impresiones || ''))}">
-        </div>
-      </div>
-
-      <div class="card-title" style="margin-top: 12px; font-size: 14px;">❤️ Interacciones</div>
-      <div class="form-row-grid">
-        <div>
-          <label class="form-label">Total interacciones</label>
-          <input type="number" class="form-input" id="f_interacciones" value="${esc(String(m.interacciones || ''))}">
-        </div>
-        <div>
-          <label class="form-label">Guardados</label>
-          <input type="number" class="form-input" id="f_guardados" value="${esc(String(m.guardados || ''))}">
-        </div>
-      </div>
-      <div class="form-row-grid">
-        <div>
-          <label class="form-label">Compartidos</label>
-          <input type="number" class="form-input" id="f_compartidos" value="${esc(String(m.compartidos || ''))}">
-        </div>
-        <div>
-          <label class="form-label">Visitas al perfil</label>
-          <input type="number" class="form-input" id="f_visitas_perfil" value="${esc(String(m.visitas_perfil || ''))}">
+          <label class="form-label">Fecha hasta *</label>
+          <input type="date" class="form-input" id="f_fecha_hasta" value="${esc(m.fecha_hasta || hoy)}">
         </div>
       </div>
       <div class="form-row">
-        <label class="form-label">Clicks al link en bio</label>
-        <input type="number" class="form-input" id="f_clicks_link_bio" value="${esc(String(m.clicks_link_bio || ''))}">
+        <label class="form-label">Tipos de contenido publicados en este período</label>
+        <div class="form-help" style="font-size: 11.5px; margin-bottom: 6px;">
+          💡 Marcá qué formatos publicó el cliente. La IA lo tiene en cuenta al generar reportes (ej: si solo hubo historias, no va a criticar falta de crecimiento de seguidores).
+        </div>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+          ${TIPOS_CONTENIDO.map(t => `
+            <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+              <input type="checkbox" value="${t.v}" class="tipo-contenido-check" ${tiposActuales.includes(t.v) ? 'checked' : ''}>
+              ${t.l}
+            </label>
+          `).join('')}
+        </div>
       </div>
 
+      <!-- BLOQUE 2: MÉTRICAS PRINCIPALES -->
+      <div class="card-title" style="margin-top: 18px; font-size: 14px; color: var(--fucsia);">🔹 Métricas principales</div>
+      <div class="form-row-grid">
+        <div>
+          <label class="form-label">Visualizaciones ${ayuda('visualizaciones')}</label>
+          <input type="number" class="form-input" id="f_visualizaciones" value="${esc(String(m.visualizaciones || ''))}" placeholder="0">
+        </div>
+        <div>
+          <label class="form-label">Cuentas alcanzadas ${ayuda('cuentas_alcanzadas')}</label>
+          <input type="number" class="form-input" id="f_cuentas_alcanzadas" value="${esc(String(m.cuentas_alcanzadas || ''))}" placeholder="0">
+        </div>
+      </div>
+      <div class="form-row-grid">
+        <div>
+          <label class="form-label">Interacciones ${ayuda('interacciones')}</label>
+          <input type="number" class="form-input" id="f_interacciones" value="${esc(String(m.interacciones || ''))}" placeholder="0">
+        </div>
+        <div>
+          <label class="form-label">Seguidores al fin del período * ${ayuda('seguidores_fin')}</label>
+          <input type="number" class="form-input" id="f_seguidores_fin" value="${esc(String(m.seguidores_fin || ''))}" placeholder="0">
+        </div>
+      </div>
+
+      <!-- BLOQUE 3: CRECIMIENTO -->
+      <div class="card-title" style="margin-top: 18px; font-size: 14px; color: var(--fucsia);">🔹 Crecimiento <span style="font-size: 11px; color: var(--gris-text-muted); font-weight: 400;">(opcional)</span></div>
+      <div class="form-row-grid">
+        <div>
+          <label class="form-label">Empezaron a seguirte ${ayuda('empezaron_seguir')}</label>
+          <input type="number" class="form-input" id="f_empezaron_seguir" value="${esc(String(m.empezaron_seguir || ''))}" placeholder="0">
+        </div>
+        <div>
+          <label class="form-label">Dejaron de seguirte ${ayuda('dejaron_seguir')}</label>
+          <input type="number" class="form-input" id="f_dejaron_seguir" value="${esc(String(m.dejaron_seguir || ''))}" placeholder="0">
+        </div>
+      </div>
+
+      <!-- BLOQUE 4: INTERACCIONES DETALLADAS -->
+      <div class="card-title" style="margin-top: 18px; font-size: 14px; color: var(--fucsia);">🔹 Interacciones detalladas <span style="font-size: 11px; color: var(--gris-text-muted); font-weight: 400;">(opcional)</span></div>
+      <div class="form-row-grid">
+        <div>
+          <label class="form-label">Me gusta ${ayuda('me_gusta')}</label>
+          <input type="number" class="form-input" id="f_me_gusta" value="${esc(String(m.me_gusta || ''))}" placeholder="0">
+        </div>
+        <div>
+          <label class="form-label">Respuestas / Comentarios ${ayuda('respuestas')}</label>
+          <input type="number" class="form-input" id="f_respuestas" value="${esc(String(m.respuestas || ''))}" placeholder="0">
+        </div>
+      </div>
+      <div class="form-row-grid">
+        <div>
+          <label class="form-label">Veces que se compartió ${ayuda('veces_compartido')}</label>
+          <input type="number" class="form-input" id="f_veces_compartido" value="${esc(String(m.veces_compartido || ''))}" placeholder="0">
+        </div>
+        <div>
+          <label class="form-label">Guardados ${ayuda('guardados')}</label>
+          <input type="number" class="form-input" id="f_guardados" value="${esc(String(m.guardados || ''))}" placeholder="0">
+        </div>
+      </div>
+
+      <!-- BLOQUE 5: ACTIVIDAD DEL PERFIL -->
+      <div class="card-title" style="margin-top: 18px; font-size: 14px; color: var(--fucsia);">🔹 Actividad del perfil <span style="font-size: 11px; color: var(--gris-text-muted); font-weight: 400;">(opcional)</span></div>
+      <div class="form-row-grid">
+        <div>
+          <label class="form-label">Visitas al perfil ${ayuda('visitas_perfil')}</label>
+          <input type="number" class="form-input" id="f_visitas_perfil" value="${esc(String(m.visitas_perfil || ''))}" placeholder="0">
+        </div>
+        <div>
+          <label class="form-label">Toques en el enlace externo ${ayuda('toques_enlace_externo')}</label>
+          <input type="number" class="form-input" id="f_toques_enlace_externo" value="${esc(String(m.toques_enlace_externo || ''))}" placeholder="0">
+        </div>
+      </div>
       <div class="form-row">
-        <label class="form-label">Notas del mes</label>
-        <textarea class="form-textarea" id="f_notas" placeholder="Observaciones del mes: qué funcionó mejor, qué cambió, aprendizajes...">${esc(m.notas || '')}</textarea>
+        <label class="form-label">Toques en la dirección del negocio ${ayuda('toques_direccion')}</label>
+        <input type="number" class="form-input" id="f_toques_direccion" value="${esc(String(m.toques_direccion || ''))}" placeholder="0">
+      </div>
+
+      <!-- NOTAS -->
+      <div class="form-row" style="margin-top: 18px;">
+        <label class="form-label">Notas del período</label>
+        <textarea class="form-textarea" id="f_notas" placeholder="Observaciones: qué funcionó mejor, qué pasó en el período, aprendizajes, etc...">${esc(m.notas || '')}</textarea>
       </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveMetrica('${id || ''}')">${esNuevo ? 'Crear' : 'Guardar'}</button>
+      <button class="btn btn-primary" onclick="saveMetrica('${id || ''}')">${esNuevo ? 'Guardar' : 'Actualizar'}</button>
     </div>`;
   $('modalOverlay').classList.add('active');
 }
 
 async function saveMetrica(id) {
   const cliente_id = $('f_cliente_id').value;
+  const fecha_desde = $('f_fecha_desde').value;
+  const fecha_hasta = $('f_fecha_hasta').value;
   const seguidores_fin = $('f_seguidores_fin').value.trim();
-  if (!cliente_id || !seguidores_fin) { showToast('Cliente y seguidores al fin del mes son obligatorios', 'error'); return; }
+  if (!cliente_id || !fecha_desde || !fecha_hasta || !seguidores_fin) {
+    showToast('Cliente, fechas y seguidores al fin son obligatorios', 'error');
+    return;
+  }
+  if (fecha_hasta < fecha_desde) {
+    showToast('La fecha hasta no puede ser anterior a la fecha desde', 'error');
+    return;
+  }
+
+  // Extraer tipos de contenido
+  const tiposContenido = [];
+  document.querySelectorAll('.tipo-contenido-check:checked').forEach(c => tiposContenido.push(c.value));
 
   const data = {
     cliente_id,
     red_social: $('f_red_social').value,
-    mes: $('f_mes').value,
-    anio: $('f_anio').value,
-    seguidores_inicio: $('f_seguidores_inicio').value.trim(),
-    seguidores_fin,
-    alcance: $('f_alcance').value.trim(),
-    impresiones: $('f_impresiones').value.trim(),
+    fecha_desde,
+    fecha_hasta,
+    tipos_contenido: JSON.stringify(tiposContenido),
+    visualizaciones: $('f_visualizaciones').value.trim(),
+    cuentas_alcanzadas: $('f_cuentas_alcanzadas').value.trim(),
     interacciones: $('f_interacciones').value.trim(),
+    seguidores_fin,
+    empezaron_seguir: $('f_empezaron_seguir').value.trim(),
+    dejaron_seguir: $('f_dejaron_seguir').value.trim(),
+    me_gusta: $('f_me_gusta').value.trim(),
+    respuestas: $('f_respuestas').value.trim(),
+    veces_compartido: $('f_veces_compartido').value.trim(),
     guardados: $('f_guardados').value.trim(),
-    compartidos: $('f_compartidos').value.trim(),
     visitas_perfil: $('f_visitas_perfil').value.trim(),
-    clicks_link_bio: $('f_clicks_link_bio').value.trim(),
+    toques_enlace_externo: $('f_toques_enlace_externo').value.trim(),
+    toques_direccion: $('f_toques_direccion').value.trim(),
     notas: $('f_notas').value.trim(),
   };
 
@@ -9470,9 +9767,7 @@ function verHistorialMetricas(clienteId) {
   const cliente = state.clientes.find(c => c.id === clienteId);
   const historial = state.metricas
     .filter(m => m.cliente_id === clienteId)
-    .sort((a, b) => (Number(b.anio) * 12 + Number(b.mes)) - (Number(a.anio) * 12 + Number(a.mes)));
-
-  const nombresMeses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    .sort((a, b) => (b.fecha_hasta || '').localeCompare(a.fecha_hasta || ''));
 
   $('modal').className = 'modal modal-lg';
   $('modal').innerHTML = `
@@ -9483,15 +9778,18 @@ function verHistorialMetricas(clienteId) {
     <div class="modal-body">
       ${historial.length === 0 ? '<p style="color: var(--gris-text-soft);">Sin métricas cargadas.</p>' : `
         <table class="finanzas-tabla">
-          <thead><tr><th>Mes</th><th>Red</th><th>Seguidores</th><th>Alcance</th><th>Interacciones</th><th></th></tr></thead>
+          <thead><tr><th>Período</th><th>Red</th><th>Visualizaciones</th><th>Alcance</th><th>Interacciones</th><th>Seguidores</th><th></th></tr></thead>
           <tbody>
             ${historial.map(m => `
               <tr>
-                <td>${nombresMeses[Number(m.mes) - 1]} ${m.anio}</td>
-                <td>${esc(m.red_social)}</td>
-                <td>${formatMiles(m.seguidores_fin)}</td>
-                <td>${formatMiles(m.alcance || 0)}</td>
+                <td style="font-size: 12px;">
+                  ${formatDateEs(m.fecha_desde)}<br><span style="color: var(--gris-text-muted);">→ ${formatDateEs(m.fecha_hasta)}</span>
+                </td>
+                <td>${esc(m.red_social || 'Instagram')}</td>
+                <td>${formatMiles(m.visualizaciones || 0)}</td>
+                <td>${formatMiles(m.cuentas_alcanzadas || 0)}</td>
                 <td>${formatMiles(m.interacciones || 0)}</td>
+                <td>${formatMiles(m.seguidores_fin || 0)}</td>
                 <td>
                   <button class="btn-ghost btn-sm" onclick="closeModal(); openMetricasModal('${esc(m.id)}')" title="Editar">✏️</button>
                   <button class="btn-ghost btn-sm btn-danger" onclick="deleteMetrica('${esc(m.id)}')" title="Eliminar">🗑</button>
@@ -9581,7 +9879,8 @@ function renderReportesList() {
               Generado el ${esc(formatDateEs(r.fecha_generacion))}
             </div>
           </div>
-          <div style="display: flex; gap: 6px;">
+          <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+            <button class="btn btn-primary btn-sm" onclick="descargarReportePdf('${esc(r.id)}')" style="background: var(--fucsia);">📄 PDF</button>
             <button class="btn btn-secondary btn-sm" onclick="copiarReporte('${esc(r.id)}')">📋 Copiar</button>
             <button class="btn btn-secondary btn-sm" onclick="editarReporte('${esc(r.id)}')">✏️ Editar</button>
             <button class="btn-ghost btn-sm btn-danger" onclick="deleteReporte('${esc(r.id)}')">🗑</button>
@@ -9673,9 +9972,9 @@ async function ejecutarGeneradorReporte() {
 
   const cliente = state.clientes.find(c => c.id === clienteId);
 
-  // Cargar datos necesarios si no están
+  // Cargar datos necesarios
   try {
-    if (!state.metricas) {
+    if (!state.metricas || state.metricas.length === 0) {
       const { data } = await sheetRead('Metricas');
       state.metricas = data;
     }
@@ -9693,15 +9992,59 @@ async function ejecutarGeneradorReporte() {
     }
   } catch (e) { showToast('Error cargando datos: ' + e.message, 'error'); return; }
 
-  // Datos para el prompt
-  const metricasMes = state.metricas.find(m => m.cliente_id === clienteId && Number(m.mes) === mes && Number(m.anio) === anio);
-  const metricasAnterior = state.metricas.find(m => {
+  const nombresMeses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+  // Buscar métricas del mes: cualquier registro cuyo período caiga dentro del mes
+  const mesInicio = new Date(anio, mes - 1, 1);
+  const mesFin = new Date(anio, mes, 0); // último día
+  const metricasDelMes = state.metricas.filter(m => {
     if (m.cliente_id !== clienteId) return false;
-    const mesAnterior = mes === 1 ? 12 : mes - 1;
-    const anioAnterior = mes === 1 ? anio - 1 : anio;
-    return Number(m.mes) === mesAnterior && Number(m.anio) === anioAnterior;
+    if (!m.fecha_desde || !m.fecha_hasta) return false;
+    const d = new Date(m.fecha_desde);
+    const h = new Date(m.fecha_hasta);
+    // Si el período se solapa con el mes
+    return (h >= mesInicio && d <= mesFin);
   });
 
+  // Si no hay métricas del mes, el reporte avisa
+  const sumMet = (campo) => metricasDelMes.reduce((s, m) => s + (Number(m[campo]) || 0), 0);
+  const maxMet = (campo) => {
+    // Para seguidores_fin tomar el más reciente
+    if (metricasDelMes.length === 0) return 0;
+    return Number(metricasDelMes.sort((a, b) => (b.fecha_hasta || '').localeCompare(a.fecha_hasta || ''))[0][campo]) || 0;
+  };
+
+  // Consolidar todos los tipos de contenido únicos publicados en el período
+  const tiposUnicos = new Set();
+  metricasDelMes.forEach(m => {
+    (parseJsonSafe(m.tipos_contenido) || []).forEach(t => tiposUnicos.add(t));
+  });
+  const tiposArr = Array.from(tiposUnicos);
+
+  // Consolidar período total (primer inicio al último fin)
+  let periodoDesde = null, periodoHasta = null, diasTotal = 0;
+  if (metricasDelMes.length > 0) {
+    const desdes = metricasDelMes.map(m => m.fecha_desde).filter(x => x).sort();
+    const hastas = metricasDelMes.map(m => m.fecha_hasta).filter(x => x).sort();
+    periodoDesde = desdes[0];
+    periodoHasta = hastas[hastas.length - 1];
+    if (periodoDesde && periodoHasta) {
+      diasTotal = Math.round((new Date(periodoHasta) - new Date(periodoDesde)) / (1000 * 60 * 60 * 24)) + 1;
+    }
+  }
+
+  // Métricas mes anterior (simples, para comparar)
+  const mesAntInicio = new Date(anio, mes - 2, 1);
+  const mesAntFin = new Date(anio, mes - 1, 0);
+  const metricasAnt = state.metricas.filter(m => {
+    if (m.cliente_id !== clienteId) return false;
+    if (!m.fecha_hasta) return false;
+    const h = new Date(m.fecha_hasta);
+    return (h >= mesAntInicio && h <= mesAntFin);
+  });
+  const sumMetAnt = (campo) => metricasAnt.reduce((s, m) => s + (Number(m[campo]) || 0), 0);
+
+  // Posts del mes
   const postsMes = state.calendario.filter(p => {
     if (p.cliente_id !== clienteId) return false;
     if (!p.fecha_publicacion) return false;
@@ -9710,46 +10053,101 @@ async function ejecutarGeneradorReporte() {
   });
 
   const estrategia = state.estrategias.find(e => e.cliente_id === clienteId && e.tipo === 'Principal' && (e.estado || 'Activa') === 'Activa');
-  const nombresMeses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const kpis = estrategia ? normalizarKpis(parseJsonSafe(estrategia.kpis_sugeridos_json)) : [];
 
   abrirModalGeneracion('Generando reporte', '📄', `Analizando ${cliente.nombre} · ${nombresMeses[mes-1]} ${anio}...`);
 
-  // Construir contexto del prompt
-  const metricasContexto = metricasMes ? `
-MÉTRICAS DEL MES (${nombresMeses[mes-1]} ${anio}):
-- Red social: ${metricasMes.red_social || 'Instagram'}
-- Seguidores al inicio: ${metricasMes.seguidores_inicio || 'n/d'}
-- Seguidores al fin: ${metricasMes.seguidores_fin || 'n/d'}
-- Alcance: ${metricasMes.alcance || 'n/d'}
-- Impresiones: ${metricasMes.impresiones || 'n/d'}
-- Interacciones: ${metricasMes.interacciones || 'n/d'}
-- Guardados: ${metricasMes.guardados || 'n/d'}
-- Compartidos: ${metricasMes.compartidos || 'n/d'}
-- Visitas al perfil: ${metricasMes.visitas_perfil || 'n/d'}
-- Clicks al link: ${metricasMes.clicks_link_bio || 'n/d'}
-${metricasMes.notas ? 'Notas: ' + metricasMes.notas : ''}
-` : 'MÉTRICAS DEL MES: no cargadas';
+  // Contexto KPIs con cumplimiento
+  const valorActual = (metricaAsociada) => {
+    if (metricaAsociada === 'seguidores_fin') return maxMet('seguidores_fin');
+    return sumMet(metricaAsociada);
+  };
 
-  const metricasComparadas = metricasAnterior ? `
-COMPARACIÓN MES ANTERIOR:
-- Seguidores: ${metricasAnterior.seguidores_fin || 'n/d'} → ${metricasMes?.seguidores_fin || 'n/d'}
-- Alcance: ${metricasAnterior.alcance || 'n/d'} → ${metricasMes?.alcance || 'n/d'}
-- Interacciones: ${metricasAnterior.interacciones || 'n/d'} → ${metricasMes?.interacciones || 'n/d'}
+  const kpisContexto = kpis.length > 0 ? `
+KPIs DEFINIDOS EN LA ESTRATEGIA (estos son la prioridad del reporte):
+${kpis.map(k => {
+  const actual = k.metrica_asociada && k.metrica_asociada !== 'otro' ? valorActual(k.metrica_asociada) : 'n/d';
+  const metaNum = Number(k.meta);
+  let cumplimiento = '';
+  if (!isNaN(metaNum) && metaNum > 0 && typeof actual === 'number') {
+    const pct = Math.round((actual / metaNum) * 100);
+    cumplimiento = pct >= 100 ? `✅ CUMPLIDO (${pct}%)` : `⚠️ Por debajo (${pct}%)`;
+  }
+  return `- [${k.prioridad || 'media'}] ${k.nombre} | Meta: ${k.meta || 'sin meta'} ${k.unidad || ''} | Actual: ${actual} | ${cumplimiento}`;
+}).join('\n')}
+` : 'KPIs: no definidos en la estrategia';
+
+  const tiposLabel = tiposArr.length > 0
+    ? tiposArr.map(t => (TIPOS_CONTENIDO.find(x => x.v === t) || {}).l || t).join(', ')
+    : 'no especificado';
+
+  const metricasContexto = metricasDelMes.length > 0 ? `
+MÉTRICAS CARGADAS (${metricasDelMes.length} registros de período):
+- Período total cubierto: ${periodoDesde} → ${periodoHasta} (${diasTotal} días)
+- Tipos de contenido publicados: ${tiposLabel}
+- Visualizaciones: ${sumMet('visualizaciones')}
+- Cuentas alcanzadas: ${sumMet('cuentas_alcanzadas')}
+- Interacciones: ${sumMet('interacciones')}
+- Seguidores al final del período: ${maxMet('seguidores_fin')}
+- Empezaron a seguir: ${sumMet('empezaron_seguir')}
+- Dejaron de seguir: ${sumMet('dejaron_seguir')}
+- Me gusta: ${sumMet('me_gusta')}
+- Respuestas: ${sumMet('respuestas')}
+- Veces compartido: ${sumMet('veces_compartido')}
+- Guardados: ${sumMet('guardados')}
+- Visitas al perfil: ${sumMet('visitas_perfil')}
+- Toques en enlace externo: ${sumMet('toques_enlace_externo')}
+- Toques en dirección: ${sumMet('toques_direccion')}
+${metricasDelMes.map(m => m.notas).filter(n => n).map(n => '- Nota: ' + n).join('\n')}
+` : 'MÉTRICAS: no se cargaron métricas de este período';
+
+  const metricasComparadas = metricasAnt.length > 0 ? `
+COMPARACIÓN CON MES ANTERIOR (${nombresMeses[(mes - 2 + 12) % 12]}):
+- Visualizaciones: ${sumMetAnt('visualizaciones')} → ${sumMet('visualizaciones')}
+- Cuentas alcanzadas: ${sumMetAnt('cuentas_alcanzadas')} → ${sumMet('cuentas_alcanzadas')}
+- Interacciones: ${sumMetAnt('interacciones')} → ${sumMet('interacciones')}
+- Empezaron a seguir: ${sumMetAnt('empezaron_seguir')} → ${sumMet('empezaron_seguir')}
 ` : '';
 
   const postsContexto = postsMes.length > 0 ? `
 PUBLICACIONES DEL MES (${postsMes.length} en total):
-${postsMes.slice(0, 20).map(p => `- [${p.formato}] ${p.titulo || p.hook || 'Sin título'} (${p.pilar || 'sin pilar'})`).join('\n')}
-` : 'PUBLICACIONES DEL MES: ninguna registrada';
+${postsMes.slice(0, 25).map(p => `- [${p.formato || 'post'}] ${p.titulo || p.hook || 'Sin título'} ${p.pilar ? '(' + p.pilar + ')' : ''}`).join('\n')}
+` : 'PUBLICACIONES DEL MES: ninguna registrada en el calendario';
 
   const estrategiaContexto = estrategia ? `
 ESTRATEGIA ACTIVA:
 - Objetivo: ${estrategia.objetivo_principal || 'n/d'}
 - Fase: ${estrategia.momento_fase || 'n/d'}
-${estrategia.metricas_meta ? '- Métricas meta: ' + estrategia.metricas_meta : ''}
+${estrategia.metricas_meta ? '- Métricas meta (texto libre): ' + estrategia.metricas_meta : ''}
 ` : '';
 
-  const systemPrompt = `Sos una analista de marketing digital de Carrusel MKT, agencia argentina. Escribís reportes mensuales profesionales para clientes, que sean entendibles, accionables y con tono cálido pero profesional.
+  // CONSIDERACIONES ESPECIALES (importantes para el prompt)
+  const consideracionesEspeciales = [];
+  if (tiposArr.length === 1 && tiposArr[0] === 'historias') {
+    consideracionesEspeciales.push('⚠️ En este período SOLO se publicaron HISTORIAS. Esto significa que: (a) NO se espera crecimiento fuerte de seguidores (las historias no son descubribles como los reels), (b) la métrica clave es la RETENCIÓN y las RESPUESTAS, no el alcance orgánico, (c) no corresponde criticar falta de seguidores nuevos.');
+  }
+  if (tiposArr.length === 0) {
+    consideracionesEspeciales.push('⚠️ No se especificó tipo de contenido publicado. Adaptá el análisis a las métricas disponibles sin suponer qué se publicó.');
+  }
+  if (diasTotal > 0 && diasTotal < 7) {
+    consideracionesEspeciales.push(`⚠️ El período analizado es MUY CORTO (${diasTotal} días). Las comparaciones mensuales o proyecciones no aplican. Hablá de lo que se leyó en estos días específicos, sin extrapolar.`);
+  } else if (diasTotal >= 7 && diasTotal < 20) {
+    consideracionesEspeciales.push(`⚠️ El período analizado es parcial (${diasTotal} días). Si comparás con mes anterior completo, aclará el sesgo.`);
+  }
+  if (metricasDelMes.length === 0) {
+    consideracionesEspeciales.push('⚠️ NO hay métricas cargadas para este mes. Generá un reporte corto basado SOLO en las publicaciones del calendario y la estrategia. Dejá claro al cliente que se necesitan métricas para un análisis numérico.');
+  }
+  if (kpis.length === 0) {
+    consideracionesEspeciales.push('⚠️ No hay KPIs definidos en la estrategia. El reporte se basa solo en métricas generales sin referencia a metas.');
+  }
+
+  const systemPrompt = `Sos una analista de marketing digital de Carrusel MKT, agencia argentina de Mendoza. Escribís reportes mensuales profesionales para clientes, con tono cálido, real y profesional (sin exageraciones ni jerga corporativa).
+
+PRINCIPIOS CLAVE:
+1. Los KPIs de la estrategia son LA PRIORIDAD. Si están definidos, el reporte debe centrarse en ellos: qué se cumplió, qué no, y por qué.
+2. Sé honesta: si algo bajó o no se logró, decilo sin rodeos pero con empatía.
+3. Adaptá el análisis al CONTEXTO REAL del período (duración, tipo de contenido, limitaciones).
+4. Español rioplatense (vos, ustedes). Tono conversacional pero profesional.
 
 ESTRUCTURA DEL REPORTE (markdown):
 
@@ -9757,50 +10155,47 @@ ESTRUCTURA DEL REPORTE (markdown):
 ## ${cliente.nombre}
 
 ## 📈 Resumen ejecutivo
-[2-3 líneas: qué pasó en el mes, principal logro, principal oportunidad]
+[2-3 oraciones. Qué pasó en el período, principal logro o hallazgo, próximo paso crítico.]
 
-## 📊 Métricas del mes
-[Análisis de las métricas numéricas con comparación al mes anterior si hay]
-[Incluir números concretos y variaciones porcentuales]
+${kpis.length > 0 ? `## 🎯 Cumplimiento de KPIs
+[Para CADA KPI definido, decir explícitamente: nombre, meta, valor actual, y si se cumplió o no. Usar ✅ cumplido / ⚠️ por debajo / 🎯 en proceso. Explicar el PORQUÉ con una frase.]
+` : ''}
+## 📊 Métricas del período
+[Repaso breve de las métricas generales. Comparar con mes anterior SI hay datos completos. Explicar variaciones importantes.]
 
-## 🎯 Qué funcionó
-[Análisis de las publicaciones del mes: qué pilar funcionó mejor, qué formato, qué temas]
+## 🔍 Análisis y aprendizajes
+[Qué funcionó, qué patrones aparecieron, qué pilar/formato rindió mejor. Basado en lo que se publicó y las métricas reales.]
 
-## 🔍 Oportunidades detectadas
-[Lo que se puede mejorar, qué probar el próximo mes]
+## 🚀 Recomendaciones
+[3 a 5 acciones concretas y realistas para el próximo período. Alineadas con los KPIs pendientes.]
 
-## 🚀 Recomendaciones para ${nombresMeses[mes % 12]}
-[3-5 recomendaciones concretas y accionables para el próximo mes]
-
-REGLAS:
-- Usá español rioplatense (vos).
-- Sé específica y honesta: si las métricas bajaron, decilo y explicá posibles razones.
-- No exageres: si no hay datos suficientes, aclaralo.
-- Tono: profesional pero cálido, como una socia estratégica.
-- Extensión: mediana, no demasiado larga.
-- Devolvés SOLO el markdown del reporte, sin preámbulo ni cierre.`;
+REGLAS FIRMES:
+- Si no tenés datos para una sección, decilo ("En este período no tuvimos métricas suficientes para evaluar X") en vez de inventar.
+- Nunca exageres ("¡impresionante crecimiento!" si apenas creció 2 seguidores).
+- Devolvés SOLO el markdown del reporte, sin preámbulo, sin cierre tipo "espero que te sirva".`;
 
   const userPrompt = `Generá el reporte mensual para:
 
-Cliente: ${cliente.nombre}
-Rubro: ${cliente.rubro || 'n/d'}
-Mes: ${nombresMeses[mes-1]} ${anio}
+CLIENTE: ${cliente.nombre}
+RUBRO: ${cliente.rubro || 'n/d'}
+MES DEL REPORTE: ${nombresMeses[mes-1]} ${anio}
 
 ${estrategiaContexto}
+${kpisContexto}
 ${metricasContexto}
 ${metricasComparadas}
 ${postsContexto}
 
-Generá el reporte completo en markdown siguiendo la estructura indicada.`;
+${consideracionesEspeciales.length > 0 ? 'CONSIDERACIONES ESPECIALES PARA ESTE REPORTE:\n' + consideracionesEspeciales.map(c => '- ' + c).join('\n') : ''}
+
+Generá el reporte completo siguiendo la estructura, centrándote en el cumplimiento de los KPIs definidos.`;
 
   try {
     const contenidoMd = await callClaude(systemPrompt, userPrompt, { maxTokens: 3000 });
     if (!contenidoMd || contenidoMd.trim().length < 50) throw new Error('La IA no devolvió un reporte válido');
 
-    // Verificar si ya existe un reporte para este cliente/mes/año
     const existente = state.reportes.find(r => r.cliente_id === clienteId && Number(r.mes) === mes && Number(r.anio) === anio);
     if (existente) {
-      // Actualizar el existente
       await sheetUpdate('Reportes', existente.id, {
         contenido_md: contenidoMd,
         fecha_generacion: todayISO(),
@@ -9871,6 +10266,89 @@ function copiarReporte(id) {
       showToast('Reporte copiado al portapapeles', 'success');
     });
   }
+}
+
+// Descargar el reporte como PDF con diseño Carrusel
+function descargarReportePdf(id) {
+  const r = state.reportes.find(x => x.id === id);
+  if (!r) return;
+  const cliente = state.clientes.find(c => c.id === r.cliente_id);
+  const nombresMeses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const periodo = `${nombresMeses[Number(r.mes) - 1]} ${r.anio}`;
+
+  if (typeof html2pdf === 'undefined') {
+    showToast('Todavía está cargando la librería PDF. Probá de nuevo en 2 segundos.', 'error');
+    return;
+  }
+
+  showToast('Generando PDF...', 'success');
+
+  // Crear contenedor oculto con el reporte estilizado
+  const container = document.createElement('div');
+  container.style.cssText = 'position: absolute; left: -9999px; top: 0; width: 210mm; background: white;';
+  container.innerHTML = `
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@500;700&family=Inter:wght@400;500;600;700&display=swap');
+      .pdf-doc { font-family: 'Inter', sans-serif; color: #2a2a2a; padding: 25mm 20mm 20mm 20mm; font-size: 11pt; line-height: 1.55; }
+      .pdf-header { border-bottom: 3px solid #ba0d66; padding-bottom: 14px; margin-bottom: 24px; }
+      .pdf-brand { font-family: 'Fraunces', serif; font-size: 16pt; color: #ba0d66; font-weight: 700; letter-spacing: -0.3px; }
+      .pdf-brand-tag { font-size: 9pt; color: #888; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 2px; }
+      .pdf-title-block { margin-top: 16px; }
+      .pdf-cliente { font-family: 'Fraunces', serif; font-size: 24pt; color: #2a2a2a; font-weight: 700; line-height: 1.1; }
+      .pdf-periodo { font-size: 11pt; color: #f79f6f; font-weight: 600; margin-top: 4px; text-transform: uppercase; letter-spacing: 1px; }
+      .pdf-body { margin-top: 10px; }
+      .pdf-body h1 { font-family: 'Fraunces', serif; font-size: 18pt; color: #ba0d66; margin: 18px 0 10px; page-break-after: avoid; }
+      .pdf-body h2 { font-family: 'Fraunces', serif; font-size: 14pt; color: #176b87; margin: 16px 0 8px; padding-left: 10px; border-left: 3px solid #f79f6f; page-break-after: avoid; }
+      .pdf-body h3 { font-family: 'Fraunces', serif; font-size: 12pt; color: #2a2a2a; margin: 12px 0 6px; page-break-after: avoid; }
+      .pdf-body p { margin: 6px 0; text-align: justify; }
+      .pdf-body ul { padding-left: 20px; margin: 6px 0; }
+      .pdf-body li { margin-bottom: 4px; }
+      .pdf-body strong { color: #ba0d66; font-weight: 600; }
+      .pdf-body em { color: #176b87; }
+      .pdf-footer { border-top: 1px solid #e5e5e5; padding-top: 12px; margin-top: 36px; font-size: 8.5pt; color: #888; display: flex; justify-content: space-between; }
+      .pdf-footer-brand { color: #ba0d66; font-weight: 600; }
+    </style>
+    <div class="pdf-doc">
+      <div class="pdf-header">
+        <div class="pdf-brand">Carrusel MKT 🎠</div>
+        <div class="pdf-brand-tag">Estrategia · Contenido · Diseño</div>
+        <div class="pdf-title-block">
+          <div class="pdf-cliente">${esc(cliente ? cliente.nombre : 'Cliente')}</div>
+          <div class="pdf-periodo">Reporte · ${esc(periodo)}</div>
+        </div>
+      </div>
+      <div class="pdf-body">${renderMarkdownParaPdf(r.contenido_md || '')}</div>
+      <div class="pdf-footer">
+        <div><span class="pdf-footer-brand">@carrusel.mkt</span> · Mendoza, Argentina</div>
+        <div>Generado el ${esc(formatDateEs(r.fecha_generacion))}</div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(container);
+
+  const nombreArchivo = `Reporte ${cliente ? cliente.nombre.replace(/\s+/g, '_') : 'cliente'} - ${periodo.replace(' ', '_')}.pdf`;
+
+  const opciones = {
+    margin: 0,
+    filename: nombreArchivo,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true, logging: false },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+  };
+
+  html2pdf().set(opciones).from(container).save().then(() => {
+    document.body.removeChild(container);
+    showToast('PDF descargado ✓', 'success');
+  }).catch(err => {
+    document.body.removeChild(container);
+    showToast('Error generando PDF: ' + err.message, 'error');
+  });
+}
+
+// Versión del renderMarkdown adaptada para el PDF (remueve el wrapper exterior)
+function renderMarkdownParaPdf(md) {
+  return renderMarkdown(md);
 }
 
 async function deleteReporte(id) {
