@@ -342,19 +342,22 @@
   }
   .calendar-month { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 600; }
   .calendar-grid {
-    display: grid; grid-template-columns: repeat(7, 1fr);
+    display: grid; grid-template-columns: repeat(7, minmax(0, 1fr));
     gap: 1px; background: var(--gris-border); border: 1px solid var(--gris-border);
     border-radius: var(--radio); overflow: hidden;
+    table-layout: fixed; width: 100%;
   }
   .calendar-day-header {
     background: #fafafa; padding: 10px 8px; font-size: 11px;
     text-transform: uppercase; font-weight: 600; color: var(--gris-text-muted);
     text-align: center; letter-spacing: 0.04em;
+    min-width: 0; overflow: hidden;
   }
   .calendar-day {
     background: #fff; min-height: 100px; padding: 6px;
     display: flex; flex-direction: column; gap: 3px;
     cursor: pointer; transition: background 0.1s;
+    min-width: 0; overflow: hidden;
   }
   .calendar-day:hover { background: #fafafa; }
   .calendar-day.other-month { background: #f8f8f5; color: var(--gris-text-muted); }
@@ -365,12 +368,179 @@
     font-size: 10.5px; padding: 3px 6px; border-radius: 4px;
     background: #eef2f6; color: var(--gris-text); white-space: nowrap;
     overflow: hidden; text-overflow: ellipsis; border-left: 3px solid var(--gris-border);
+    max-width: 100%; min-width: 0;
   }
   .calendar-post.idea { border-left-color: var(--gris-text-muted); }
   .calendar-post.borrador { border-left-color: var(--amarillo); background: #fff4e0; }
   .calendar-post.revision { border-left-color: var(--petroleo); background: #e6f0fb; }
   .calendar-post.aprobada { border-left-color: var(--verde); background: #e6f4ef; }
   .calendar-post.publicada { border-left-color: #1d6b4e; background: #d4e9e0; }
+
+  /* ===== VISTA CARDS (tipo Kalend) ===== */
+  .cal-view-toggle {
+    display: inline-flex; gap: 2px;
+    background: var(--gris-bg); padding: 3px;
+    border-radius: 6px; border: 1px solid var(--gris-border);
+  }
+  .cal-view-toggle button {
+    background: transparent; border: none; cursor: pointer;
+    padding: 6px 12px; font-size: 12.5px; font-weight: 600;
+    color: var(--gris-text-soft); border-radius: 4px;
+    transition: all 0.1s;
+  }
+  .cal-view-toggle button:hover { color: var(--fucsia); }
+  .cal-view-toggle button.active {
+    background: #fff; color: var(--fucsia);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  }
+
+  .cards-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 14px; margin-top: 14px;
+  }
+  @media (max-width: 1100px) {
+    .cards-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 700px) {
+    .cards-grid { grid-template-columns: 1fr; }
+  }
+
+  .cal-card {
+    background: #fff; border: 1px solid var(--gris-border);
+    border-radius: 10px; overflow: hidden;
+    cursor: pointer; transition: all 0.15s;
+    display: flex; flex-direction: column;
+    position: relative;
+  }
+  .cal-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+    border-color: var(--fucsia-light);
+  }
+  .cal-card-border {
+    height: 4px; width: 100%;
+    background: var(--gris-border);
+  }
+  .cal-card-border.reel { background: var(--fucsia); }
+  .cal-card-border.carrusel { background: var(--salmon); }
+  .cal-card-border.post,
+  .cal-card-border.publicacion { background: var(--petroleo); }
+  .cal-card-border.historia,
+  .cal-card-border.story { background: #8a6a20; }
+  .cal-card-border.en_vivo,
+  .cal-card-border.envivo { background: var(--rojo); }
+
+  .cal-card-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 14px 6px; gap: 8px;
+  }
+  .cal-card-day {
+    font-size: 11px; font-weight: 700; color: var(--gris-text-muted);
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .cal-card-day.today { color: var(--fucsia); }
+  .cal-card-format-badge {
+    font-size: 10px; font-weight: 700;
+    padding: 2px 8px; border-radius: 10px;
+    text-transform: uppercase; letter-spacing: 0.05em;
+    background: #1a1a1a; color: #fff;
+  }
+  .cal-card-format-badge.reel { background: var(--fucsia); }
+  .cal-card-format-badge.carrusel { background: var(--salmon); color: #6a3818; }
+  .cal-card-format-badge.post,
+  .cal-card-format-badge.publicacion { background: var(--petroleo); }
+  .cal-card-format-badge.historia,
+  .cal-card-format-badge.story { background: #8a6a20; }
+
+  .cal-card-network {
+    padding: 0 14px 8px;
+    font-size: 11px; color: var(--gris-text-muted);
+    display: flex; align-items: center; gap: 4px;
+  }
+
+  .cal-card-pilar-chip {
+    display: inline-block;
+    padding: 3px 10px; margin: 0 14px 10px;
+    background: var(--crema); border: 1px solid #e5d7b8;
+    border-radius: 12px; font-size: 10.5px; font-weight: 600;
+    color: #8a6a20; text-transform: uppercase;
+    letter-spacing: 0.04em; max-width: calc(100% - 28px);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    align-self: flex-start;
+  }
+
+  .cal-card-title {
+    padding: 0 14px 8px; font-family: 'Fraunces', serif;
+    font-size: 16px; font-weight: 700; line-height: 1.25;
+    color: var(--gris-text);
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .cal-card-preview {
+    padding: 0 14px 12px; font-size: 12px; line-height: 1.4;
+    color: var(--gris-text-soft);
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+    overflow: hidden;
+    flex: 1;
+  }
+
+  .cal-card-footer {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 14px; border-top: 1px solid var(--gris-border);
+    background: #fafafa;
+  }
+  .cal-card-estado-chip {
+    font-size: 10px; font-weight: 700;
+    padding: 3px 8px; border-radius: 10px;
+    text-transform: uppercase;
+  }
+  .cal-card-estado-chip.idea { background: #eef2f6; color: var(--gris-text-soft); }
+  .cal-card-estado-chip.borrador { background: #fff4e0; color: #8a6a20; }
+  .cal-card-estado-chip.revision { background: #e6f0fb; color: var(--petroleo); }
+  .cal-card-estado-chip.aprobada { background: #e6f4ef; color: var(--verde); }
+  .cal-card-estado-chip.publicada { background: #d4e9e0; color: #1d6b4e; }
+
+  .cal-card-arrow {
+    width: 24px; height: 24px; border-radius: 50%;
+    background: #fff; border: 1px solid var(--gris-border);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--gris-text-muted); font-size: 14px;
+  }
+  .cal-card:hover .cal-card-arrow {
+    background: var(--fucsia); color: #fff; border-color: var(--fucsia);
+  }
+
+  .cal-cards-section-title {
+    font-family: 'Fraunces', serif; font-size: 14px;
+    color: var(--gris-text); font-weight: 700;
+    margin: 22px 0 8px; padding-bottom: 6px;
+    border-bottom: 2px solid var(--fucsia-light);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .cal-cards-section-count {
+    font-size: 11px; color: var(--gris-text-muted);
+    font-weight: 500; font-family: 'Inter', sans-serif;
+  }
+  .cal-empty-cards {
+    padding: 30px; text-align: center;
+    color: var(--gris-text-muted);
+    background: var(--gris-bg); border-radius: 8px;
+    margin-top: 14px;
+  }
+
+  .cal-card-add-btn {
+    background: transparent; border: 2px dashed var(--gris-border);
+    border-radius: 10px; padding: 24px 14px;
+    color: var(--gris-text-muted); cursor: pointer;
+    font-size: 13px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s; min-height: 180px;
+  }
+  .cal-card-add-btn:hover {
+    border-color: var(--fucsia); color: var(--fucsia);
+    background: #fef8fb;
+  }
 
   /* ===== ACCESOS ===== */
   .acceso-item {
@@ -1405,6 +1575,7 @@ let state = {
   currentClienteId: null,
   currentClienteTab: 'ficha',
   calendarDate: new Date(),
+  calendarView: 'grilla', // 'grilla' o 'cards'
   clientes: [],
   briefs: [],
   estrategias: [],
@@ -5157,34 +5328,6 @@ async function renderTabCalendario() {
     const month = state.calendarDate.getMonth();
     const monthName = state.calendarDate.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
 
-    // Primera y última fecha del mes
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const firstDayWeek = firstDay.getDay(); // 0=Dom, 1=Lun...
-    const mondayOffset = firstDayWeek === 0 ? 6 : firstDayWeek - 1;
-    const startDate = new Date(year, month, 1 - mondayOffset);
-
-    // Generar 42 celdas (6 semanas)
-    const today = new Date(); today.setHours(0,0,0,0);
-    let dayCells = '';
-    for (let i = 0; i < 42; i++) {
-      const d = new Date(startDate);
-      d.setDate(startDate.getDate() + i);
-      const dateStr = d.toISOString().split('T')[0];
-      const isOtherMonth = d.getMonth() !== month;
-      const isToday = d.getTime() === today.getTime();
-      const dayPosts = posts.filter(p => p.fecha_publicacion === dateStr);
-      const postsHtml = dayPosts.map(p => `
-        <div class="calendar-post ${(p.estado || 'idea').toLowerCase()}" onclick="event.stopPropagation(); openPostModal('${esc(p.id)}')" title="${esc(p.titulo || p.hook || 'Sin título')}">
-          ${esc(p.titulo || p.hook || '(sin título)')}
-        </div>`).join('');
-      dayCells += `
-        <div class="calendar-day ${isOtherMonth ? 'other-month' : ''} ${isToday ? 'today' : ''}" onclick="openPostModal(null, '${dateStr}')">
-          <div class="calendar-day-num">${d.getDate()}</div>
-          ${postsHtml}
-        </div>`;
-    }
-
     // Estadísticas del mes visible
     const monthPosts = posts.filter(p => {
       if (!p.fecha_publicacion) return false;
@@ -5197,7 +5340,7 @@ async function renderTabCalendario() {
       pendientes: monthPosts.filter(p => p.estado !== 'Publicada').length,
     };
 
-    $('tabContent').innerHTML = `
+    const headerHtml = `
       <div class="calendar-controls">
         <div style="display: flex; align-items: center; gap: 10px;">
           <button class="btn btn-secondary btn-sm" onclick="changeMonth(-1)">‹</button>
@@ -5206,33 +5349,194 @@ async function renderTabCalendario() {
           <button class="btn-ghost btn-sm" onclick="goToToday()">Hoy</button>
         </div>
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <div class="cal-view-toggle">
+            <button class="${state.calendarView === 'grilla' ? 'active' : ''}" onclick="switchCalendarView('grilla')">📅 Grilla</button>
+            <button class="${state.calendarView === 'cards' ? 'active' : ''}" onclick="switchCalendarView('cards')">🎴 Cards</button>
+          </div>
           <div style="font-size: 12px; color: var(--gris-text-soft);">
             ${stats.total} posts · ${stats.publicadas} publicadas · ${stats.pendientes} pendientes
           </div>
           <button class="gen-btn gen-btn-small" onclick="abrirGeneradorCalendarioMensual()">✨ Generar mes con IA</button>
           <button class="btn btn-primary btn-sm" onclick="openPostModal()">+ Nueva publicación</button>
         </div>
-      </div>
-      <div class="calendar-grid">
-        <div class="calendar-day-header">Lun</div>
-        <div class="calendar-day-header">Mar</div>
-        <div class="calendar-day-header">Mié</div>
-        <div class="calendar-day-header">Jue</div>
-        <div class="calendar-day-header">Vie</div>
-        <div class="calendar-day-header">Sáb</div>
-        <div class="calendar-day-header">Dom</div>
-        ${dayCells}
-      </div>
-      <div style="margin-top: 14px; display: flex; gap: 14px; flex-wrap: wrap; font-size: 11.5px; color: var(--gris-text-muted);">
-        <span style="display: inline-flex; align-items: center; gap: 6px;"><span style="width: 10px; height: 10px; background: #eef2f6; border-left: 3px solid var(--gris-text-muted); border-radius: 2px;"></span>Idea</span>
-        <span style="display: inline-flex; align-items: center; gap: 6px;"><span style="width: 10px; height: 10px; background: #fff4e0; border-left: 3px solid var(--amarillo); border-radius: 2px;"></span>Borrador</span>
-        <span style="display: inline-flex; align-items: center; gap: 6px;"><span style="width: 10px; height: 10px; background: #e6f0fb; border-left: 3px solid var(--petroleo); border-radius: 2px;"></span>En revisión</span>
-        <span style="display: inline-flex; align-items: center; gap: 6px;"><span style="width: 10px; height: 10px; background: #e6f4ef; border-left: 3px solid var(--verde); border-radius: 2px;"></span>Aprobada</span>
-        <span style="display: inline-flex; align-items: center; gap: 6px;"><span style="width: 10px; height: 10px; background: #d4e9e0; border-left: 3px solid #1d6b4e; border-radius: 2px;"></span>Publicada</span>
       </div>`;
+
+    const contentHtml = state.calendarView === 'cards'
+      ? renderCalendarioCards(posts, year, month)
+      : renderCalendarioGrilla(posts, year, month);
+
+    $('tabContent').innerHTML = headerHtml + contentHtml;
   } catch (e) {
     $('tabContent').innerHTML = `<div class="card" style="border-color: var(--rojo);"><strong style="color: var(--rojo);">Error</strong><p>${esc(e.message)}</p></div>`;
   }
+}
+
+function switchCalendarView(view) {
+  state.calendarView = view;
+  renderTabCalendario();
+}
+
+// ============================================================================
+// VISTA GRILLA (mensual clásica)
+// ============================================================================
+function renderCalendarioGrilla(posts, year, month) {
+  // Primera fecha del mes
+  const firstDay = new Date(year, month, 1);
+  const firstDayWeek = firstDay.getDay();
+  const mondayOffset = firstDayWeek === 0 ? 6 : firstDayWeek - 1;
+  const startDate = new Date(year, month, 1 - mondayOffset);
+
+  // Generar 42 celdas (6 semanas)
+  const today = new Date(); today.setHours(0,0,0,0);
+  let dayCells = '';
+  for (let i = 0; i < 42; i++) {
+    const d = new Date(startDate);
+    d.setDate(startDate.getDate() + i);
+    const dateStr = toLocalISODate(d);
+    const isOtherMonth = d.getMonth() !== month;
+    const isToday = d.getTime() === today.getTime();
+    const dayPosts = posts.filter(p => p.fecha_publicacion === dateStr);
+    const postsHtml = dayPosts.map(p => `
+      <div class="calendar-post ${(p.estado || 'idea').toLowerCase()}" onclick="event.stopPropagation(); openPostModal('${esc(p.id)}')" title="${esc(p.titulo || p.hook || 'Sin título')}">
+        ${esc(p.titulo || p.hook || '(sin título)')}
+      </div>`).join('');
+    dayCells += `
+      <div class="calendar-day ${isOtherMonth ? 'other-month' : ''} ${isToday ? 'today' : ''}" onclick="openPostModal(null, '${dateStr}')">
+        <div class="calendar-day-num">${d.getDate()}</div>
+        ${postsHtml}
+      </div>`;
+  }
+
+  return `
+    <div class="calendar-grid">
+      <div class="calendar-day-header">Lun</div>
+      <div class="calendar-day-header">Mar</div>
+      <div class="calendar-day-header">Mié</div>
+      <div class="calendar-day-header">Jue</div>
+      <div class="calendar-day-header">Vie</div>
+      <div class="calendar-day-header">Sáb</div>
+      <div class="calendar-day-header">Dom</div>
+      ${dayCells}
+    </div>
+    <div style="margin-top: 14px; display: flex; gap: 14px; flex-wrap: wrap; font-size: 11.5px; color: var(--gris-text-muted);">
+      <span style="display: inline-flex; align-items: center; gap: 6px;"><span style="width: 10px; height: 10px; background: #eef2f6; border-left: 3px solid var(--gris-text-muted); border-radius: 2px;"></span>Idea</span>
+      <span style="display: inline-flex; align-items: center; gap: 6px;"><span style="width: 10px; height: 10px; background: #fff4e0; border-left: 3px solid var(--amarillo); border-radius: 2px;"></span>Borrador</span>
+      <span style="display: inline-flex; align-items: center; gap: 6px;"><span style="width: 10px; height: 10px; background: #e6f0fb; border-left: 3px solid var(--petroleo); border-radius: 2px;"></span>En revisión</span>
+      <span style="display: inline-flex; align-items: center; gap: 6px;"><span style="width: 10px; height: 10px; background: #e6f4ef; border-left: 3px solid var(--verde); border-radius: 2px;"></span>Aprobada</span>
+      <span style="display: inline-flex; align-items: center; gap: 6px;"><span style="width: 10px; height: 10px; background: #d4e9e0; border-left: 3px solid #1d6b4e; border-radius: 2px;"></span>Publicada</span>
+    </div>`;
+}
+
+// Helper: fecha local en ISO sin problemas de UTC
+function toLocalISODate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+// ============================================================================
+// VISTA CARDS (tipo Kalend.ia)
+// ============================================================================
+function renderCalendarioCards(posts, year, month) {
+  // Filtrar solo posts del mes visible (con fecha), ordenados por fecha
+  const monthPosts = posts
+    .filter(p => {
+      if (!p.fecha_publicacion) return false;
+      const pd = new Date(p.fecha_publicacion + 'T00:00:00');
+      return pd.getFullYear() === year && pd.getMonth() === month;
+    })
+    .sort((a, b) => (a.fecha_publicacion || '').localeCompare(b.fecha_publicacion || ''));
+
+  if (monthPosts.length === 0) {
+    return `
+      <div class="cal-empty-cards">
+        <p style="font-size: 14px; margin: 0 0 4px;">📭 No hay publicaciones en este mes.</p>
+        <p style="font-size: 12.5px; margin: 0 0 14px;">Generalas con IA o creá una manual para empezar.</p>
+        <button class="btn btn-primary btn-sm" onclick="openPostModal()">+ Nueva publicación</button>
+      </div>
+    `;
+  }
+
+  // Agrupar por semana (una sección por semana)
+  const porSemana = {};
+  monthPosts.forEach(p => {
+    const d = new Date(p.fecha_publicacion + 'T00:00:00');
+    const semanaInicio = getLunesDeSemana(d);
+    const key = toLocalISODate(semanaInicio);
+    if (!porSemana[key]) porSemana[key] = { inicio: semanaInicio, posts: [] };
+    porSemana[key].posts.push(p);
+  });
+
+  const semanasOrdenadas = Object.keys(porSemana).sort();
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  const seccionesHtml = semanasOrdenadas.map(key => {
+    const { inicio, posts: semanaPosts } = porSemana[key];
+    const fin = new Date(inicio); fin.setDate(fin.getDate() + 6);
+    const tituloSemana = `Semana del ${inicio.getDate()} al ${fin.getDate()} de ${inicio.toLocaleDateString('es-AR', { month: 'short' })}`;
+
+    const cardsHtml = semanaPosts.map(p => renderCalCard(p, today)).join('');
+
+    return `
+      <div>
+        <div class="cal-cards-section-title">
+          📅 ${esc(tituloSemana)}
+          <span class="cal-cards-section-count">${semanaPosts.length} ${semanaPosts.length === 1 ? 'post' : 'posts'}</span>
+        </div>
+        <div class="cards-grid">
+          ${cardsHtml}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  return seccionesHtml;
+}
+
+function getLunesDeSemana(d) {
+  const x = new Date(d);
+  x.setHours(0,0,0,0);
+  const dow = x.getDay();
+  const diff = dow === 0 ? -6 : 1 - dow;
+  x.setDate(x.getDate() + diff);
+  return x;
+}
+
+function renderCalCard(p, today) {
+  const formatoKey = (p.formato || 'post').toLowerCase().replace(/\s+/g, '_');
+  const estadoKey = (p.estado || 'idea').toLowerCase();
+  const fechaObj = p.fecha_publicacion ? new Date(p.fecha_publicacion + 'T00:00:00') : null;
+  const esHoy = fechaObj && fechaObj.getTime() === today.getTime();
+
+  const nombresDias = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
+  const diaLabel = fechaObj ? `${nombresDias[fechaObj.getDay()]} ${fechaObj.getDate()}` : 'SIN FECHA';
+  const redSocial = p.red_social || 'Instagram';
+
+  const titulo = p.titulo || p.hook || '(sin título)';
+  // Preview: combina descripcion / cta / objetivo
+  const preview = p.descripcion || p.hook || p.cta || '';
+
+  const pilar = p.pilar ? `<div class="cal-card-pilar-chip">${esc(p.pilar)}</div>` : '';
+  const formato = p.formato || 'Post';
+
+  return `
+    <div class="cal-card" onclick="openPostModal('${esc(p.id)}')">
+      <div class="cal-card-border ${formatoKey}"></div>
+      <div class="cal-card-head">
+        <div class="cal-card-day ${esHoy ? 'today' : ''}">${esc(diaLabel)}</div>
+        <div class="cal-card-format-badge ${formatoKey}">${esc(formato)}</div>
+      </div>
+      <div class="cal-card-network">📷 ${esc(redSocial)}</div>
+      ${pilar}
+      <div class="cal-card-title">${esc(titulo)}</div>
+      ${preview ? `<div class="cal-card-preview">${esc(preview)}</div>` : '<div style="flex: 1;"></div>'}
+      <div class="cal-card-footer">
+        <div class="cal-card-estado-chip ${estadoKey}">${esc(p.estado || 'Idea')}</div>
+        <div class="cal-card-arrow">→</div>
+      </div>
+    </div>
+  `;
 }
 
 function changeMonth(delta) {
