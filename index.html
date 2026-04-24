@@ -1186,6 +1186,35 @@
   .badge-estado-pago.Pendiente { background: #fff4e0; color: #8a6a20; }
   .badge-estado-pago.Vencido { background: #fef0ef; color: var(--rojo); }
 
+  /* ===== BANNER SESIÓN ===== */
+  .banner-sesion {
+    position: fixed; top: 0; left: 0; right: 0;
+    z-index: 10000; padding: 12px 20px;
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 12px; flex-wrap: wrap;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    animation: slideDown 0.3s ease-out;
+    font-size: 14px;
+  }
+  @keyframes slideDown {
+    from { transform: translateY(-100%); }
+    to { transform: translateY(0); }
+  }
+  .banner-sesion-info {
+    background: #e6f0fb; border-bottom: 2px solid var(--petroleo);
+    color: var(--petroleo);
+  }
+  .banner-sesion-warn {
+    background: #fff9ec; border-bottom: 2px solid #d99a1e;
+    color: #8a6a20;
+  }
+  .banner-sesion-danger {
+    background: #fef0ef; border-bottom: 2px solid var(--rojo);
+    color: var(--rojo); font-weight: 600;
+  }
+  .banner-sesion-msg { flex: 1; min-width: 200px; }
+  .banner-sesion-actions { display: flex; gap: 6px; align-items: center; }
+
   .tooltip-icon {
     display: inline-block;
     width: 15px; height: 15px;
@@ -1369,6 +1398,8 @@ const CONFIG = {
 let state = {
   user: null,
   accessToken: null,
+  tokenExpiresAt: null,
+  refreshingSession: false,
   apiKey: null,
   currentPage: 'dashboard',
   currentClienteId: null,
@@ -1450,15 +1481,26 @@ function initGoogleAuth() {
     callback: async (tokenResponse) => {
       if (tokenResponse.error) { showToast('Error de autenticación', 'error'); return; }
       state.accessToken = tokenResponse.access_token;
-      // Guardar token con tiempo de expiración para mantener sesión al refrescar
       const expiresAt = Date.now() + (tokenResponse.expires_in || 3600) * 1000;
+      state.tokenExpiresAt = expiresAt;
       try {
         localStorage.setItem('carrusel_token', tokenResponse.access_token);
         localStorage.setItem('carrusel_token_expires', String(expiresAt));
       } catch (e) { console.warn('localStorage no disponible'); }
       gapi.client.setToken({ access_token: tokenResponse.access_token });
+
+      // Si estábamos refrescando (no es login nuevo), avisar y salir
+      if (state.refreshingSession) {
+        state.refreshingSession = false;
+        cerrarBannerSesion();
+        showToast('✓ Sesión renovada por 1 hora más', 'success');
+        iniciarMonitorSesion();
+        return;
+      }
+
       await loadUserInfo();
       enterApp();
+      iniciarMonitorSesion();
     },
   });
 
@@ -1479,21 +1521,112 @@ async function tryRestoreSession() {
     }
     // Validar que el token aún funcione
     state.accessToken = token;
-    await gapiReady; // esperar que gapi.client esté inicializado
+    state.tokenExpiresAt = expiresAt;
+    await gapiReady;
     gapi.client.setToken({ access_token: token });
     try {
       await loadUserInfo();
-      // Si pude cargar la info del usuario, el token es válido
       enterApp();
+      iniciarMonitorSesion();
     } catch (e) {
-      // Token inválido o expirado: limpiar y mostrar login
       localStorage.removeItem('carrusel_token');
       localStorage.removeItem('carrusel_token_expires');
       state.accessToken = null;
+      state.tokenExpiresAt = null;
     }
   } catch (e) {
     console.warn('Error restaurando sesión:', e);
   }
+}
+
+// ============================================================================
+// MONITOR DE SESIÓN (avisa antes de que venza el token)
+// ============================================================================
+let _monitorSesionInterval = null;
+let _avisosMostrados = { diez: false, cinco: false, uno: false };
+
+function iniciarMonitorSesion() {
+  // Detener monitor previo si existe
+  if (_monitorSesionInterval) clearInterval(_monitorSesionInterval);
+  _avisosMostrados = { diez: false, cinco: false, uno: false };
+
+  // Chequea cada 30 segundos
+  _monitorSesionInterval = setInterval(() => {
+    if (!state.tokenExpiresAt || !state.accessToken) {
+      clearInterval(_monitorSesionInterval);
+      return;
+    }
+    const minutosRestantes = Math.floor((state.tokenExpiresAt - Date.now()) / 60000);
+
+    // Vencido: cerrar sesión limpiamente
+    if (minutosRestantes <= 0) {
+      clearInterval(_monitorSesionInterval);
+      manejarSesionVencida();
+      return;
+    }
+
+    // Avisos escalonados
+    if (minutosRestantes <= 1 && !_avisosMostrados.uno) {
+      _avisosMostrados.uno = true;
+      mostrarBannerSesion('🚨 Tu sesión vence en 1 minuto', 'danger');
+    } else if (minutosRestantes <= 5 && !_avisosMostrados.cinco) {
+      _avisosMostrados.cinco = true;
+      mostrarBannerSesion('⏰ Tu sesión vence en ' + minutosRestantes + ' minutos. Refrescá ahora para no interrumpirte.', 'warn');
+    } else if (minutosRestantes <= 10 && !_avisosMostrados.diez) {
+      _avisosMostrados.diez = true;
+      mostrarBannerSesion('⏱ Tu sesión vence en ' + minutosRestantes + ' minutos', 'info');
+    }
+  }, 30000); // chequea cada 30s
+}
+
+function mostrarBannerSesion(mensaje, tipo) {
+  cerrarBannerSesion(); // quitar anterior si existe
+  const banner = document.createElement('div');
+  banner.id = 'banner_sesion';
+  banner.className = 'banner-sesion banner-sesion-' + tipo;
+  banner.innerHTML = `
+    <div class="banner-sesion-msg">${esc(mensaje)}</div>
+    <div class="banner-sesion-actions">
+      <button class="btn btn-primary btn-sm" onclick="refrescarSesion()">🔄 Refrescar sesión</button>
+      <button class="btn-ghost btn-sm" onclick="cerrarBannerSesion()" title="Cerrar aviso">✕</button>
+    </div>
+  `;
+  document.body.appendChild(banner);
+}
+
+function cerrarBannerSesion() {
+  const el = document.getElementById('banner_sesion');
+  if (el) el.remove();
+}
+
+function refrescarSesion() {
+  if (!tokenClient) {
+    showToast('Error: cliente de auth no inicializado', 'error');
+    return;
+  }
+  state.refreshingSession = true;
+  // Pedir un nuevo token con prompt='' (silencioso si Google lo permite)
+  try {
+    tokenClient.requestAccessToken({ prompt: '' });
+  } catch (e) {
+    state.refreshingSession = false;
+    showToast('Error refrescando: ' + e.message, 'error');
+  }
+}
+
+function manejarSesionVencida() {
+  cerrarBannerSesion();
+  // Mostrar banner de sesión vencida con opción de relogear
+  const banner = document.createElement('div');
+  banner.id = 'banner_sesion';
+  banner.className = 'banner-sesion banner-sesion-danger';
+  banner.innerHTML = `
+    <div class="banner-sesion-msg">🔒 Tu sesión expiró. Relogueate para continuar.</div>
+    <div class="banner-sesion-actions">
+      <button class="btn btn-primary btn-sm" onclick="refrescarSesion()">🔄 Reloguear ahora</button>
+    </div>
+  `;
+  document.body.appendChild(banner);
 }
 
 async function loadUserInfo() {
@@ -1515,11 +1648,14 @@ function handleLogin() {
 
 function handleLogout() {
   google.accounts.oauth2.revoke(state.accessToken, () => {});
+  // Detener monitor de sesión
+  if (_monitorSesionInterval) { clearInterval(_monitorSesionInterval); _monitorSesionInterval = null; }
+  cerrarBannerSesion();
   try {
     localStorage.removeItem('carrusel_token');
     localStorage.removeItem('carrusel_token_expires');
   } catch (e) {}
-  state = { ...state, user: null, accessToken: null, clientes: [], briefs: [], estrategias: [], accesos: [], calendario: [], ideas: [], servicios: [], prospectos: [], onboardings: [], plantillasOnboarding: [], finanzas_ingresos: [], finanzas_egresos: [], metricas: [], reportes: [] };
+  state = { ...state, user: null, accessToken: null, tokenExpiresAt: null, clientes: [], briefs: [], estrategias: [], accesos: [], calendario: [], ideas: [], servicios: [], prospectos: [], onboardings: [], plantillasOnboarding: [], finanzas_ingresos: [], finanzas_egresos: [], metricas: [], reportes: [] };
   $('loginScreen').style.display = 'flex';
   $('app').classList.remove('active');
 }
@@ -1578,6 +1714,11 @@ async function sheetRead(sheetName) {
     return { headers, data };
   } catch (e) {
     console.error('sheetRead error:', e);
+    // Detectar si es error de autenticación (token vencido o inválido)
+    if (e && (e.status === 401 || e.status === 403 || (e.result && e.result.error && (e.result.error.code === 401 || e.result.error.code === 403)))) {
+      manejarSesionVencida();
+      throw new Error('Sesión expirada. Por favor reloguéate.');
+    }
     throw new Error('No pude leer la hoja ' + sheetName);
   }
 }
