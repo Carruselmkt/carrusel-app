@@ -9741,11 +9741,11 @@ function renderDashboardContent(ingresos) {
         <div class="kpi-value">${prospectosActivos}</div>
         <div class="kpi-sub">${state.prospectos.filter(p => p.estado === 'Ganado').length} convertidos</div>
       </div>
-      <div class="kpi-card publicaciones">
+      <div class="kpi-card publicaciones" onclick="abrirAgendaConsolidada()">
         <div class="kpi-icon">📅</div>
         <div class="kpi-label">Posts próximos 7 días</div>
         <div class="kpi-value">${postsSemana.length}</div>
-        <div class="kpi-sub">${postsSemana.filter(p => p.estado === 'Publicado').length} ya publicados</div>
+        <div class="kpi-sub">${postsSemana.filter(p => p.estado === 'Publicada').length} ya publicados</div>
       </div>
     </div>
   `;
@@ -9995,6 +9995,262 @@ function formatMilesCompacto(n) {
   if (num >= 1000000) return (num / 1000000).toFixed(1).replace('.0', '') + 'M';
   if (num >= 1000) return Math.round(num / 1000) + 'k';
   return String(num);
+}
+
+// ============================================================================
+// AGENDA CONSOLIDADA (modal con todos los posts próximos de todos los clientes)
+// ============================================================================
+let _agendaFiltros = { cliente: '', formato: '', estado: '' };
+
+async function abrirAgendaConsolidada() {
+  $('modal').className = 'modal modal-lg';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>📅 Agenda · Próximos 7 días</h2>
+      <button class="btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="agendaContent"><div class="loading"><div class="spinner"></div>Cargando agenda...</div></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cerrar</button>
+    </div>`;
+  $('modalOverlay').classList.add('active');
+
+  try {
+    // Asegurar que tenemos datos cargados
+    if (!state.calendario || state.calendario.length === 0) {
+      const { data } = await sheetRead('Calendario');
+      state.calendario = data;
+    }
+    if (!state.clientes || state.clientes.length === 0) {
+      const { data } = await sheetRead('Clientes');
+      state.clientes = data;
+    }
+    renderAgendaConsolidada();
+  } catch (e) {
+    $('agendaContent').innerHTML = `<div style="color: var(--rojo); padding: 14px;">Error: ${esc(e.message)}</div>`;
+  }
+}
+
+function renderAgendaConsolidada() {
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  const finRango = new Date(hoy); finRango.setDate(hoy.getDate() + 7);
+
+  // Filtrar posts en la ventana de 7 días
+  let posts = state.calendario.filter(p => {
+    if (!p.fecha_publicacion) return false;
+    const f = new Date(p.fecha_publicacion + 'T00:00:00');
+    return f >= hoy && f <= finRango;
+  });
+
+  // Aplicar filtros
+  if (_agendaFiltros.cliente) posts = posts.filter(p => p.cliente_id === _agendaFiltros.cliente);
+  if (_agendaFiltros.formato) posts = posts.filter(p => (p.formato || '').toLowerCase() === _agendaFiltros.formato.toLowerCase());
+  if (_agendaFiltros.estado) posts = posts.filter(p => (p.estado || 'Idea') === _agendaFiltros.estado);
+
+  // Ordenar por fecha
+  posts.sort((a, b) => (a.fecha_publicacion || '').localeCompare(b.fecha_publicacion || ''));
+
+  // Estadísticas
+  const totalSinFiltrar = state.calendario.filter(p => {
+    if (!p.fecha_publicacion) return false;
+    const f = new Date(p.fecha_publicacion + 'T00:00:00');
+    return f >= hoy && f <= finRango;
+  }).length;
+
+  // Generar dropdowns de filtros
+  const clientesConPosts = [...new Set(state.calendario.filter(p => {
+    if (!p.fecha_publicacion) return false;
+    const f = new Date(p.fecha_publicacion + 'T00:00:00');
+    return f >= hoy && f <= finRango;
+  }).map(p => p.cliente_id))];
+
+  const filtrosHtml = `
+    <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; padding: 10px; background: var(--gris-bg); border-radius: 8px;">
+      <select class="form-select" style="flex: 1; min-width: 140px;" onchange="aplicarFiltroAgenda('cliente', this.value)">
+        <option value="">👥 Todos los clientes</option>
+        ${clientesConPosts.map(cid => {
+          const c = state.clientes.find(x => x.id === cid);
+          return c ? `<option value="${esc(cid)}" ${_agendaFiltros.cliente === cid ? 'selected' : ''}>${esc(c.nombre)}</option>` : '';
+        }).join('')}
+      </select>
+      <select class="form-select" style="flex: 1; min-width: 130px;" onchange="aplicarFiltroAgenda('formato', this.value)">
+        <option value="">🎯 Todos los formatos</option>
+        <option value="Reel" ${_agendaFiltros.formato === 'Reel' ? 'selected' : ''}>🎬 Reel</option>
+        <option value="Carrusel" ${_agendaFiltros.formato === 'Carrusel' ? 'selected' : ''}>🎠 Carrusel</option>
+        <option value="Story" ${_agendaFiltros.formato === 'Story' ? 'selected' : ''}>📖 Story</option>
+        <option value="Post" ${_agendaFiltros.formato === 'Post' ? 'selected' : ''}>📷 Post</option>
+        <option value="Publicación" ${_agendaFiltros.formato === 'Publicación' ? 'selected' : ''}>📷 Publicación</option>
+      </select>
+      <select class="form-select" style="flex: 1; min-width: 130px;" onchange="aplicarFiltroAgenda('estado', this.value)">
+        <option value="">📌 Todos los estados</option>
+        <option value="Idea" ${_agendaFiltros.estado === 'Idea' ? 'selected' : ''}>💡 Idea</option>
+        <option value="Borrador" ${_agendaFiltros.estado === 'Borrador' ? 'selected' : ''}>📝 Borrador</option>
+        <option value="Revisión" ${_agendaFiltros.estado === 'Revisión' ? 'selected' : ''}>👀 Revisión</option>
+        <option value="Aprobada" ${_agendaFiltros.estado === 'Aprobada' ? 'selected' : ''}>✅ Aprobada</option>
+        <option value="Publicada" ${_agendaFiltros.estado === 'Publicada' ? 'selected' : ''}>🚀 Publicada</option>
+      </select>
+      ${(_agendaFiltros.cliente || _agendaFiltros.formato || _agendaFiltros.estado) ? `
+        <button class="btn-ghost btn-sm" onclick="limpiarFiltrosAgenda()">✕ Limpiar filtros</button>
+      ` : ''}
+    </div>
+  `;
+
+  // Si no hay posts después de filtrar
+  if (posts.length === 0) {
+    const filtrosActivos = _agendaFiltros.cliente || _agendaFiltros.formato || _agendaFiltros.estado;
+    $('agendaContent').innerHTML = `
+      ${filtrosHtml}
+      <div style="text-align: center; padding: 30px; color: var(--gris-text-muted);">
+        ${filtrosActivos
+          ? '🔍 No hay publicaciones que coincidan con estos filtros.'
+          : (totalSinFiltrar === 0
+              ? '📭 No hay publicaciones agendadas en los próximos 7 días.'
+              : 'No hay publicaciones para mostrar.')}
+      </div>
+    `;
+    return;
+  }
+
+  // Agrupar por día
+  const grupos = {};
+  posts.forEach(p => {
+    if (!grupos[p.fecha_publicacion]) grupos[p.fecha_publicacion] = [];
+    grupos[p.fecha_publicacion].push(p);
+  });
+
+  const fechasOrdenadas = Object.keys(grupos).sort();
+  const diasNombre = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+  const seccionesHtml = fechasOrdenadas.map(fecha => {
+    const d = new Date(fecha + 'T00:00:00');
+    const diff = Math.round((d - hoy) / (1000 * 60 * 60 * 24));
+    let etiquetaDia = '';
+    if (diff === 0) etiquetaDia = '🔴 Hoy';
+    else if (diff === 1) etiquetaDia = '⚡ Mañana';
+    else if (diff === 2) etiquetaDia = 'Pasado mañana';
+    else etiquetaDia = diasNombre[d.getDay()];
+
+    const fechaLabel = `${etiquetaDia} · ${formatDateEs(fecha)}`;
+    const postsDelDia = grupos[fecha];
+
+    return `
+      <div style="margin-bottom: 18px;">
+        <div style="font-family: 'Fraunces', serif; font-size: 14px; font-weight: 700;
+                    color: var(--fucsia); padding: 6px 0; margin-bottom: 8px;
+                    border-bottom: 2px solid var(--fucsia-light); display: flex; justify-content: space-between;">
+          <span>${esc(fechaLabel)}</span>
+          <span style="font-size: 11px; color: var(--gris-text-muted); font-family: 'Inter', sans-serif; font-weight: 500;">
+            ${postsDelDia.length} ${postsDelDia.length === 1 ? 'post' : 'posts'}
+          </span>
+        </div>
+        ${postsDelDia.map(p => renderAgendaPost(p)).join('')}
+      </div>
+    `;
+  }).join('');
+
+  $('agendaContent').innerHTML = filtrosHtml + `
+    <div style="font-size: 12.5px; color: var(--gris-text-soft); margin-bottom: 14px;">
+      Mostrando <strong>${posts.length}</strong> de ${totalSinFiltrar} ${totalSinFiltrar === 1 ? 'publicación' : 'publicaciones'} agendadas en los próximos 7 días.
+    </div>
+    ${seccionesHtml}
+  `;
+}
+
+function renderAgendaPost(p) {
+  const cliente = state.clientes.find(c => c.id === p.cliente_id);
+  const nombreCliente = cliente ? cliente.nombre : '(cliente borrado)';
+
+  const formatoKey = (p.formato || 'post').toLowerCase().replace(/\s+/g, '_');
+  const formatoIconos = {
+    reel: '🎬', carrusel: '🎠', story: '📖', historia: '📖',
+    post: '📷', publicacion: '📷', publicación: '📷',
+  };
+  const icono = formatoIconos[formatoKey] || '📷';
+
+  const estadoKey = (p.estado || 'idea').toLowerCase();
+  const estadoIcono = {
+    idea: '💡', borrador: '📝', revisión: '👀',
+    revision: '👀', aprobada: '✅', publicada: '🚀',
+  };
+  const iconoEstado = estadoIcono[estadoKey] || '💡';
+
+  const titulo = p.titulo || p.hook || '(sin título)';
+
+  // Color según formato
+  const colorBorde = {
+    reel: 'var(--fucsia)',
+    carrusel: 'var(--salmon)',
+    story: '#8a6a20',
+    historia: '#8a6a20',
+    post: 'var(--petroleo)',
+    publicacion: 'var(--petroleo)',
+    publicación: 'var(--petroleo)',
+  };
+
+  return `
+    <div style="background: #fff; border: 1px solid var(--gris-border); border-left: 4px solid ${colorBorde[formatoKey] || 'var(--gris-border)'};
+                border-radius: 6px; padding: 10px 12px; margin-bottom: 6px;
+                cursor: pointer; transition: all 0.12s;"
+         onmouseenter="this.style.boxShadow='var(--sombra)'; this.style.transform='translateX(2px)';"
+         onmouseleave="this.style.boxShadow=''; this.style.transform='';"
+         onclick="abrirPostDesdeAgenda('${esc(p.cliente_id)}', '${esc(p.id)}')">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
+        <div style="flex: 1; min-width: 0;">
+          <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 4px;">
+            <span style="font-size: 11px; font-weight: 700; color: var(--fucsia); text-transform: uppercase; letter-spacing: 0.04em;">
+              ${esc(nombreCliente)}
+            </span>
+            <span style="font-size: 11px; color: var(--gris-text-muted);">·</span>
+            <span style="font-size: 11px; color: var(--gris-text-soft);">
+              ${icono} ${esc(p.formato || 'Post')}
+            </span>
+            ${p.pilar ? `
+              <span style="font-size: 11px; color: var(--gris-text-muted);">·</span>
+              <span style="font-size: 10.5px; padding: 1px 7px; background: var(--crema); color: #8a6a20; border-radius: 8px; font-weight: 600;">
+                ${esc(p.pilar)}
+              </span>` : ''}
+          </div>
+          <div style="font-size: 13.5px; font-weight: 600; color: var(--gris-text);
+                      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            ${esc(titulo)}
+          </div>
+          ${p.hook && p.hook !== titulo ? `
+            <div style="font-size: 12px; color: var(--gris-text-soft); font-style: italic; margin-top: 2px;
+                        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+              "${esc(p.hook)}"
+            </div>` : ''}
+        </div>
+        <div style="text-align: right; white-space: nowrap;">
+          <span style="font-size: 11px; padding: 3px 8px; border-radius: 10px; font-weight: 600;
+                       background: var(--gris-bg); color: var(--gris-text-soft);">
+            ${iconoEstado} ${esc(p.estado || 'Idea')}
+          </span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function aplicarFiltroAgenda(campo, valor) {
+  _agendaFiltros[campo] = valor;
+  renderAgendaConsolidada();
+}
+
+function limpiarFiltrosAgenda() {
+  _agendaFiltros = { cliente: '', formato: '', estado: '' };
+  renderAgendaConsolidada();
+}
+
+function abrirPostDesdeAgenda(clienteId, postId) {
+  // Cierra el modal y navega al cliente, calendario, abriendo el post
+  closeModal();
+  state.currentClienteId = clienteId;
+  state.currentClienteTab = 'calendario';
+  renderClienteDetalle();
+  // Abrir el modal del post después de un pequeño delay para que cargue la solapa
+  setTimeout(() => openPostModal(postId), 250);
 }
 
 
