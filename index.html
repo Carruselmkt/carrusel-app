@@ -1456,6 +1456,88 @@
   .reporte-body p { margin: 6px 0; }
   .reporte-body strong { color: var(--fucsia); }
 
+  /* ===== STORYTELLING GENERATOR ===== */
+  .st-formato-opt input[type="radio"] {
+    display: none;
+  }
+  .st-formato-card {
+    border: 2px solid var(--gris-border);
+    border-radius: 8px;
+    padding: 14px 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: #fff;
+  }
+  .st-formato-card:hover {
+    border-color: var(--fucsia-light);
+    background: #fef8fb;
+  }
+  .st-formato-opt input:checked + .st-formato-card {
+    border-color: var(--fucsia);
+    background: #fef8fb;
+    box-shadow: 0 0 0 3px rgba(186, 13, 102, 0.1);
+  }
+  .st-formato-icon { font-size: 28px; margin-bottom: 4px; }
+  .st-formato-label { font-weight: 700; font-size: 13.5px; color: var(--gris-text); }
+  .st-formato-help { font-size: 11px; color: var(--gris-text-muted); margin-top: 2px; }
+
+  .st-pieza {
+    background: #fff;
+    border: 1px solid var(--gris-border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+  }
+  .st-pieza-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding-bottom: 8px; margin-bottom: 8px;
+    border-bottom: 1px dashed var(--gris-border);
+  }
+  .st-pieza-num {
+    font-weight: 700; color: var(--fucsia); font-size: 13.5px;
+    font-family: 'Fraunces', serif;
+  }
+  .st-pieza-tipo {
+    font-size: 11px; padding: 2px 8px;
+    background: var(--crema); color: #8a6a20;
+    border-radius: 10px; font-weight: 600;
+  }
+  .st-pieza-tiempo {
+    font-size: 12px; padding: 2px 8px;
+    background: #e6f0fb; color: var(--petroleo);
+    border-radius: 10px; font-weight: 600;
+    font-family: 'Courier New', monospace;
+  }
+  .st-pieza-body { display: flex; flex-direction: column; gap: 8px; }
+  .st-pieza-field { display: flex; flex-direction: column; gap: 3px; }
+  .st-pieza-field label {
+    font-size: 10.5px; color: var(--gris-text-muted);
+    text-transform: uppercase; letter-spacing: 0.04em;
+    font-weight: 600;
+  }
+  .st-pieza-field .editable-field {
+    background: var(--gris-bg); padding: 6px 10px;
+    border-radius: 4px; min-height: 22px;
+    font-size: 13px; line-height: 1.4;
+    border: 1px solid transparent;
+  }
+  .st-pieza-field .editable-field:hover {
+    background: #fff; border-color: var(--gris-border);
+  }
+  .st-pieza-field .editable-field:focus {
+    outline: 2px solid var(--fucsia); outline-offset: -1px;
+    background: #fff;
+  }
+  .st-pieza-field .editable-field.hint {
+    font-style: italic; color: var(--gris-text-soft);
+  }
+  .st-pieza-nota {
+    margin-top: 6px; padding: 6px 10px;
+    background: #fef8e6; border-left: 3px solid #c4a01a;
+    border-radius: 4px; font-size: 11.5px; color: #8a6a20;
+  }
+
   /* ===== RESPONSIVE ===== */
   @media (max-width: 900px) {
     .app.active { grid-template-columns: 1fr; }
@@ -3753,6 +3835,58 @@ PRINCIPIOS ESTRATÉGICOS PARA HISTORIAS DE INSTAGRAM:
 6. REGLA DE ORO: La conexión construye la confianza. La venta la usa. Sin las dos, el sistema no funciona.
 `;
 
+// ============================================================================
+// GUÍA STORYTELLING (principios narrativos para el generador de storytelling)
+// ============================================================================
+const GUIA_STORYTELLING = `
+PRINCIPIOS FUNDAMENTALES DEL STORYTELLING:
+
+1. LA HISTORIA EN SÍ
+- Conflicto claro: toda buena historia necesita una tensión. Sin problema no hay interés.
+- Personajes con los que conectar: el público necesita identificarse o empatizar con alguien.
+- Arco narrativo: inicio que engancha, desarrollo que sostiene, cierre que satisface.
+
+2. CONEXIÓN EMOCIONAL
+- Las emociones son el vehículo principal. Los datos informan, las historias mueven.
+- Apelar a experiencias universales (miedo, esperanza, pérdida, superación) genera resonancia inmediata.
+- Mostrar vulnerabilidad o autenticidad genera más confianza que la perfección.
+
+3. PROPÓSITO
+- Saber por qué se cuenta la historia define cómo contarla. Cada elemento debe servir al propósito; lo que no suma, resta.
+
+4. PÚBLICO
+- Conocer a quién te dirigís es tan importante como la historia misma.
+- El lenguaje, el tono y los detalles deben resonar con ellos, no solo con vos.
+
+5. ESTRUCTURA
+- Modelo del héroe: situación → desafío → transformación. Refleja cómo vivimos.
+- Esquema simple: contexto → problema → solución → resultado.
+- Para historias cortas: hook → tensión → giro → resolución.
+
+6. FORMA DE CONTAR
+- El RITMO importa: pausas, detalles sensoriales, variaciones.
+- LA ESPECIFICIDAD VENDE: "perdí todo en 3 meses" es menos poderoso que "el martes 14 cerré la empresa donde trabajé 7 años". Ir a lo concreto, evitar lo genérico.
+- MOSTRAR EN VEZ DE DECIR: en lugar de "fue difícil", describí qué se sentía.
+- DETALLES SENSORIALES: olores, sonidos, texturas, expresiones. Hacen la historia tangible.
+
+7. AUTENTICIDAD
+- Las historias fabricadas o exageradas se notan. La verdad, incluso incómoda, genera más impacto.
+- No agregar "drama de más" donde no lo hay.
+- Si la historia es cruda o tiene puntos de tensión, no suavizarlos.
+
+REGLA DE ORO: una buena historia tiene EMOCIÓN + ESTRUCTURA + PROPÓSITO + VERDAD. El resto es técnica.
+
+REGLAS DE EJECUCIÓN:
+- Identificá el conflicto/tensión central de la historia bruta y construí el arco alrededor de eso.
+- Si el propósito es VENDER, asegurate de que el cliente o el oyente se vea en la historia (es él quien atraviesa el conflicto, no solo vos).
+- Si el propósito es INSPIRAR, enfocá en la transformación, no en la fórmula.
+- Si el propósito es EDUCAR, usá la historia como vehículo de la lección, sin moralejas explícitas.
+- Si el propósito es ENTRETENER, priorizá ritmo, sorpresa, humor o reverso.
+- Buscá los detalles específicos en la historia bruta. Si la persona dice "tuve un mal día", preguntáte "¿qué pasó EXACTAMENTE?" e inventalo verosímil si hace falta para hacer la historia real (manteniendo la verdad emocional).
+- Cortes claros entre escenas. Cada slide/historia/escena debe tener UN momento clave.
+- El hook (primera línea/slide/segundo) tiene que ser una pregunta, una declaración fuerte o una imagen mental que para el scroll. Evitá "Hola, hoy les voy a contar..."
+`;
+
 const METRICAS_ASOCIADAS = [
   { v: 'visualizaciones', l: 'Visualizaciones' },
   { v: 'cuentas_alcanzadas', l: 'Cuentas alcanzadas' },
@@ -4231,9 +4365,9 @@ function renderIdeaCard(idea) {
   const estadoClase = estado.toLowerCase().replace(/ /g, '-');
   const tieneCopyDesarrollado = idea.copy && idea.copy.trim();
 
-  // Detectar si tiene carrusel o reel guardados en notas (formato: "CARRUSEL_SLIDES:JSON" o "REEL_GUION:JSON")
-  let tieneCarrusel = false, tieneReel = false;
-  let slidesCount = 0, escenasCount = 0;
+  // Detectar si tiene carrusel, reel o secuencia de historias guardados en notas
+  let tieneCarrusel = false, tieneReel = false, tieneHistorias = false;
+  let slidesCount = 0, escenasCount = 0, historiasCount = 0;
   if (idea.notas && typeof idea.notas === 'string') {
     if (idea.notas.startsWith('CARRUSEL_SLIDES:')) {
       tieneCarrusel = true;
@@ -4246,6 +4380,12 @@ function renderIdeaCard(idea) {
       try {
         const escenas = JSON.parse(idea.notas.substring('REEL_GUION:'.length));
         escenasCount = Array.isArray(escenas) ? escenas.length : 0;
+      } catch (e) {}
+    } else if (idea.notas.startsWith('HISTORIAS_SECUENCIA:')) {
+      tieneHistorias = true;
+      try {
+        const hist = JSON.parse(idea.notas.substring('HISTORIAS_SECUENCIA:'.length));
+        historiasCount = Array.isArray(hist) ? hist.length : 0;
       } catch (e) {}
     }
   }
@@ -4264,10 +4404,11 @@ function renderIdeaCard(idea) {
         ${tieneCopyDesarrollado ? `<span class="idea-chip" style="background: #e6f4ef; color: var(--verde);">✓ Copy desarrollado</span>` : ''}
         ${tieneCarrusel ? `<span class="idea-chip" style="background: #fef0e5; color: #c06a3d;">🎠 ${slidesCount} slides</span>` : ''}
         ${tieneReel ? `<span class="idea-chip" style="background: #e6f0fb; color: var(--petroleo);">🎬 ${escenasCount} escenas</span>` : ''}
+        ${tieneHistorias ? `<span class="idea-chip" style="background: #fef8e6; color: #8a6a20;">📖 ${historiasCount} historias</span>` : ''}
       </div>
 
       ${idea.hook ? `<div class="idea-hook">"${esc(idea.hook)}"</div>` : ''}
-      ${idea.idea && idea.idea !== idea.titulo && !tieneCarrusel && !tieneReel ? `<div class="idea-descripcion">${esc(idea.idea)}</div>` : ''}
+      ${idea.idea && idea.idea !== idea.titulo && !tieneCarrusel && !tieneReel && !tieneHistorias ? `<div class="idea-descripcion">${esc(idea.idea)}</div>` : ''}
 
       ${tieneCopyDesarrollado ? `
         <details style="margin-bottom: 10px;">
@@ -4288,10 +4429,15 @@ function renderIdeaCard(idea) {
           <button class="btn btn-secondary btn-sm" onclick="verReelDeIdea('${esc(idea.id)}')">🎬 Ver ${escenasCount} escenas</button>
         </div>
       ` : ''}
+      ${tieneHistorias ? `
+        <div style="margin-bottom: 10px;">
+          <button class="btn btn-secondary btn-sm" onclick="verHistoriasDeIdea('${esc(idea.id)}')">📖 Ver ${historiasCount} historias</button>
+        </div>
+      ` : ''}
 
       <div class="idea-actions">
         ${estado !== 'Publicada' ? `
-          ${!tieneCopyDesarrollado && !tieneCarrusel && !tieneReel ? `<button class="gen-btn gen-btn-small" onclick="desarrollarIdea('${esc(idea.id)}')">✨ Desarrollar copy</button>` : ''}
+          ${!tieneCopyDesarrollado && !tieneCarrusel && !tieneReel && !tieneHistorias ? `<button class="gen-btn gen-btn-small" onclick="desarrollarIdea('${esc(idea.id)}')">✨ Desarrollar copy</button>` : ''}
           ${estado !== 'Agendada' ? `<button class="btn btn-primary btn-sm" onclick="agendarIdea('${esc(idea.id)}')">📅 Agendar</button>` : ''}
         ` : ''}
         <button class="btn btn-secondary btn-sm" onclick="openIdeaModal('${esc(idea.id)}')">✏️ Editar</button>
@@ -4341,8 +4487,9 @@ function verReelDeIdea(ideaId) {
     <div class="escena-card">
       <span class="escena-tiempo">⏱️ ${esc(e.tiempo || '?')}</span>
       ${e.texto_pantalla ? `<div class="slide-section"><span class="slide-section-label">📝 Texto en pantalla</span><div style="font-weight: 600;">${esc(e.texto_pantalla)}</div></div>` : ''}
-      ${e.voz_audio ? `<div class="slide-section"><span class="slide-section-label">🎤 Voz / Audio</span><div>${esc(e.voz_audio)}</div></div>` : ''}
+      ${e.voz_audio || e.voz ? `<div class="slide-section"><span class="slide-section-label">🎤 Voz / Audio</span><div>${esc(e.voz_audio || e.voz)}</div></div>` : ''}
       ${e.accion ? `<div class="slide-section"><span class="slide-section-label">🎬 Acción</span><div style="font-style: italic; color: var(--gris-text-soft);">${esc(e.accion)}</div></div>` : ''}
+      ${e.tipo_plano ? `<div class="slide-section"><span class="slide-section-label">📹 Plano</span><div style="font-style: italic; color: var(--gris-text-soft);">${esc(e.tipo_plano)}</div></div>` : ''}
     </div>`).join('');
 
   $('modal').className = 'modal modal-lg';
@@ -4357,6 +4504,41 @@ function verReelDeIdea(ideaId) {
     </div>`;
   $('modalOverlay').classList.add('active');
 }
+
+// Visualizador de secuencia de historias (storytelling formato historias)
+function verHistoriasDeIdea(ideaId) {
+  const idea = state.ideas.find(i => i.id === ideaId);
+  if (!idea || !idea.notas) return;
+  let historias = [];
+  try { historias = JSON.parse(idea.notas.substring('HISTORIAS_SECUENCIA:'.length)); } catch (e) { showToast('Error leyendo las historias', 'error'); return; }
+
+  const tipoLabel = { hook: '🎯 Hook', desarrollo: '🔄 Desarrollo', giro: '⚡ Giro', cierre: '✨ Cierre' };
+
+  const historiasHtml = historias.map((h, i) => `
+    <div class="escena-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <span class="escena-tiempo">📖 Historia ${i + 1}</span>
+        ${h.tipo ? `<span style="font-size: 11px; padding: 2px 8px; background: var(--crema); border-radius: 10px; color: #8a6a20; font-weight: 600;">${tipoLabel[h.tipo] || h.tipo}</span>` : ''}
+      </div>
+      ${h.texto_principal ? `<div class="slide-section"><span class="slide-section-label">💬 Texto principal</span><div style="font-weight: 600;">${esc(h.texto_principal)}</div></div>` : ''}
+      ${h.zocalo ? `<div class="slide-section"><span class="slide-section-label">📌 Zócalo / Titular</span><div>${esc(h.zocalo)}</div></div>` : ''}
+      ${h.visual_sugerido ? `<div class="slide-section"><span class="slide-section-label">📷 Visual sugerido</span><div style="font-style: italic; color: var(--gris-text-soft);">${esc(h.visual_sugerido)}</div></div>` : ''}
+      ${h.nota_narrativa ? `<div style="margin-top: 8px; padding: 6px 10px; background: #fef8e6; border-left: 3px solid #c4a01a; border-radius: 4px; font-size: 11.5px; color: #8a6a20;">💭 ${esc(h.nota_narrativa)}</div>` : ''}
+    </div>`).join('');
+
+  $('modal').className = 'modal modal-lg';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>📖 Secuencia de historias: ${esc(idea.titulo)}</h2>
+      <button class="btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">${historiasHtml}</div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cerrar</button>
+    </div>`;
+  $('modalOverlay').classList.add('active');
+}
+
 
 // ============================================================================
 // MODAL DE IDEA (crear/editar manual)
@@ -5890,6 +6072,11 @@ async function renderGeneradores() {
           <h3>Generar reel suelto</h3>
           <p>Desarrollá el guión de un reel escena por escena (tiempo, texto en pantalla, voz, acción). Se guarda en el banco.</p>
         </div>
+        <div class="generador-card" onclick="atajoGenerarStorytelling()">
+          <div class="generador-icon" style="background: linear-gradient(135deg, #b8860b 0%, var(--salmon) 100%);">🎭</div>
+          <h3>Generador de Storytelling</h3>
+          <p>Convertí una historia real (anécdota, vivencia, testimonio) en una secuencia de historias, un carrusel o un guión de reel. La IA aplica los principios de storytelling: arco narrativo, conflicto, emoción, especificidad.</p>
+        </div>
         <div class="generador-card" onclick="atajoGenerarCalendarioMensual()">
           <div class="generador-icon" style="background: linear-gradient(135deg, var(--salmon) 0%, var(--fucsia) 100%);">📅</div>
           <h3>Generar calendario mensual</h3>
@@ -5989,6 +6176,476 @@ async function ejecutarAtajoCalendario() {
 async function atajoGenerarCopy() { abrirGeneradorLibre('copy'); }
 async function atajoGenerarCarrusel() { abrirGeneradorLibre('carrusel'); }
 async function atajoGenerarReel() { abrirGeneradorLibre('reel'); }
+async function atajoGenerarStorytelling() { abrirGeneradorStorytelling(); }
+
+// ============================================================================
+// GENERADOR DE STORYTELLING
+// ============================================================================
+
+function abrirGeneradorStorytelling() {
+  if (state.clientes.length === 0) {
+    showToast('No hay clientes cargados', 'error');
+    return;
+  }
+  const opciones = state.clientes.map(c => `<option value="${esc(c.id)}">${esc(c.nombre)}</option>`).join('');
+  $('modal').className = 'modal modal-lg';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>🎭 Generador de Storytelling</h2>
+      <button class="btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="color: var(--gris-text-soft); font-size: 13.5px; margin-bottom: 14px;">
+        Pegá una historia real (anécdota tuya o del cliente, vivencia, testimonio, momento clave) y la IA la transforma en contenido estructurado aplicando los principios del storytelling: arco narrativo, conflicto, emoción, especificidad, autenticidad.
+      </p>
+
+      <div class="form-row">
+        <label class="form-label">Cliente *</label>
+        <select class="form-select" id="st_cliente">
+          <option value="">— Elegí cliente —</option>
+          ${opciones}
+        </select>
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">Formato de salida *</label>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <label class="st-formato-opt" style="flex: 1; min-width: 130px;">
+            <input type="radio" name="st_formato" value="historias" checked>
+            <div class="st-formato-card">
+              <div class="st-formato-icon">📖</div>
+              <div class="st-formato-label">Historias</div>
+              <div class="st-formato-help">Secuencia de stories de IG</div>
+            </div>
+          </label>
+          <label class="st-formato-opt" style="flex: 1; min-width: 130px;">
+            <input type="radio" name="st_formato" value="carrusel">
+            <div class="st-formato-card">
+              <div class="st-formato-icon">🎠</div>
+              <div class="st-formato-label">Carrusel</div>
+              <div class="st-formato-help">Slides para feed</div>
+            </div>
+          </label>
+          <label class="st-formato-opt" style="flex: 1; min-width: 130px;">
+            <input type="radio" name="st_formato" value="reel">
+            <div class="st-formato-card">
+              <div class="st-formato-icon">🎬</div>
+              <div class="st-formato-label">Reel</div>
+              <div class="st-formato-help">Guión de video</div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">Propósito *</label>
+        <select class="form-select" id="st_proposito">
+          <option value="inspirar">✨ Inspirar — generar motivación, identificación, esperanza</option>
+          <option value="vender">💰 Vender — llevar a una conversación o acción comercial</option>
+          <option value="educar">📚 Educar — enseñar algo a través de la historia</option>
+          <option value="entretener">🎉 Entretener — generar disfrute, humor, sorpresa</option>
+        </select>
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">La historia (en bruto) *</label>
+        <div class="form-help" style="font-size: 11.5px; margin-bottom: 6px;">
+          💡 Escribí la historia tal como te la contaron o como la viviste. No te preocupes por la redacción ni la estructura. La IA va a encontrar el arco narrativo. Cuanto más detallada, mejor.
+        </div>
+        <textarea class="form-textarea" id="st_historia" rows="10" placeholder="Ej: Hace 3 años decidí dejar mi trabajo en relación de dependencia. Ganaba bien pero estaba muerta por dentro. Un martes cualquiera renuncié sin tener nada planeado. Los primeros meses fueron caóticos: sin clientes, dudando todo el tiempo. Me acuerdo una noche llorando en la cocina pensando que me había equivocado. Hasta que llegó la primera consulta paga. Hoy tengo 40 clientas activas y no me arrepiento de nada."></textarea>
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">CTA al final (opcional)</label>
+        <input type="text" class="form-input" id="st_cta" placeholder='Ej: "Si esto te resonó, mandame un mensaje" / "Reservá tu turno desde el link en bio"'>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="ejecutarGeneradorStorytelling()">✨ Generar storytelling</button>
+    </div>`;
+  $('modalOverlay').classList.add('active');
+}
+
+async function ejecutarGeneradorStorytelling() {
+  if (!checkApiKey()) return;
+  const clienteId = $('st_cliente').value;
+  const formato = document.querySelector('input[name="st_formato"]:checked').value;
+  const proposito = $('st_proposito').value;
+  const historia = $('st_historia').value.trim();
+  const cta = $('st_cta').value.trim();
+
+  if (!clienteId) { showToast('Elegí un cliente', 'error'); return; }
+  if (!historia || historia.length < 30) { showToast('La historia es muy corta. Contala con un poco más de detalle.', 'error'); return; }
+
+  state.currentClienteId = clienteId;
+  const cliente = state.clientes.find(c => c.id === clienteId);
+
+  // Cargar contexto del cliente si no lo tenemos
+  try {
+    if (!state.briefs || state.briefs.length === 0) {
+      const { data } = await sheetRead('Briefs');
+      state.briefs = data;
+    }
+    if (!state.estrategias) {
+      const { data } = await sheetRead('Estrategias');
+      state.estrategias = data;
+    }
+  } catch (e) {}
+
+  const formatoLabels = { historias: 'Historias de IG', carrusel: 'Carrusel', reel: 'Reel' };
+  const propositoLabels = { inspirar: 'Inspirar', vender: 'Vender', educar: 'Educar', entretener: 'Entretener' };
+
+  abrirModalGeneracion('Generando storytelling', '🎭', `${formatoLabels[formato]} · ${propositoLabels[proposito]} · ${cliente.nombre}`);
+
+  // Contexto del cliente
+  const briefContexto = buildBriefContext(clienteId);
+  const estrategiaActiva = (state.estrategias || []).find(e => e.cliente_id === clienteId && e.tipo === 'Principal' && (e.estado || 'Activa') === 'Activa');
+  const tonoVoz = estrategiaActiva ? parseJsonSafe(estrategiaActiva.tono_voz_json) : null;
+  const buyerPersonas = estrategiaActiva ? parseJsonSafe(estrategiaActiva.buyer_personas_json) : [];
+
+  const tonoContexto = (tonoVoz && Object.keys(tonoVoz).length > 0)
+    ? `\n\nTONO DE VOZ DE LA MARCA:\n${tonoVoz.tono || ''}\nPalabras SÍ: ${tonoVoz.si || ''}\nPalabras NO: ${tonoVoz.no || ''}`
+    : '';
+
+  const buyerContexto = buyerPersonas.length > 0
+    ? `\n\nBUYER PERSONAS (a quién le hablamos):\n${buyerPersonas.map(bp => `- ${bp.nombre}: dolores: ${bp.dolores || '-'}; deseos: ${bp.deseos || '-'}`).join('\n')}`
+    : '';
+
+  // Distinto schema según formato
+  let formatoSchema = '';
+  let formatoInstrucciones = '';
+
+  if (formato === 'historias') {
+    formatoInstrucciones = `
+FORMATO HISTORIAS DE IG:
+- Dividí el relato en la cantidad de historias necesarias según el largo (típicamente 3-7).
+- Cada historia es UN momento clave del arco narrativo, no fragmentos arbitrarios.
+- La primera historia debe ser un HOOK fuerte (no "hola buen día"). Una pregunta, una imagen mental, una frase polémica o una declaración cruda.
+- La última historia debe cerrar con la transformación + CTA si aplica.
+- Aplicá las reglas de historias de Instagram: sin frases vacías, especificidad, vulnerabilidad real.`;
+    formatoSchema = `[
+  {
+    "n": 1,
+    "tipo": "hook" | "desarrollo" | "giro" | "cierre",
+    "texto_principal": "El texto que va sobre la historia. Conciso, impactante.",
+    "zocalo": "Texto chico opcional como subtítulo o titular (solo si suma)",
+    "visual_sugerido": "Qué mostrar: 'a cámara con primer plano', 'captura de chat', 'foto del producto', 'video mostrando X', etc.",
+    "nota_narrativa": "Por qué esta historia funciona en el arco (interno, no se publica)"
+  },
+  ...
+]`;
+  } else if (formato === 'carrusel') {
+    formatoInstrucciones = `
+FORMATO CARRUSEL DE IG:
+- Dividí el relato en slides necesarios según el largo (típicamente 6-10).
+- Slide 1 = portada con hook (titular grande que para el scroll).
+- Slides 2 a N-1 = desarrollo del arco (un momento clave por slide).
+- Slide final = cierre + CTA.
+- Cada slide debe poder leerse en 5 segundos.`;
+    formatoSchema = `[
+  {
+    "n": 1,
+    "tipo": "portada" | "desarrollo" | "giro" | "cierre",
+    "titular": "El texto grande del slide",
+    "subtitulo": "Texto secundario opcional",
+    "visual_sugerido": "Qué imagen / fondo / elemento visual usar",
+    "copy_pie": "Si aplica, copy que iría en el caption del post para este slide"
+  },
+  ...
+]`;
+  } else if (formato === 'reel') {
+    formatoInstrucciones = `
+FORMATO REEL:
+- Guión completo escena por escena, con marcas de tiempo (segundos).
+- Hook en los primeros 0-3 segundos: pregunta directa, declaración cruda o imagen mental fuerte.
+- Desarrollo con cortes ágiles para mantener atención.
+- Texto en pantalla específico para cada escena.
+- Cierre con CTA hablado o en pantalla.`;
+    formatoSchema = `[
+  {
+    "n": 1,
+    "tiempo": "0-3s",
+    "tipo_plano": "Primer plano a cámara | Plano medio | Detalle | Texto en pantalla | etc.",
+    "voz_en_off": "Lo que se dice (texto del audio)",
+    "texto_pantalla": "Lo que aparece en texto sobre el video",
+    "accion_visual": "Qué se ve / qué hace la persona",
+    "nota_narrativa": "Por qué esta escena funciona (interno)"
+  },
+  ...
+]`;
+  }
+
+  const propositoInstrucciones = {
+    inspirar: 'PROPÓSITO: INSPIRAR. Foco en la transformación. Que el público termine con la sensación "yo también puedo". Evitá moralejas explícitas o frases hechas. Que la historia hable por sí sola.',
+    vender: 'PROPÓSITO: VENDER. El público debe verse en la historia (debe ser él quien atraviesa el conflicto, no solo vos). El cierre debe llevar a una conversación o acción concreta. Si la historia es del cliente, mostrá que vos sos el "guía" que lo ayudó.',
+    educar: 'PROPÓSITO: EDUCAR. Usá la historia como VEHÍCULO de la lección. La enseñanza debe surgir de la trama, no enunciarse al inicio. El público aprende descubriendo lo mismo que aprendió el protagonista.',
+    entretener: 'PROPÓSITO: ENTRETENER. Priorizá ritmo, sorpresa, humor o giro inesperado. Que el público termine queriendo contárselo a alguien.',
+  };
+
+  const ctaContexto = cta ? `\n\nCTA OBLIGATORIO al final: "${cta}"` : '';
+
+  const systemPrompt = `Sos guionista narrativa de Carrusel MKT, agencia argentina. Especialista en transformar historias reales en contenido digital de alto impacto.
+
+${propositoInstrucciones[proposito]}
+
+${GUIA_STORYTELLING}
+
+${formatoInstrucciones}
+
+REGLAS DE ESCRITURA:
+- Español rioplatense (vos, ustedes).
+- Especificidad por encima de lo genérico (recordá: "el martes 14" > "un día").
+- Mostrar > decir. Detalles sensoriales (qué se vio, escuchó, sintió).
+- Conservá la verdad emocional de la historia bruta. No suavices ni dramatices de más.
+- Si la historia tiene "huecos" (la persona dijo algo genérico tipo "la pasé mal"), proponé un detalle verosímil que mantenga la verdad emocional. Si no podés, dejá un placeholder tipo "[detalle específico a completar]" para que la persona lo llene.
+- El tono debe alinearse con el TONO DE VOZ de la marca y los buyer personas.
+
+FORMATO DE SALIDA: SOLO un JSON válido (array), sin markdown, sin texto adicional:
+
+${formatoSchema}`;
+
+  const userPrompt = `CLIENTE: ${cliente.nombre}
+${briefContexto}${tonoContexto}${buyerContexto}
+
+LA HISTORIA EN BRUTO:
+${historia}
+${ctaContexto}
+
+Generá la secuencia completa aplicando el arco narrativo y los principios del storytelling. Devolvé SOLO el JSON.`;
+
+  try {
+    const raw = await callClaude(systemPrompt, userPrompt, { maxTokens: 4500 });
+    const piezas = extractJson(raw);
+    if (!Array.isArray(piezas) || piezas.length === 0) throw new Error('La IA no devolvió un storytelling válido');
+    mostrarPreviewStorytelling(piezas, formato, clienteId, cta, proposito);
+  } catch (e) {
+    mostrarErrorGeneracion(e.message);
+  }
+}
+
+function mostrarPreviewStorytelling(piezas, formato, clienteId, cta, proposito) {
+  const cliente = state.clientes.find(c => c.id === clienteId);
+  const formatoLabels = { historias: '📖 Historias', carrusel: '🎠 Carrusel', reel: '🎬 Reel' };
+
+  const piezasHtml = piezas.map((p, i) => renderPiezaStorytelling(p, i, formato)).join('');
+
+  $('genModalBody').innerHTML = `
+    <div class="gen-preview">
+      <div class="gen-preview-header">${formatoLabels[formato]} · ${piezas.length} piezas — ${esc(cliente.nombre)}</div>
+      <div class="editable-hint">
+        💡 Revisá cada pieza. Click en cualquier texto para editarlo. Al guardar se suma al banco de ideas del cliente.
+      </div>
+      <div id="storytellingPreview">
+        ${piezasHtml}
+      </div>
+    </div>
+  `;
+
+  // Guardar contexto para el guardado
+  window._storytellingCtx = { clienteId, formato, cta, proposito };
+
+  $('genModalFooter').innerHTML = `
+    <button class="btn btn-secondary" onclick="closeModal()">Descartar</button>
+    <button class="btn btn-primary" onclick="guardarStorytellingComoIdea()">✓ Guardar al banco de ideas</button>
+  `;
+}
+
+function renderPiezaStorytelling(p, i, formato) {
+  if (formato === 'historias') {
+    const tipoLabel = { hook: '🎯 Hook', desarrollo: '🔄 Desarrollo', giro: '⚡ Giro', cierre: '✨ Cierre' };
+    return `
+      <div class="st-pieza" data-pieza-idx="${i}">
+        <div class="st-pieza-header">
+          <span class="st-pieza-num">Historia ${i + 1}</span>
+          <span class="st-pieza-tipo" data-tipo>${tipoLabel[p.tipo] || p.tipo}</span>
+        </div>
+        <div class="st-pieza-body">
+          <div class="st-pieza-field">
+            <label>Texto principal</label>
+            <div class="editable-field" contenteditable="true" data-field="texto_principal">${esc(p.texto_principal || '')}</div>
+          </div>
+          ${p.zocalo ? `
+          <div class="st-pieza-field">
+            <label>Zócalo / titular</label>
+            <div class="editable-field" contenteditable="true" data-field="zocalo">${esc(p.zocalo)}</div>
+          </div>` : ''}
+          <div class="st-pieza-field">
+            <label>📷 Visual sugerido</label>
+            <div class="editable-field hint" contenteditable="true" data-field="visual_sugerido">${esc(p.visual_sugerido || '')}</div>
+          </div>
+          ${p.nota_narrativa ? `
+          <div class="st-pieza-nota">💭 ${esc(p.nota_narrativa)}</div>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  } else if (formato === 'carrusel') {
+    const tipoLabel = { portada: '🎯 Portada', desarrollo: '🔄 Desarrollo', giro: '⚡ Giro', cierre: '✨ Cierre' };
+    return `
+      <div class="st-pieza" data-pieza-idx="${i}">
+        <div class="st-pieza-header">
+          <span class="st-pieza-num">Slide ${i + 1}</span>
+          <span class="st-pieza-tipo" data-tipo>${tipoLabel[p.tipo] || p.tipo}</span>
+        </div>
+        <div class="st-pieza-body">
+          <div class="st-pieza-field">
+            <label>Titular</label>
+            <div class="editable-field" contenteditable="true" data-field="titular" style="font-size: 16px; font-weight: 700; color: var(--fucsia);">${esc(p.titular || '')}</div>
+          </div>
+          ${p.subtitulo ? `
+          <div class="st-pieza-field">
+            <label>Subtítulo</label>
+            <div class="editable-field" contenteditable="true" data-field="subtitulo">${esc(p.subtitulo)}</div>
+          </div>` : ''}
+          <div class="st-pieza-field">
+            <label>📷 Visual sugerido</label>
+            <div class="editable-field hint" contenteditable="true" data-field="visual_sugerido">${esc(p.visual_sugerido || '')}</div>
+          </div>
+          ${p.copy_pie ? `
+          <div class="st-pieza-field">
+            <label>📝 Copy del pie del post</label>
+            <div class="editable-field" contenteditable="true" data-field="copy_pie">${esc(p.copy_pie)}</div>
+          </div>` : ''}
+        </div>
+      </div>
+    `;
+  } else if (formato === 'reel') {
+    return `
+      <div class="st-pieza" data-pieza-idx="${i}">
+        <div class="st-pieza-header">
+          <span class="st-pieza-num">Escena ${i + 1}</span>
+          <span class="st-pieza-tiempo">${esc(p.tiempo || '')}</span>
+        </div>
+        <div class="st-pieza-body">
+          <div class="st-pieza-field">
+            <label>📹 Tipo de plano</label>
+            <div class="editable-field hint" contenteditable="true" data-field="tipo_plano">${esc(p.tipo_plano || '')}</div>
+          </div>
+          <div class="st-pieza-field">
+            <label>🗣️ Voz / lo que se dice</label>
+            <div class="editable-field" contenteditable="true" data-field="voz_en_off">${esc(p.voz_en_off || '')}</div>
+          </div>
+          <div class="st-pieza-field">
+            <label>🅰️ Texto en pantalla</label>
+            <div class="editable-field" contenteditable="true" data-field="texto_pantalla">${esc(p.texto_pantalla || '')}</div>
+          </div>
+          <div class="st-pieza-field">
+            <label>🎬 Acción visual</label>
+            <div class="editable-field hint" contenteditable="true" data-field="accion_visual">${esc(p.accion_visual || '')}</div>
+          </div>
+          ${p.nota_narrativa ? `
+          <div class="st-pieza-nota">💭 ${esc(p.nota_narrativa)}</div>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  }
+  return '';
+}
+
+function extraerStorytellingDelDOM(formato) {
+  const cards = document.querySelectorAll('#storytellingPreview .st-pieza');
+  const piezas = [];
+  cards.forEach((card, i) => {
+    const pieza = { n: i + 1 };
+    card.querySelectorAll('[data-field]').forEach(el => {
+      pieza[el.dataset.field] = el.innerText.trim();
+    });
+    const tipoEl = card.querySelector('[data-tipo]');
+    const tiempoEl = card.querySelector('.st-pieza-tiempo');
+    if (tipoEl) {
+      // Sacar el emoji y quedarnos con el tipo en lower
+      const txt = tipoEl.innerText.toLowerCase();
+      if (txt.includes('hook') || txt.includes('portada')) pieza.tipo = formato === 'carrusel' ? 'portada' : 'hook';
+      else if (txt.includes('desarrollo')) pieza.tipo = 'desarrollo';
+      else if (txt.includes('giro')) pieza.tipo = 'giro';
+      else if (txt.includes('cierre')) pieza.tipo = 'cierre';
+    }
+    if (tiempoEl) pieza.tiempo = tiempoEl.innerText.trim();
+    piezas.push(pieza);
+  });
+  return piezas;
+}
+
+async function guardarStorytellingComoIdea() {
+  const ctx = window._storytellingCtx;
+  if (!ctx) return;
+  const piezas = extraerStorytellingDelDOM(ctx.formato);
+  if (piezas.length === 0) { showToast('No hay piezas para guardar', 'error'); return; }
+
+  const cliente = state.clientes.find(c => c.id === ctx.clienteId);
+  const formatoMap = { historias: 'Story', carrusel: 'Carrusel', reel: 'Reel' };
+  const formatoIdea = formatoMap[ctx.formato];
+  const propositoLabels = { inspirar: 'Inspirar', vender: 'Vender', educar: 'Educar', entretener: 'Entretener' };
+
+  // Título: tomamos del primer hook/titular
+  let titulo = '';
+  if (ctx.formato === 'historias') titulo = piezas[0].texto_principal || 'Storytelling';
+  else if (ctx.formato === 'carrusel') titulo = piezas[0].titular || 'Storytelling';
+  else titulo = piezas[0].voz_en_off || piezas[0].texto_pantalla || 'Storytelling';
+  if (titulo.length > 80) titulo = titulo.substring(0, 77) + '...';
+
+  // Hook
+  let hook = '';
+  if (ctx.formato === 'historias') hook = piezas[0].texto_principal || '';
+  else if (ctx.formato === 'carrusel') hook = piezas[0].titular || '';
+  else hook = piezas[0].voz_en_off || '';
+
+  // Notas con prefijo según formato
+  let notas = '';
+  if (ctx.formato === 'historias') {
+    notas = 'HISTORIAS_SECUENCIA:' + JSON.stringify(piezas);
+  } else if (ctx.formato === 'carrusel') {
+    // Convertir formato carrusel-storytelling al formato slides estándar para reusar el visualizador
+    const slides = piezas.map((p, i) => ({
+      n: p.n || (i + 1),
+      titulo: p.titular || '',
+      texto: p.subtitulo || '',
+      visual: p.visual_sugerido || '',
+      copy_pie: p.copy_pie || '',
+    }));
+    notas = 'CARRUSEL_SLIDES:' + JSON.stringify(slides);
+  } else if (ctx.formato === 'reel') {
+    // Convertir al formato escenas estándar
+    const escenas = piezas.map((p, i) => ({
+      n: p.n || (i + 1),
+      tiempo: p.tiempo || '',
+      texto_pantalla: p.texto_pantalla || '',
+      voz: p.voz_en_off || '',
+      accion: p.accion_visual || '',
+      tipo_plano: p.tipo_plano || '',
+    }));
+    notas = 'REEL_GUION:' + JSON.stringify(escenas);
+  }
+
+  const idea = {
+    id: genId('idea'),
+    cliente_id: ctx.clienteId,
+    fecha_creada: todayISO(),
+    titulo: titulo,
+    pilar: '',
+    formato: formatoIdea,
+    hook: hook,
+    idea: `Storytelling · Propósito: ${propositoLabels[ctx.proposito]} · ${piezas.length} piezas`,
+    notas: notas,
+    estado: 'Sin usar',
+    origen: 'IA',
+  };
+
+  try {
+    await sheetAppend('Ideas', idea);
+    closeModal();
+    showToast(`✓ Storytelling guardado en el banco de ideas de ${cliente.nombre}`, 'success');
+    // Si estoy en el cliente, recargar la solapa de ideas
+    if (state.currentClienteId === ctx.clienteId && state.currentClienteTab === 'ideas') {
+      renderTabIdeas();
+    }
+  } catch (e) {
+    showToast('Error guardando: ' + e.message, 'error');
+  }
+}
+
 
 function abrirGeneradorLibre(tipo) {
   if (state.clientes.length === 0) {
