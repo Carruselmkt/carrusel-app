@@ -3681,6 +3681,78 @@ Proponé KPIs estructurados con metas numéricas concretas para esta estrategia.
   }
 }
 
+// ============================================================================
+// GUÍA ESTRATÉGICA: HISTORIAS DE INSTAGRAM (basada en material de Nati García)
+// Se inyecta en los prompts del Generador de Ideas y Calendario Mensual
+// para mejorar la calidad y coherencia estratégica de las propuestas.
+// ============================================================================
+const GUIA_ESTRATEGIA_HISTORIAS = `
+PRINCIPIOS ESTRATÉGICOS PARA HISTORIAS DE INSTAGRAM:
+
+1. EXISTEN 2 TIPOS DE HISTORIAS, JAMÁS LAS MEZCLES EN LA MISMA TANDA:
+
+   A) HISTORIAS DE CONEXIÓN — Objetivo: que el público sienta familiaridad y subir el alcance general de la cuenta.
+      ✓ Sin subtítulos pegados ni música editada (sí pueden tener un zócalo o titular simple).
+      ✓ Sin guión previo, sin edición forzada.
+      ✓ Con movimiento, directo al grano, como un audio a una amiga.
+      ✓ Pueden mostrar momentos cotidianos, opiniones, dudas, reflexiones, detrás de escena.
+      ✗ NO repostear el reel directamente.
+      ✗ NO empezar con "hola buen día" ni fórmulas vacías tipo "no te rindas".
+      Ejemplos universales (adaptables a cualquier rubro):
+        - "Empecé a probar [algo nuevo] y les muestro cómo me fue"
+        - "Pedirle a la audiencia un consejo: '¿qué les parece esto?'"
+        - "Contar algo random que pasó en el día/semana"
+        - "Mostrar un detrás de escena del trabajo"
+        - "Una opinión personal sobre algo del rubro"
+
+   B) HISTORIAS DE VENTA — Objetivo: iniciar UNA conversación de venta concreta.
+      ✓ Máximo 3 historias por tanda.
+      ✓ Una por objetivo, sin mezclar.
+      ✓ Conectar con el dolor/sueño del cliente ideal, no con vos.
+      ✗ NO usar fórmulas vacías como "se me liberaron 3 cupos".
+      ✗ NO mezclar con contenido educativo o de conexión en la misma tanda.
+
+2. LAS 3 FÓRMULAS DE COPY PARA HISTORIAS DE VENTA:
+
+   FÓRMULA 1 — PAS (Problema · Agitación · Solución + CTA)
+     Ej: "¿Llevás meses con [problema]? Si no lo tratás, puede volverse [consecuencia peor]. Mandame un mensaje."
+
+   FÓRMULA 2 — BBB (Beneficio · Beneficio · Beneficio + CTA)
+     Ej: "¿Querés evitar [beneficio 1]? ¿Querés evitar [beneficio 2]? ¿Querés evitar [beneficio 3]? Escribime y te ayudo."
+
+   FÓRMULA 3 — SOS (Sueño · Obstáculo · Solución + CTA)
+     Ej: "¿Querés [sueño]? Pero te frena [obstáculo]. Escribime y te muestro cómo lograrlo."
+
+   También funciona el split en 2 historias:
+     Historia 1: P + A (Problema + Agitación, deja la pregunta)
+     Historia 2: T + S + CTA (Testimonio o ejemplo + Solución + Llamado a la acción)
+
+3. POR QUÉ IMPORTAN LAS HISTORIAS DE CONEXIÓN:
+   - Elevan las visualizaciones de toda la cuenta.
+   - Cuando alguien interactúa con una historia tuya, te volvés a aparecer primero (eso impacta también en reels y carruseles).
+   - Construyen la confianza que después se "usa" para vender.
+   - Sin conexión previa, las historias de venta no funcionan.
+
+4. PROPUESTA DE GRILLA SEMANAL CON INTENCIÓN (no es rígida, es propuesta):
+   - Lunes: CONEXIÓN (random, hasta 4 historias)
+   - Martes: VENTA (1 historia, fórmula PAS)
+   - Miércoles: EDUCATIVO (sin pensarlo demasiado, 1 historia)
+   - Jueves: descanso o borrador
+   - Viernes: VENTA (hasta 3 historias, con video o capturas tipo testimonio)
+   - Sábado: CONEXIÓN o EDUCATIVO (hasta 3 historias)
+   - Domingo: descanso o borrador
+
+5. BENCHMARK DE VISUALIZACIONES (% sobre seguidores totales):
+   - Menos del 1%: preocupante.
+   - Entre 1% y 5%: aceptable.
+   - Entre 5% y 10%: bueno.
+   - 10% o más: óptimo.
+   IMPORTANTE: las historias de conexión SUBEN este porcentaje. Las de venta lo BAJAN — y está bien.
+   Por eso necesitás las dos: las de conexión "pagan" el alcance que las de venta "consumen".
+
+6. REGLA DE ORO: La conexión construye la confianza. La venta la usa. Sin las dos, el sistema no funciona.
+`;
+
 const METRICAS_ASOCIADAS = [
   { v: 'visualizaciones', l: 'Visualizaciones' },
   { v: 'cuentas_alcanzadas', l: 'Cuentas alcanzadas' },
@@ -4682,6 +4754,19 @@ ${enfoquePrincipal ? `\n⚠️ REGLA #1 — ENFOQUE OBLIGATORIO ⚠️\n${reglaE
 - COMPACTAS: el campo "idea" debe ser un desarrollo de 2-3 líneas máximo (no slide por slide, eso es para el generador de carrusel). Explicar el ángulo y qué mensaje da.
 - Usá español rioplatense (vos, no tú).
 ${formatoContext}
+
+==========================================================
+📚 GUÍA ESTRATÉGICA SOBRE HISTORIAS DE INSTAGRAM
+(aplicar SIEMPRE que generes ideas de formato "Story" o "Historia")
+==========================================================
+${GUIA_ESTRATEGIA_HISTORIAS}
+
+REGLAS ADICIONALES PARA HISTORIAS:
+- Cuando una idea sea formato "Story", indicá en el campo "idea" si es de CONEXIÓN o de VENTA (escribilo explícito, ej: "Tipo: CONEXIÓN — ...").
+- Si proponés varias historias de venta, agrupalas en una secuencia (ej: "Tanda de 3 historias con fórmula PAS").
+- Por cada historia de venta que propongas, asegurate de proponer al menos una de conexión cercana en el calendario, para mantener el balance.
+- Adaptá los ejemplos al rubro real del cliente: si es servicios profesionales, usá "paciente/cliente"; si es producto físico, usá "compradora"; si es educación/cursos, usá "alumna"; etc.
+- En el copy de venta, usá EXPLÍCITAMENTE las fórmulas (PAS / BBB / SOS) y mencionalas en el desarrollo.
 
 FORMATO DE SALIDA: devolvés SOLO un JSON válido (sin markdown, sin texto adicional):
 
@@ -6978,6 +7063,20 @@ REGLAS DEL CALENDARIO MENSUAL:
 - Cada post debe ser DIFERENTE a los otros (distintos temas, ángulos).
 - Crear una narrativa mensual: el calendario debe tener coherencia global, no ser posts sueltos.
 ${formatoContext}
+
+==========================================================
+📚 GUÍA ESTRATÉGICA SOBRE HISTORIAS DE INSTAGRAM
+(aplicar SIEMPRE que en el calendario haya formato "Story" o "Historia")
+==========================================================
+${GUIA_ESTRATEGIA_HISTORIAS}
+
+REGLAS ADICIONALES PARA HISTORIAS EN EL CALENDARIO:
+- Si hay historias planificadas, equilibrá entre CONEXIÓN y VENTA. Como referencia, una proporción saludable es ~60% conexión / ~30% venta / ~10% educativas.
+- Por cada historia de venta, asegurate que haya al menos una de conexión cercana (mismo día o el día anterior).
+- Si proponés historias de venta, indicá CUÁL FÓRMULA usar (PAS / BBB / SOS) en el campo "idea".
+- Indicá en el campo "idea" si la historia es CONEXIÓN, VENTA o EDUCATIVA (escribilo explícito al inicio, ej: "Tipo: CONEXIÓN — ...").
+- Adaptá los ejemplos al rubro real del cliente: si es servicios profesionales, usá "paciente/cliente"; si es producto físico, usá "compradora"; si es educación/cursos, usá "alumna"; etc.
+- Mantené el principio: la conexión construye, la venta usa esa confianza.
 
 FORMATO DE SALIDA: SOLO un JSON válido (sin markdown):
 
