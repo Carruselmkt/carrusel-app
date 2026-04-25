@@ -1456,6 +1456,54 @@
   .reporte-body p { margin: 6px 0; }
   .reporte-body strong { color: var(--fucsia); }
 
+  /* ===== SELECCIÓN DE IDEAS (modo multi-select) ===== */
+  .idea-card-selectable {
+    cursor: pointer; padding-left: 44px !important; position: relative;
+    transition: all 0.15s;
+  }
+  .idea-card-selectable:hover {
+    border-color: var(--fucsia-light);
+    background: #fef8fb;
+  }
+  .idea-card-selected {
+    border-color: var(--fucsia) !important;
+    background: #fef0f7 !important;
+    box-shadow: 0 0 0 2px var(--fucsia-light);
+  }
+  .idea-checkbox-wrap {
+    position: absolute; top: 50%; left: 14px;
+    transform: translateY(-50%);
+    display: flex; align-items: center;
+  }
+  .idea-checkbox {
+    width: 20px; height: 20px;
+    cursor: pointer; accent-color: var(--fucsia);
+  }
+
+  .idea-select-bar {
+    position: fixed; bottom: 18px; left: 50%;
+    transform: translateX(-50%);
+    background: #fff; border: 1px solid var(--gris-border);
+    border-radius: 12px; padding: 10px 16px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.15);
+    display: flex; align-items: center; gap: 14px;
+    z-index: 9000; flex-wrap: wrap;
+    animation: ideaSelectBarIn 0.2s ease-out;
+    max-width: calc(100vw - 30px);
+  }
+  @keyframes ideaSelectBarIn {
+    from { transform: translate(-50%, 100%); opacity: 0; }
+    to { transform: translate(-50%, 0); opacity: 1; }
+  }
+  .idea-select-info {
+    font-size: 14px; color: var(--gris-text);
+    padding-right: 10px; border-right: 1px solid var(--gris-border);
+  }
+  .idea-select-info strong { color: var(--fucsia); }
+  .idea-select-actions {
+    display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
+  }
+
   /* ===== STORYTELLING GENERATOR ===== */
   .st-formato-opt input[type="radio"] {
     display: none;
@@ -1562,6 +1610,7 @@
   }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -2040,6 +2089,13 @@ async function upsertByClienteId(sheetName, clienteId, dataObj) {
 function navigateTo(page) {
   state.currentPage = page;
   state.currentClienteId = null;
+  // Limpiar modo selección de ideas al cambiar de pantalla
+  if (ideaSelectMode) {
+    ideaSelectMode = false;
+    ideaSelectedIds.clear();
+    const bar = document.getElementById('ideaSelectBar');
+    if (bar) bar.remove();
+  }
   document.querySelectorAll('.nav-item').forEach(b => {
     b.classList.toggle('active', b.dataset.page === page);
   });
@@ -2405,6 +2461,13 @@ async function renderClienteDetalle() {
 
 function switchTab(tab) {
   state.currentClienteTab = tab;
+  // Limpiar modo selección al salir de Ideas
+  if (tab !== 'ideas' && ideaSelectMode) {
+    ideaSelectMode = false;
+    ideaSelectedIds.clear();
+    const bar = document.getElementById('ideaSelectBar');
+    if (bar) bar.remove();
+  }
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   event.target.classList.add('active');
   renderCurrentTab();
@@ -4245,6 +4308,107 @@ function editarKpis(estrategiaId) {
 const FORMATOS_CONTENIDO = ['Post', 'Carrusel', 'Reel', 'Story', 'Video'];
 
 let ideaFilters = { pilar: 'todos', formato: 'todos', estado: 'todos' };
+let ideaSelectMode = false;
+let ideaSelectedIds = new Set();
+
+function toggleIdeaSelectMode() {
+  ideaSelectMode = !ideaSelectMode;
+  if (!ideaSelectMode) ideaSelectedIds.clear();
+  renderIdeasList();
+  renderIdeaSelectBar();
+}
+
+function toggleIdeaSelect(ideaId) {
+  if (!ideaSelectMode) return;
+  if (ideaSelectedIds.has(ideaId)) ideaSelectedIds.delete(ideaId);
+  else ideaSelectedIds.add(ideaId);
+  renderIdeasList();
+  renderIdeaSelectBar();
+}
+
+function selectAllIdeasVisibles() {
+  // Selecciona todas las ideas visibles (con los filtros actuales aplicados)
+  let visibles = [...state.ideas];
+  if (ideaFilters.pilar !== 'todos') visibles = visibles.filter(i => i.pilar === ideaFilters.pilar);
+  if (ideaFilters.formato !== 'todos') visibles = visibles.filter(i => i.formato === ideaFilters.formato);
+  if (ideaFilters.estado !== 'todos') visibles = visibles.filter(i => (i.estado || 'Sin usar') === ideaFilters.estado);
+  visibles.forEach(i => ideaSelectedIds.add(i.id));
+  renderIdeasList();
+  renderIdeaSelectBar();
+}
+
+function deseleccionarTodasIdeas() {
+  ideaSelectedIds.clear();
+  renderIdeasList();
+  renderIdeaSelectBar();
+}
+
+function renderIdeaSelectBar() {
+  let bar = document.getElementById('ideaSelectBar');
+  if (!ideaSelectMode || ideaSelectedIds.size === 0) {
+    if (bar) bar.remove();
+    return;
+  }
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'ideaSelectBar';
+    bar.className = 'idea-select-bar';
+    document.body.appendChild(bar);
+  }
+  bar.innerHTML = `
+    <div class="idea-select-info">
+      <strong>${ideaSelectedIds.size}</strong> ${ideaSelectedIds.size === 1 ? 'idea seleccionada' : 'ideas seleccionadas'}
+    </div>
+    <div class="idea-select-actions">
+      <button class="btn-ghost btn-sm" onclick="selectAllIdeasVisibles()">Seleccionar todas</button>
+      <button class="btn-ghost btn-sm" onclick="deseleccionarTodasIdeas()">Limpiar</button>
+      <button class="btn btn-primary btn-sm" onclick="abrirExportarIdeasExcel()" style="background: var(--verde);">📊 Exportar Excel</button>
+      <button class="btn btn-secondary btn-sm" onclick="toggleIdeaSelectMode()">✕ Salir</button>
+    </div>
+  `;
+}
+
+function abrirExportarIdeasExcel() {
+  if (ideaSelectedIds.size === 0) { showToast('No hay ideas seleccionadas', 'error'); return; }
+
+  $('modal').className = 'modal';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>📊 Exportar ideas a Excel</h2>
+      <button class="btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="color: var(--gris-text-soft); font-size: 13px; margin-bottom: 14px;">
+        Vas a exportar <strong>${ideaSelectedIds.size}</strong> ${ideaSelectedIds.size === 1 ? 'idea' : 'ideas'} con todo el contenido (copy, slides, escenas, historias).
+      </p>
+      <div class="form-row">
+        <label style="display: flex; gap: 6px; align-items: center; cursor: pointer;">
+          <input type="checkbox" id="exp_ideas_internas" checked>
+          <span style="font-size: 13px;">Incluir notas internas y "[Visual sugerido]" (descomarcalo si es para enviar al cliente)</span>
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="ejecutarExportarIdeasExcel()">📊 Generar Excel</button>
+    </div>`;
+  $('modalOverlay').classList.add('active');
+}
+
+function ejecutarExportarIdeasExcel() {
+  const incluirInternas = $('exp_ideas_internas').checked;
+  const cliente = state.clientes.find(c => c.id === state.currentClienteId);
+  const ideasSeleccionadas = state.ideas.filter(i => ideaSelectedIds.has(i.id));
+  if (ideasSeleccionadas.length === 0) { showToast('No hay ideas seleccionadas', 'error'); return; }
+
+  generarExcelIdeas(cliente, ideasSeleccionadas, incluirInternas);
+  closeModal();
+  // Salir del modo selección al completar
+  ideaSelectMode = false;
+  ideaSelectedIds.clear();
+  renderIdeasList();
+  renderIdeaSelectBar();
+}
 
 async function renderTabIdeas() {
   const cliente = state.clientes.find(c => c.id === state.currentClienteId);
@@ -4320,7 +4484,10 @@ function renderIdeasList() {
           ${stats.total} ideas · ${stats.sinUsar} sin usar · ${stats.agendadas} agendadas · ${stats.publicadas} publicadas
         </p>
       </div>
-      <div style="display: flex; gap: 8px;">
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <button class="btn ${ideaSelectMode ? 'btn-primary' : 'btn-secondary'} btn-sm" onclick="toggleIdeaSelectMode()" title="Seleccionar varias ideas">
+          ${ideaSelectMode ? '✓ Modo selección activo' : '☑️ Seleccionar'}
+        </button>
         <button class="btn btn-secondary btn-sm" onclick="openIdeaModal()">+ Manual</button>
         ${estrategiaActiva ? `<button class="gen-btn gen-btn-small" onclick="abrirGeneradorIdeas()">✨ Generar ideas con IA</button>` : ''}
       </div>
@@ -4391,7 +4558,12 @@ function renderIdeaCard(idea) {
   }
 
   return `
-    <div class="idea-card estado-${estadoClase}">
+    <div class="idea-card estado-${estadoClase} ${ideaSelectMode ? 'idea-card-selectable' : ''} ${ideaSelectMode && ideaSelectedIds.has(idea.id) ? 'idea-card-selected' : ''}" ${ideaSelectMode ? `onclick="toggleIdeaSelect('${esc(idea.id)}')"` : ''}>
+      ${ideaSelectMode ? `
+        <div class="idea-checkbox-wrap">
+          <input type="checkbox" class="idea-checkbox" ${ideaSelectedIds.has(idea.id) ? 'checked' : ''} onclick="event.stopPropagation(); toggleIdeaSelect('${esc(idea.id)}')">
+        </div>
+      ` : ''}
       <div class="idea-header">
         <div class="idea-title">${esc(idea.titulo || '(sin título)')}</div>
         <span class="badge badge-${estado === 'Sin usar' ? 'idea' : estado === 'Agendada' ? 'revision' : 'publicada'}">${esc(estado)}</span>
@@ -5623,6 +5795,7 @@ async function renderTabCalendario() {
           <div style="font-size: 12px; color: var(--gris-text-soft);">
             ${stats.total} posts · ${stats.publicadas} publicadas · ${stats.pendientes} pendientes
           </div>
+          <button class="btn btn-secondary btn-sm" onclick="abrirExportarPlanningExcel()" title="Exportar planning a Excel">📊 Exportar Excel</button>
           <button class="gen-btn gen-btn-small" onclick="abrirGeneradorCalendarioMensual()">✨ Generar mes con IA</button>
           <button class="btn btn-primary btn-sm" onclick="openPostModal()">+ Nueva publicación</button>
         </div>
@@ -10251,6 +10424,369 @@ function abrirPostDesdeAgenda(clienteId, postId) {
   renderClienteDetalle();
   // Abrir el modal del post después de un pequeño delay para que cargue la solapa
   setTimeout(() => openPostModal(postId), 250);
+}
+
+
+// ============================================================================
+// EXPORTAR PLANNING DEL CALENDARIO A EXCEL
+// ============================================================================
+
+function abrirExportarPlanningExcel() {
+  if (typeof XLSX === 'undefined') {
+    showToast('La librería de Excel todavía está cargando, probá en unos segundos.', 'error');
+    return;
+  }
+  const cliente = state.clientes.find(c => c.id === state.currentClienteId);
+  if (!cliente) return;
+
+  // Preset: mes actual
+  const hoy = new Date();
+  const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+  const finMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+
+  $('modal').className = 'modal';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>📊 Exportar planning a Excel</h2>
+      <button class="btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="color: var(--gris-text-soft); font-size: 13px; margin-bottom: 14px;">
+        Generá un Excel con todas las publicaciones de <strong>${esc(cliente.nombre)}</strong> en el rango que elijas.
+        El archivo incluye copy completo, hooks, slides de carruseles, escenas de reels y secuencias de historias.
+      </p>
+
+      <div class="form-row-grid">
+        <div>
+          <label class="form-label">Fecha desde *</label>
+          <input type="date" class="form-input" id="exp_desde" value="${toLocalISODate(inicioMes)}">
+        </div>
+        <div>
+          <label class="form-label">Fecha hasta *</label>
+          <input type="date" class="form-input" id="exp_hasta" value="${toLocalISODate(finMes)}">
+        </div>
+      </div>
+
+      <div class="form-row" style="margin-top: 6px;">
+        <label class="form-label">Estilo de exportación</label>
+        <div style="display: flex; gap: 14px; flex-wrap: wrap;">
+          <label style="display: flex; gap: 6px; align-items: center; cursor: pointer;">
+            <input type="radio" name="exp_estilo" value="completo" checked>
+            <span><strong>Completo</strong> — copy + slides + escenas + historias</span>
+          </label>
+          <label style="display: flex; gap: 6px; align-items: center; cursor: pointer;">
+            <input type="radio" name="exp_estilo" value="resumen">
+            <span><strong>Resumen</strong> — solo títulos, hooks y estado</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="form-row" style="margin-top: 6px;">
+        <label style="display: flex; gap: 6px; align-items: center; cursor: pointer;">
+          <input type="checkbox" id="exp_incluir_internas" checked>
+          <span style="font-size: 13px;">Incluir notas internas (descomarcalo si es para enviar al cliente)</span>
+        </label>
+      </div>
+
+      <div class="form-row" style="margin-top: 6px;">
+        <label style="display: flex; gap: 6px; align-items: center; cursor: pointer;">
+          <input type="checkbox" id="exp_incluir_publicadas">
+          <span style="font-size: 13px;">Incluir publicaciones ya publicadas (por defecto: solo pendientes y agendadas)</span>
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="ejecutarExportarPlanningExcel()">📊 Generar Excel</button>
+    </div>`;
+  $('modalOverlay').classList.add('active');
+}
+
+function ejecutarExportarPlanningExcel() {
+  const desde = $('exp_desde').value;
+  const hasta = $('exp_hasta').value;
+  const estilo = document.querySelector('input[name="exp_estilo"]:checked').value;
+  const incluirInternas = $('exp_incluir_internas').checked;
+  const incluirPublicadas = $('exp_incluir_publicadas').checked;
+
+  if (!desde || !hasta) { showToast('Elegí un rango de fechas', 'error'); return; }
+  if (hasta < desde) { showToast('La fecha hasta no puede ser anterior a la fecha desde', 'error'); return; }
+
+  const cliente = state.clientes.find(c => c.id === state.currentClienteId);
+
+  // Filtrar posts del cliente en el rango
+  let posts = state.calendario.filter(p => {
+    if (p.cliente_id !== cliente.id) return false;
+    if (!p.fecha_publicacion) return false;
+    return p.fecha_publicacion >= desde && p.fecha_publicacion <= hasta;
+  });
+
+  if (!incluirPublicadas) {
+    posts = posts.filter(p => p.estado !== 'Publicada');
+  }
+
+  posts.sort((a, b) => (a.fecha_publicacion || '').localeCompare(b.fecha_publicacion || ''));
+
+  if (posts.length === 0) {
+    showToast('No hay publicaciones en ese rango con los filtros aplicados', 'error');
+    return;
+  }
+
+  generarExcelPlanning(cliente, posts, desde, hasta, estilo, incluirInternas);
+}
+
+function generarExcelPlanning(cliente, posts, desde, hasta, estilo, incluirInternas) {
+  // Construir filas
+  const filas = posts.map(p => {
+    const fila = {
+      'Fecha': formatDateEs(p.fecha_publicacion),
+      'Día': new Date(p.fecha_publicacion + 'T00:00:00').toLocaleDateString('es-AR', { weekday: 'long' }),
+      'Red Social': p.red_social || 'Instagram',
+      'Formato': p.formato || 'Post',
+      'Pilar': p.pilar || '',
+      'Estado': p.estado || 'Idea',
+      'Título': p.titulo || '',
+      'Hook': p.hook || '',
+    };
+
+    if (estilo === 'completo') {
+      // Copy / texto completo según el tipo
+      let contenidoDetallado = '';
+
+      // Detectar y procesar contenido según formato
+      if (p.notas && typeof p.notas === 'string') {
+        if (p.notas.startsWith('CARRUSEL_SLIDES:')) {
+          try {
+            const slides = JSON.parse(p.notas.substring('CARRUSEL_SLIDES:'.length));
+            contenidoDetallado = slides.map((s, i) => {
+              const partes = [`SLIDE ${i + 1}:`];
+              if (s.titulo) partes.push('Título: ' + s.titulo);
+              if (s.texto) partes.push('Texto: ' + s.texto);
+              if (s.copy_pie) partes.push('Pie: ' + s.copy_pie);
+              if (s.visual && incluirInternas) partes.push('[Visual sugerido: ' + s.visual + ']');
+              return partes.join('\n');
+            }).join('\n\n');
+          } catch (e) { contenidoDetallado = '(error leyendo carrusel)'; }
+        } else if (p.notas.startsWith('REEL_GUION:')) {
+          try {
+            const escenas = JSON.parse(p.notas.substring('REEL_GUION:'.length));
+            contenidoDetallado = escenas.map((e, i) => {
+              const partes = [`ESCENA ${i + 1}` + (e.tiempo ? ` (${e.tiempo})` : '') + ':'];
+              if (e.tipo_plano && incluirInternas) partes.push('Plano: ' + e.tipo_plano);
+              if (e.voz || e.voz_audio || e.voz_en_off) partes.push('Voz/Audio: ' + (e.voz || e.voz_audio || e.voz_en_off));
+              if (e.texto_pantalla) partes.push('Texto en pantalla: ' + e.texto_pantalla);
+              if (e.accion || e.accion_visual) partes.push('Acción: ' + (e.accion || e.accion_visual));
+              return partes.join('\n');
+            }).join('\n\n');
+          } catch (e) { contenidoDetallado = '(error leyendo reel)'; }
+        } else if (p.notas.startsWith('HISTORIAS_SECUENCIA:')) {
+          try {
+            const historias = JSON.parse(p.notas.substring('HISTORIAS_SECUENCIA:'.length));
+            contenidoDetallado = historias.map((h, i) => {
+              const partes = [`HISTORIA ${i + 1}` + (h.tipo ? ` [${h.tipo}]` : '') + ':'];
+              if (h.texto_principal) partes.push('Texto: ' + h.texto_principal);
+              if (h.zocalo) partes.push('Zócalo: ' + h.zocalo);
+              if (h.visual_sugerido && incluirInternas) partes.push('[Visual: ' + h.visual_sugerido + ']');
+              return partes.join('\n');
+            }).join('\n\n');
+          } catch (e) { contenidoDetallado = '(error leyendo historias)'; }
+        }
+      }
+
+      // Si no hay contenido especial, usar el copy normal
+      if (!contenidoDetallado && p.copy) contenidoDetallado = p.copy;
+      // Si tampoco hay copy, dejar la idea/descripción
+      if (!contenidoDetallado && p.idea) contenidoDetallado = p.idea;
+
+      fila['Contenido / Guión / Slides'] = contenidoDetallado;
+      fila['CTA'] = p.cta || '';
+      fila['Hashtags'] = p.hashtags || '';
+
+      if (incluirInternas) {
+        fila['Notas internas'] = (p.notas && !p.notas.startsWith('CARRUSEL_SLIDES:') &&
+                                   !p.notas.startsWith('REEL_GUION:') &&
+                                   !p.notas.startsWith('HISTORIAS_SECUENCIA:')) ? p.notas : '';
+      }
+    }
+
+    return fila;
+  });
+
+  // Crear hoja con anchos de columna optimizados
+  const ws = XLSX.utils.json_to_sheet(filas);
+
+  // Calcular anchos
+  const cols = Object.keys(filas[0]);
+  ws['!cols'] = cols.map(col => {
+    const headerLen = col.length;
+    let maxLen = headerLen;
+    filas.forEach(f => {
+      const v = String(f[col] || '');
+      // Para contenido largo, limitamos el ancho a 60
+      const lineas = v.split('\n');
+      lineas.forEach(l => { if (l.length > maxLen) maxLen = Math.min(l.length, 60); });
+    });
+    if (col === 'Contenido / Guión / Slides') return { wch: 60 };
+    if (col === 'Hook' || col === 'Título') return { wch: 35 };
+    if (col === 'CTA' || col === 'Hashtags' || col === 'Notas internas') return { wch: 25 };
+    return { wch: Math.max(headerLen + 2, Math.min(maxLen + 2, 25)) };
+  });
+
+  // Habilitar wrap text en celdas con saltos de línea
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  for (let R = range.s.r + 1; R <= range.e.r; R++) {
+    for (let C = range.s.c; C <= range.e.c; C++) {
+      const addr = XLSX.utils.encode_cell({ r: R, c: C });
+      if (ws[addr] && typeof ws[addr].v === 'string' && ws[addr].v.includes('\n')) {
+        ws[addr].s = { alignment: { wrapText: true, vertical: 'top' } };
+      }
+    }
+  }
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Planning');
+
+  // Hoja secundaria con resumen
+  const totalPorFormato = {};
+  const totalPorEstado = {};
+  posts.forEach(p => {
+    const f = p.formato || 'Post';
+    const e = p.estado || 'Idea';
+    totalPorFormato[f] = (totalPorFormato[f] || 0) + 1;
+    totalPorEstado[e] = (totalPorEstado[e] || 0) + 1;
+  });
+
+  const resumenFilas = [
+    { 'Métrica': 'Cliente', 'Valor': cliente.nombre },
+    { 'Métrica': 'Período', 'Valor': formatDateEs(desde) + ' al ' + formatDateEs(hasta) },
+    { 'Métrica': 'Total publicaciones', 'Valor': posts.length },
+    { 'Métrica': '', 'Valor': '' },
+    { 'Métrica': 'Por formato', 'Valor': '' },
+    ...Object.entries(totalPorFormato).map(([k, v]) => ({ 'Métrica': '  ' + k, 'Valor': v })),
+    { 'Métrica': '', 'Valor': '' },
+    { 'Métrica': 'Por estado', 'Valor': '' },
+    ...Object.entries(totalPorEstado).map(([k, v]) => ({ 'Métrica': '  ' + k, 'Valor': v })),
+    { 'Métrica': '', 'Valor': '' },
+    { 'Métrica': 'Generado por', 'Valor': 'Carrusel MKT 🎠' },
+    { 'Métrica': 'Fecha', 'Valor': formatDateEs(todayISO()) },
+  ];
+
+  const wsResumen = XLSX.utils.json_to_sheet(resumenFilas);
+  wsResumen['!cols'] = [{ wch: 25 }, { wch: 35 }];
+  XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen');
+
+  const nombreArchivo = `Planning ${cliente.nombre.replace(/\s+/g, '_')} - ${desde} al ${hasta}.xlsx`;
+  XLSX.writeFile(wb, nombreArchivo);
+
+  closeModal();
+  showToast(`✓ Excel descargado · ${posts.length} publicaciones`, 'success');
+}
+
+
+// ============================================================================
+// EXPORTAR IDEAS SELECCIONADAS A EXCEL
+// ============================================================================
+
+function generarExcelIdeas(cliente, ideas, incluirInternas) {
+  if (typeof XLSX === 'undefined') {
+    showToast('La librería de Excel todavía está cargando, probá en unos segundos.', 'error');
+    return;
+  }
+
+  const filas = ideas.map(idea => {
+    const fila = {
+      'Fecha creada': formatDateEs(idea.fecha_creada),
+      'Título': idea.titulo || '',
+      'Pilar': idea.pilar || '',
+      'Formato': idea.formato || '',
+      'Hook': idea.hook || '',
+      'Idea / Descripción': idea.idea || '',
+      'Estado': idea.estado || 'Sin usar',
+    };
+
+    // Contenido detallado según formato
+    let contenidoDetallado = '';
+    if (idea.notas && typeof idea.notas === 'string') {
+      if (idea.notas.startsWith('CARRUSEL_SLIDES:')) {
+        try {
+          const slides = JSON.parse(idea.notas.substring('CARRUSEL_SLIDES:'.length));
+          contenidoDetallado = slides.map((s, i) => {
+            const partes = [`SLIDE ${i + 1}:`];
+            if (s.titulo) partes.push('Título: ' + s.titulo);
+            if (s.texto) partes.push('Texto: ' + s.texto);
+            if (s.copy_pie) partes.push('Pie: ' + s.copy_pie);
+            if (s.visual && incluirInternas) partes.push('[Visual: ' + s.visual + ']');
+            return partes.join('\n');
+          }).join('\n\n');
+        } catch (e) {}
+      } else if (idea.notas.startsWith('REEL_GUION:')) {
+        try {
+          const escenas = JSON.parse(idea.notas.substring('REEL_GUION:'.length));
+          contenidoDetallado = escenas.map((e, i) => {
+            const partes = [`ESCENA ${i + 1}` + (e.tiempo ? ` (${e.tiempo})` : '') + ':'];
+            if (e.tipo_plano && incluirInternas) partes.push('Plano: ' + e.tipo_plano);
+            if (e.voz || e.voz_audio || e.voz_en_off) partes.push('Voz/Audio: ' + (e.voz || e.voz_audio || e.voz_en_off));
+            if (e.texto_pantalla) partes.push('Texto en pantalla: ' + e.texto_pantalla);
+            if (e.accion || e.accion_visual) partes.push('Acción: ' + (e.accion || e.accion_visual));
+            return partes.join('\n');
+          }).join('\n\n');
+        } catch (e) {}
+      } else if (idea.notas.startsWith('HISTORIAS_SECUENCIA:')) {
+        try {
+          const historias = JSON.parse(idea.notas.substring('HISTORIAS_SECUENCIA:'.length));
+          contenidoDetallado = historias.map((h, i) => {
+            const partes = [`HISTORIA ${i + 1}` + (h.tipo ? ` [${h.tipo}]` : '') + ':'];
+            if (h.texto_principal) partes.push('Texto: ' + h.texto_principal);
+            if (h.zocalo) partes.push('Zócalo: ' + h.zocalo);
+            if (h.visual_sugerido && incluirInternas) partes.push('[Visual: ' + h.visual_sugerido + ']');
+            return partes.join('\n');
+          }).join('\n\n');
+        } catch (e) {}
+      }
+    }
+
+    // Si no hay contenido especial, usar el copy
+    if (!contenidoDetallado && idea.copy) contenidoDetallado = idea.copy;
+
+    fila['Contenido / Guión / Slides'] = contenidoDetallado;
+    fila['CTA'] = idea.cta || '';
+    fila['Hashtags'] = idea.hashtags || '';
+
+    if (incluirInternas) {
+      const notasInternas = (idea.notas && !idea.notas.startsWith('CARRUSEL_SLIDES:') &&
+                             !idea.notas.startsWith('REEL_GUION:') &&
+                             !idea.notas.startsWith('HISTORIAS_SECUENCIA:')) ? idea.notas : '';
+      fila['Notas internas'] = notasInternas;
+    }
+
+    return fila;
+  });
+
+  const ws = XLSX.utils.json_to_sheet(filas);
+  const cols = Object.keys(filas[0]);
+  ws['!cols'] = cols.map(col => {
+    if (col === 'Contenido / Guión / Slides') return { wch: 60 };
+    if (col === 'Hook' || col === 'Título' || col === 'Idea / Descripción') return { wch: 35 };
+    if (col === 'CTA' || col === 'Hashtags' || col === 'Notas internas') return { wch: 25 };
+    return { wch: 18 };
+  });
+
+  // Wrap text en celdas con saltos
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  for (let R = range.s.r + 1; R <= range.e.r; R++) {
+    for (let C = range.s.c; C <= range.e.c; C++) {
+      const addr = XLSX.utils.encode_cell({ r: R, c: C });
+      if (ws[addr] && typeof ws[addr].v === 'string' && ws[addr].v.includes('\n')) {
+        ws[addr].s = { alignment: { wrapText: true, vertical: 'top' } };
+      }
+    }
+  }
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Ideas');
+  const nombreArchivo = `Ideas ${cliente.nombre.replace(/\s+/g, '_')} - ${todayISO()}.xlsx`;
+  XLSX.writeFile(wb, nombreArchivo);
+  showToast(`✓ Excel descargado · ${ideas.length} ideas`, 'success');
 }
 
 
