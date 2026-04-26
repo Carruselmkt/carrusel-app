@@ -2883,13 +2883,18 @@ async function abrirGeneradorFODA(clienteId) {
   const cliente = state.clientes.find(c => c.id === clienteId);
   if (!cliente) return;
 
-  // Verificar que el brief tenga datos suficientes
+  // Verificar que el brief tenga datos suficientes (con las claves reales del brief)
   const brief = (state.briefs || []).find(b => b.cliente_id === clienteId) || {};
-  const camposRelevantes = ['rubro','tipo_negocio','productos','propuesta_valor','publico','problemas_resuelve','competencia','diferencial'];
+  const camposRelevantes = [
+    'productos_servicios','historia','mision_vision_valores',
+    'publico_objetivo','objetivo_general','objetivo_redes',
+    'que_transmitir','competencia_local','competencia_nacional',
+    'mas_rentable','mas_vendido','funcionamiento'
+  ];
   const completos = camposRelevantes.filter(k => brief[k] && brief[k].trim()).length;
 
   if (completos < 3) {
-    showToast('Completá al menos 3 campos del brief (rubro, productos, propuesta de valor, público) antes de generar el FODA con IA.', 'error');
+    showToast('Completá al menos 3 campos del brief (productos, público, objetivos, etc.) antes de generar el FODA con IA.', 'error');
     return;
   }
 
