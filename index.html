@@ -1456,6 +1456,57 @@
   .reporte-body p { margin: 6px 0; }
   .reporte-body strong { color: var(--fucsia); }
 
+  /* ===== FODA (4 cuadrantes en grilla 2x2) ===== */
+  .foda-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-top: 8px;
+  }
+  @media (max-width: 800px) {
+    .foda-grid { grid-template-columns: 1fr; }
+  }
+  .foda-cuadrante {
+    background: #fff;
+    border-radius: 10px;
+    padding: 12px 14px;
+    border: 1.5px solid var(--gris-border);
+    border-top-width: 4px;
+    display: flex; flex-direction: column;
+    min-height: 180px;
+  }
+  .foda-cuadrante.foda-fortalezas { border-top-color: var(--verde); background: #f4fbf6; }
+  .foda-cuadrante.foda-oportunidades { border-top-color: var(--petroleo); background: #f0f7fc; }
+  .foda-cuadrante.foda-debilidades { border-top-color: #d99a1e; background: #fffaf0; }
+  .foda-cuadrante.foda-amenazas { border-top-color: var(--rojo); background: #fef6f5; }
+
+  .foda-header {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 8px; padding-bottom: 8px;
+    border-bottom: 1px dashed var(--gris-border);
+  }
+  .foda-icon { font-size: 22px; line-height: 1; }
+  .foda-title {
+    font-weight: 700; font-size: 12px;
+    color: var(--gris-text); letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .foda-help {
+    font-size: 10.5px; color: var(--gris-text-muted);
+    text-transform: uppercase; letter-spacing: 0.04em;
+    margin-top: 1px;
+  }
+  .foda-textarea {
+    flex: 1; resize: vertical; min-height: 110px;
+    font-size: 13px; line-height: 1.5;
+    background: #fff;
+  }
+
+  .foda-section .foda-textarea:focus {
+    border-color: var(--fucsia);
+    box-shadow: 0 0 0 2px rgba(186, 13, 102, 0.1);
+  }
+
   /* ===== SELECCIÓN DE IDEAS (modo multi-select) ===== */
   .idea-card-selectable {
     cursor: pointer; padding-left: 44px !important; position: relative;
@@ -1709,6 +1760,7 @@ let state = {
   calendarView: 'grilla', // 'grilla' o 'cards'
   clientes: [],
   briefs: [],
+  foda: [],
   estrategias: [],
   accesos: [],
   calendario: [],
@@ -1957,7 +2009,7 @@ function handleLogout() {
     localStorage.removeItem('carrusel_token');
     localStorage.removeItem('carrusel_token_expires');
   } catch (e) {}
-  state = { ...state, user: null, accessToken: null, tokenExpiresAt: null, clientes: [], briefs: [], estrategias: [], accesos: [], calendario: [], ideas: [], servicios: [], prospectos: [], onboardings: [], plantillasOnboarding: [], finanzas_ingresos: [], finanzas_egresos: [], metricas: [], reportes: [] };
+  state = { ...state, user: null, accessToken: null, tokenExpiresAt: null, clientes: [], briefs: [], foda: [], estrategias: [], accesos: [], calendario: [], ideas: [], servicios: [], prospectos: [], onboardings: [], plantillasOnboarding: [], finanzas_ingresos: [], finanzas_egresos: [], metricas: [], reportes: [] };
   $('loginScreen').style.display = 'flex';
   $('app').classList.remove('active');
 }
@@ -1966,7 +2018,19 @@ function enterApp() {
   $('loginScreen').style.display = 'none';
   $('app').classList.add('active');
   loadApiKey(); // cargar key desde Config
+  precargarFODA(); // cargar FODA en background para que esté disponible en generadores
   navigateTo(state.currentPage);
+}
+
+async function precargarFODA() {
+  try {
+    const { data } = await sheetRead('FODA');
+    state.foda = data;
+  } catch (e) {
+    // Si falla (hoja no existe aún), dejar array vacío
+    state.foda = [];
+    console.warn('FODA no disponible aún:', e.message);
+  }
 }
 
 async function loadApiKey() {
@@ -2610,9 +2674,14 @@ async function renderTabBrief() {
   $('tabContent').innerHTML = `<div class="loading"><div class="spinner"></div>Cargando brief...</div>`;
 
   try {
-    const { data } = await sheetRead('Briefs');
-    state.briefs = data;
-    let brief = data.find(b => b.cliente_id === cliente.id) || { cliente_id: cliente.id };
+    const [briefRes, fodaRes] = await Promise.all([
+      sheetRead('Briefs'),
+      sheetRead('FODA').catch(() => ({ data: [] })),
+    ]);
+    state.briefs = briefRes.data;
+    state.foda = fodaRes.data;
+    let brief = briefRes.data.find(b => b.cliente_id === cliente.id) || { cliente_id: cliente.id };
+    let foda = fodaRes.data.find(f => f.cliente_id === cliente.id) || null;
 
     const sectionsHtml = BRIEF_SECTIONS.map(section => {
       const totalFields = section.fields.length;
@@ -2648,6 +2717,10 @@ async function renderTabBrief() {
     const completedAll = BRIEF_SECTIONS.reduce((a, s) => a + s.fields.filter(f => brief[f.k] && brief[f.k].trim()).length, 0);
     const pct = Math.round((completedAll / totalAll) * 100);
 
+    // Sección FODA (parte del brief, al final)
+    const fodaCompleta = foda && (foda.fortalezas || foda.oportunidades || foda.debilidades || foda.amenazas);
+    const fodaSection = renderFODASection(cliente.id, foda, fodaCompleta);
+
     $('tabContent').innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 18px;">
         <div>
@@ -2662,9 +2735,324 @@ async function renderTabBrief() {
           <div style="font-size: 11px; color: var(--gris-text-muted);">${completedAll} de ${totalAll} campos</div>
         </div>
       </div>
-      ${sectionsHtml}`;
+      ${sectionsHtml}
+      ${fodaSection}`;
   } catch (e) {
     $('tabContent').innerHTML = `<div class="card" style="border-color: var(--rojo); background: #fef8f8;"><strong style="color: var(--rojo);">Error al cargar el brief</strong><p style="margin-top: 6px; font-size: 13px;">${esc(e.message)}</p></div>`;
+  }
+}
+
+// ============================================================================
+// SECCIÓN FODA dentro del Brief
+// ============================================================================
+function renderFODASection(clienteId, foda, fodaCompleta) {
+  const f = foda || {};
+  const fechaActualizacion = f.fecha_actualizacion ? formatDateEs(f.fecha_actualizacion) : null;
+
+  return `
+    <div class="brief-section foda-section ${fodaCompleta ? 'open' : ''}" data-section="foda">
+      <div class="brief-section-header" onclick="this.parentElement.classList.toggle('open')">
+        <span class="brief-section-icon">🎯</span>
+        <span class="brief-section-title">Análisis FODA</span>
+        <span class="brief-progress ${fodaCompleta ? 'complete' : ''}">${fodaCompleta ? '✓' : '0/4'}</span>
+        <span class="brief-section-caret">▸</span>
+      </div>
+      <div class="brief-section-body">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+          <p style="color: var(--gris-text-soft); font-size: 12.5px; margin: 0;">
+            ${fechaActualizacion ? `Actualizado el ${fechaActualizacion}.` : 'Aún no se generó el FODA del cliente.'}
+            La IA usa este análisis al generar estrategias y reportes.
+          </p>
+          <button class="gen-btn gen-btn-small" onclick="abrirGeneradorFODA('${clienteId}')">✨ ${fodaCompleta ? 'Regenerar' : 'Generar'} con IA</button>
+        </div>
+
+        <div class="foda-grid">
+          <div class="foda-cuadrante foda-fortalezas">
+            <div class="foda-header">
+              <span class="foda-icon">💪</span>
+              <div>
+                <div class="foda-title">FORTALEZAS</div>
+                <div class="foda-help">Interno · Positivo</div>
+              </div>
+            </div>
+            <textarea class="form-textarea foda-textarea" data-foda-field="fortalezas" onblur="saveFODAField('${clienteId}', 'fortalezas', this.value)" placeholder="Qué hace bien la marca / qué tiene a favor / ventajas internas">${esc(f.fortalezas || '')}</textarea>
+          </div>
+
+          <div class="foda-cuadrante foda-oportunidades">
+            <div class="foda-header">
+              <span class="foda-icon">🌱</span>
+              <div>
+                <div class="foda-title">OPORTUNIDADES</div>
+                <div class="foda-help">Externo · Positivo</div>
+              </div>
+            </div>
+            <textarea class="form-textarea foda-textarea" data-foda-field="oportunidades" onblur="saveFODAField('${clienteId}', 'oportunidades', this.value)" placeholder="Tendencias del mercado / huecos a aprovechar / contexto a favor">${esc(f.oportunidades || '')}</textarea>
+          </div>
+
+          <div class="foda-cuadrante foda-debilidades">
+            <div class="foda-header">
+              <span class="foda-icon">⚠️</span>
+              <div>
+                <div class="foda-title">DEBILIDADES</div>
+                <div class="foda-help">Interno · Negativo</div>
+              </div>
+            </div>
+            <textarea class="form-textarea foda-textarea" data-foda-field="debilidades" onblur="saveFODAField('${clienteId}', 'debilidades', this.value)" placeholder="Carencias internas / lo que falta / lo que cuesta">${esc(f.debilidades || '')}</textarea>
+          </div>
+
+          <div class="foda-cuadrante foda-amenazas">
+            <div class="foda-header">
+              <span class="foda-icon">🚧</span>
+              <div>
+                <div class="foda-title">AMENAZAS</div>
+                <div class="foda-help">Externo · Negativo</div>
+              </div>
+            </div>
+            <textarea class="form-textarea foda-textarea" data-foda-field="amenazas" onblur="saveFODAField('${clienteId}', 'amenazas', this.value)" placeholder="Competencia / cambios del mercado / riesgos externos">${esc(f.amenazas || '')}</textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+async function saveFODAField(clienteId, field, value) {
+  const key = 'foda_' + clienteId + '_' + field;
+  clearTimeout(autosaveTimers[key]);
+  autosaveTimers[key] = setTimeout(async () => {
+    showAutosave('saving', 'Guardando FODA...');
+    try {
+      const { data } = await sheetRead('FODA');
+      const existing = data.find(f => f.cliente_id === clienteId);
+      const hoy = todayISO();
+      if (existing) {
+        if ((existing[field] || '') === value) { showAutosave('saved', 'Guardado'); return; }
+        await sheetUpdate('FODA', existing.id, { [field]: value, fecha_actualizacion: hoy });
+      } else {
+        const nuevo = {
+          id: genId('foda'),
+          cliente_id: clienteId,
+          fortalezas: '',
+          oportunidades: '',
+          debilidades: '',
+          amenazas: '',
+          fecha_creacion: hoy,
+          fecha_actualizacion: hoy,
+          [field]: value,
+        };
+        await sheetAppend('FODA', nuevo);
+      }
+      showAutosave('saved', 'Guardado');
+    } catch (e) {
+      showAutosave('error', 'Error al guardar FODA');
+      console.error(e);
+    }
+  }, 400);
+}
+
+// Helper para obtener FODA de un cliente (para inyectar en prompts)
+async function obtenerFODA(clienteId) {
+  try {
+    if (!state.foda || state.foda.length === 0) {
+      const { data } = await sheetRead('FODA');
+      state.foda = data;
+    }
+    return state.foda.find(f => f.cliente_id === clienteId) || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function buildFODAContext(clienteId) {
+  const foda = (state.foda || []).find(f => f.cliente_id === clienteId);
+  if (!foda) return '';
+  const partes = [];
+  if (foda.fortalezas) partes.push(`FORTALEZAS:\n${foda.fortalezas}`);
+  if (foda.oportunidades) partes.push(`OPORTUNIDADES:\n${foda.oportunidades}`);
+  if (foda.debilidades) partes.push(`DEBILIDADES:\n${foda.debilidades}`);
+  if (foda.amenazas) partes.push(`AMENAZAS:\n${foda.amenazas}`);
+  if (partes.length === 0) return '';
+  return `\n\nANÁLISIS FODA DEL CLIENTE:\n${partes.join('\n\n')}`;
+}
+
+// ============================================================================
+// GENERADOR FODA con IA
+// ============================================================================
+async function abrirGeneradorFODA(clienteId) {
+  if (!checkApiKey()) return;
+  const cliente = state.clientes.find(c => c.id === clienteId);
+  if (!cliente) return;
+
+  // Verificar que el brief tenga datos suficientes
+  const brief = (state.briefs || []).find(b => b.cliente_id === clienteId) || {};
+  const camposRelevantes = ['rubro','tipo_negocio','productos','propuesta_valor','publico','problemas_resuelve','competencia','diferencial'];
+  const completos = camposRelevantes.filter(k => brief[k] && brief[k].trim()).length;
+
+  if (completos < 3) {
+    showToast('Completá al menos 3 campos del brief (rubro, productos, propuesta de valor, público) antes de generar el FODA con IA.', 'error');
+    return;
+  }
+
+  // Verificar si ya hay FODA cargado y advertir
+  const fodaActual = (state.foda || []).find(f => f.cliente_id === clienteId);
+  const tieneContenido = fodaActual && (fodaActual.fortalezas || fodaActual.oportunidades || fodaActual.debilidades || fodaActual.amenazas);
+
+  if (tieneContenido) {
+    if (!confirm('Ya hay un FODA cargado. Si generás uno nuevo, se va a sobrescribir el actual.\n\n¿Continuar?')) return;
+  }
+
+  abrirModalGeneracion('Generando FODA con IA', '🎯', cliente.nombre);
+
+  try {
+    const briefContexto = buildBriefContext(clienteId);
+
+    const systemPrompt = `Sos analista estratégica de Carrusel MKT, agencia argentina. Tu tarea es generar un análisis FODA profesional y específico para un cliente.
+
+PRINCIPIOS CLAVE:
+1. Cada cuadrante debe tener entre 3 y 5 puntos concretos, no genéricos.
+2. ESPECIFICIDAD: nada de "tiene buenos productos" — usá detalles del brief ("ofrece atención online en zonas con poca cobertura").
+3. Las FORTALEZAS son INTERNAS y POSITIVAS (lo que la marca controla y le juega a favor).
+4. Las DEBILIDADES son INTERNAS y NEGATIVAS (lo que la marca controla pero le juega en contra: carencias, faltantes).
+5. Las OPORTUNIDADES son EXTERNAS y POSITIVAS (contexto del mercado, tendencias, huecos a aprovechar).
+6. Las AMENAZAS son EXTERNAS y NEGATIVAS (competencia, cambios, riesgos del entorno).
+7. Las amenazas y oportunidades deben referirse al MERCADO/CONTEXTO del rubro, no a problemas internos.
+8. Español rioplatense (vos, ustedes).
+9. Cada punto en una línea, empezando con guión "- ".
+
+ESTRUCTURA DE CADA PUNTO:
+"- [Aspecto concreto]: [implicancia o explicación breve]"
+Ejemplo: "- Atención personalizada online: permite cubrir pacientes en zonas con poca oferta especializada"
+
+NO inventes datos que no estén en el brief. Si no hay info para un cuadrante, decí "- (Completar manualmente con conocimiento del cliente)".
+
+FORMATO DE SALIDA: SOLO un JSON válido, sin markdown, sin texto adicional:
+{
+  "fortalezas": "- punto 1\\n- punto 2\\n- punto 3",
+  "oportunidades": "- punto 1\\n- punto 2\\n- punto 3",
+  "debilidades": "- punto 1\\n- punto 2\\n- punto 3",
+  "amenazas": "- punto 1\\n- punto 2\\n- punto 3"
+}`;
+
+    const userPrompt = `CLIENTE: ${cliente.nombre}
+${briefContexto}
+
+Generá el análisis FODA completo basándote en el brief. Devolvé SOLO el JSON.`;
+
+    const raw = await callClaude(systemPrompt, userPrompt, { maxTokens: 2000 });
+    const fodaPropuesta = extractJson(raw);
+
+    if (!fodaPropuesta || typeof fodaPropuesta !== 'object') {
+      throw new Error('La IA no devolvió un FODA válido');
+    }
+
+    mostrarPreviewFODA(clienteId, fodaPropuesta);
+  } catch (e) {
+    mostrarErrorGeneracion(e.message);
+  }
+}
+
+function mostrarPreviewFODA(clienteId, foda) {
+  const cliente = state.clientes.find(c => c.id === clienteId);
+
+  $('genModalBody').innerHTML = `
+    <div class="gen-preview">
+      <div class="gen-preview-header">🎯 FODA propuesto para ${esc(cliente.nombre)}</div>
+      <div class="editable-hint">
+        💡 Revisá y editá cada cuadrante antes de guardar. Click en cualquier texto para modificarlo.
+      </div>
+
+      <div class="foda-grid" style="margin-top: 14px;">
+        <div class="foda-cuadrante foda-fortalezas">
+          <div class="foda-header">
+            <span class="foda-icon">💪</span>
+            <div>
+              <div class="foda-title">FORTALEZAS</div>
+              <div class="foda-help">Interno · Positivo</div>
+            </div>
+          </div>
+          <textarea class="form-textarea foda-textarea" id="foda_preview_fortalezas" rows="6">${esc(foda.fortalezas || '')}</textarea>
+        </div>
+
+        <div class="foda-cuadrante foda-oportunidades">
+          <div class="foda-header">
+            <span class="foda-icon">🌱</span>
+            <div>
+              <div class="foda-title">OPORTUNIDADES</div>
+              <div class="foda-help">Externo · Positivo</div>
+            </div>
+          </div>
+          <textarea class="form-textarea foda-textarea" id="foda_preview_oportunidades" rows="6">${esc(foda.oportunidades || '')}</textarea>
+        </div>
+
+        <div class="foda-cuadrante foda-debilidades">
+          <div class="foda-header">
+            <span class="foda-icon">⚠️</span>
+            <div>
+              <div class="foda-title">DEBILIDADES</div>
+              <div class="foda-help">Interno · Negativo</div>
+            </div>
+          </div>
+          <textarea class="form-textarea foda-textarea" id="foda_preview_debilidades" rows="6">${esc(foda.debilidades || '')}</textarea>
+        </div>
+
+        <div class="foda-cuadrante foda-amenazas">
+          <div class="foda-header">
+            <span class="foda-icon">🚧</span>
+            <div>
+              <div class="foda-title">AMENAZAS</div>
+              <div class="foda-help">Externo · Negativo</div>
+            </div>
+          </div>
+          <textarea class="form-textarea foda-textarea" id="foda_preview_amenazas" rows="6">${esc(foda.amenazas || '')}</textarea>
+        </div>
+      </div>
+    </div>
+  `;
+
+  window._fodaCtx = { clienteId };
+
+  $('genModalFooter').innerHTML = `
+    <button class="btn btn-secondary" onclick="closeModal()">Descartar</button>
+    <button class="btn btn-primary" onclick="guardarFODAGenerado()">✓ Guardar FODA</button>
+  `;
+}
+
+async function guardarFODAGenerado() {
+  const ctx = window._fodaCtx;
+  if (!ctx) return;
+
+  const fortalezas = $('foda_preview_fortalezas').value.trim();
+  const oportunidades = $('foda_preview_oportunidades').value.trim();
+  const debilidades = $('foda_preview_debilidades').value.trim();
+  const amenazas = $('foda_preview_amenazas').value.trim();
+  const hoy = todayISO();
+
+  try {
+    const { data } = await sheetRead('FODA');
+    const existing = data.find(f => f.cliente_id === ctx.clienteId);
+    if (existing) {
+      await sheetUpdate('FODA', existing.id, {
+        fortalezas, oportunidades, debilidades, amenazas,
+        fecha_actualizacion: hoy,
+      });
+    } else {
+      await sheetAppend('FODA', {
+        id: genId('foda'),
+        cliente_id: ctx.clienteId,
+        fortalezas, oportunidades, debilidades, amenazas,
+        fecha_creacion: hoy,
+        fecha_actualizacion: hoy,
+      });
+    }
+    // Refrescar state
+    const { data: nuevosFoda } = await sheetRead('FODA');
+    state.foda = nuevosFoda;
+
+    closeModal();
+    showToast('✓ FODA guardado correctamente', 'success');
+    if (state.currentClienteTab === 'brief') renderTabBrief();
+  } catch (e) {
+    showToast('Error guardando: ' + e.message, 'error');
   }
 }
 
@@ -2838,6 +3226,9 @@ function buildBriefContext(clienteId) {
   agregarSiExiste('COMPETENCIA LOCAL', brief.competencia_local);
   agregarSiExiste('COMPETENCIA NACIONAL/INTERNACIONAL', brief.competencia_nacional);
   agregarSiExiste('REFERENTES', brief.referentes);
+
+  // Inyectar FODA si está cargado
+  ctx += buildFODAContext(clienteId);
 
   return ctx;
 }
@@ -12680,7 +13071,7 @@ async function guardarPlantilla(plantillaId) {
 }
 
 async function verificarHojas() {
-  const hojas = ['Clientes','Prospectos','Briefs','Accesos','Estrategias','Calendario','Ideas','Servicios','Metricas','Onboarding','Plantillas_Onboarding','Finanzas_Ingresos','Finanzas_Egresos','Config'];
+  const hojas = ['Clientes','Prospectos','Briefs','Accesos','Estrategias','Calendario','Ideas','Servicios','Metricas','Onboarding','Plantillas_Onboarding','Finanzas_Ingresos','Finanzas_Egresos','Reportes','FODA','Config'];
   const result = $('verifyResult');
   result.innerHTML = '<div class="loading"><div class="spinner"></div>Verificando...</div>';
   try {
