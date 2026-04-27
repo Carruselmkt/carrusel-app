@@ -2252,8 +2252,13 @@ async function sheetRead(sheetName) {
 }
 
 async function sheetAppend(sheetName, rowObj) {
-  const { headers } = await sheetRead(sheetName);
-  const row = headers.map(h => rowObj[h] || '');
+  let { headers } = await sheetRead(sheetName);
+  // Si hay claves en rowObj que no existen como columna, agregarlas como nuevas columnas
+  const newKeys = Object.keys(rowObj).filter(k => !headers.includes(k));
+  if (newKeys.length > 0) {
+    headers = await ensureColumns(sheetName, headers, newKeys);
+  }
+  const row = headers.map(h => rowObj[h] !== undefined && rowObj[h] !== null ? rowObj[h] : '');
   await gapi.client.sheets.spreadsheets.values.append({
     spreadsheetId: CONFIG.SPREADSHEET_ID, range: sheetName,
     valueInputOption: 'USER_ENTERED', insertDataOption: 'INSERT_ROWS',
@@ -2262,9 +2267,14 @@ async function sheetAppend(sheetName, rowObj) {
 }
 
 async function sheetUpdate(sheetName, idValue, rowObj, idCol = 'id') {
-  const { headers, data } = await sheetRead(sheetName);
+  let { headers, data } = await sheetRead(sheetName);
   const idx = data.findIndex(r => r[idCol] === idValue);
   if (idx === -1) throw new Error('No encontré el registro');
+  // Si hay claves en rowObj que no existen como columna, agregarlas
+  const newKeys = Object.keys(rowObj).filter(k => !headers.includes(k));
+  if (newKeys.length > 0) {
+    headers = await ensureColumns(sheetName, headers, newKeys);
+  }
   const rowNum = idx + 2;
   const newRow = headers.map(h => rowObj[h] !== undefined ? rowObj[h] : (data[idx][h] || ''));
   await gapi.client.sheets.spreadsheets.values.update({
@@ -2273,6 +2283,19 @@ async function sheetUpdate(sheetName, idValue, rowObj, idCol = 'id') {
     valueInputOption: 'USER_ENTERED',
     resource: { values: [newRow] },
   });
+}
+
+// Helper: agrega columnas nuevas al final de la fila de encabezados
+async function ensureColumns(sheetName, currentHeaders, newColumnNames) {
+  const allHeaders = [...currentHeaders, ...newColumnNames];
+  await gapi.client.sheets.spreadsheets.values.update({
+    spreadsheetId: CONFIG.SPREADSHEET_ID,
+    range: `${sheetName}!A1`,
+    valueInputOption: 'USER_ENTERED',
+    resource: { values: [allHeaders] },
+  });
+  console.log(`[sheets] Columnas agregadas a ${sheetName}: ${newColumnNames.join(', ')}`);
+  return allHeaders;
 }
 
 async function sheetDelete(sheetName, idValue, idCol = 'id') {
