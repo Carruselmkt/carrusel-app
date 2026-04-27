@@ -2633,6 +2633,8 @@ function closeModal() {
   if (!window._preservarPendings) {
     window._pendingCarruselSlides = null;
     window._pendingReelGuion = null;
+    window._pendingHistoriasSecuencia = null;
+    window._pendingAnuncioMeta = null;
   }
   window._preservarPendings = false;
 }
@@ -6056,12 +6058,16 @@ async function confirmarAgendarIdea(ideaId) {
     idea_id: ideaId,
   };
 
-  // Si la idea tiene carrusel o reel guardado en notas, traspasarlo a la publicación
+  // Si la idea tiene carrusel, reel, historias o anuncio Meta guardado en notas, traspasarlo a la publicación
   if (idea.notas && typeof idea.notas === 'string') {
     if (idea.notas.startsWith('CARRUSEL_SLIDES:')) {
       publicacion.carrusel_slides = idea.notas.substring('CARRUSEL_SLIDES:'.length);
     } else if (idea.notas.startsWith('REEL_GUION:')) {
       publicacion.reel_guion = idea.notas.substring('REEL_GUION:'.length);
+    } else if (idea.notas.startsWith('HISTORIAS_SECUENCIA:')) {
+      publicacion.historias_secuencia = idea.notas.substring('HISTORIAS_SECUENCIA:'.length);
+    } else if (idea.notas.startsWith('ANUNCIO_META:')) {
+      publicacion.anuncio_meta = idea.notas.substring('ANUNCIO_META:'.length);
     }
   }
 
@@ -6564,9 +6570,11 @@ function openPostModal(id = null, defaultDate = null) {
   const esNuevo = !id;
   const fecha = p.fecha_publicacion || defaultDate || todayISO();
   window._postModalEditingId = id;
-  // Cargar si tiene carrusel/reel previos al editor
+  // Cargar si tiene carrusel/reel/historias/anuncio previos al editor
   if (p.carrusel_slides) window._pendingCarruselSlides = p.carrusel_slides;
   if (p.reel_guion) window._pendingReelGuion = p.reel_guion;
+  if (p.historias_secuencia) window._pendingHistoriasSecuencia = p.historias_secuencia;
+  if (p.anuncio_meta) window._pendingAnuncioMeta = p.anuncio_meta;
 
   $('modal').className = 'modal modal-lg';
   $('modal').innerHTML = `
@@ -6682,7 +6690,7 @@ function openPostModal(id = null, defaultDate = null) {
     </div>`;
   $('modalOverlay').classList.add('active');
 
-  // Si había carrusel o reel previo (al editar una publicación existente), mostrar indicadores
+  // Si había carrusel/reel/historias/anuncio previo (al editar una publicación existente), mostrar indicadores
   setTimeout(() => {
     if (window._pendingCarruselSlides) {
       try {
@@ -6694,6 +6702,20 @@ function openPostModal(id = null, defaultDate = null) {
       try {
         const escenas = JSON.parse(window._pendingReelGuion);
         if (Array.isArray(escenas) && escenas.length > 0) mostrarIndicadorReel(escenas.length);
+      } catch (e) {}
+    }
+    if (window._pendingHistoriasSecuencia) {
+      try {
+        const historias = JSON.parse(window._pendingHistoriasSecuencia);
+        if (Array.isArray(historias) && historias.length > 0) mostrarIndicadorHistorias(historias.length);
+      } catch (e) {}
+    }
+    if (window._pendingAnuncioMeta) {
+      try {
+        const anuncio = JSON.parse(window._pendingAnuncioMeta);
+        if (anuncio && Array.isArray(anuncio.variantes) && anuncio.variantes.length > 0) {
+          mostrarIndicadorAnuncioMeta(anuncio.variantes.length, anuncio.fase || '');
+        }
       } catch (e) {}
     }
   }, 100);
@@ -6727,6 +6749,14 @@ async function savePost(id) {
   // Si hay guión de reel pendiente, incluirlo
   if (window._pendingReelGuion) {
     data.reel_guion = window._pendingReelGuion;
+  }
+  // Si hay secuencia de historias pendiente, incluirla
+  if (window._pendingHistoriasSecuencia) {
+    data.historias_secuencia = window._pendingHistoriasSecuencia;
+  }
+  // Si hay anuncio Meta pendiente, incluirlo
+  if (window._pendingAnuncioMeta) {
+    data.anuncio_meta = window._pendingAnuncioMeta;
   }
 
   try {
@@ -8905,6 +8935,132 @@ function mostrarIndicadorReel(cantidad) {
     <button type="button" class="btn-ghost btn-sm" onclick="verReelGuardado()" style="font-size: 12px;">Ver escenas</button>
   `;
   hookField.parentElement.parentElement.insertBefore(indicador, hookField.parentElement);
+}
+
+function mostrarIndicadorHistorias(cantidad) {
+  const hookField = $('f_hook');
+  if (!hookField) return;
+  const existing = document.getElementById('historias_indicador');
+  if (existing) existing.remove();
+  const indicador = document.createElement('div');
+  indicador.id = 'historias_indicador';
+  indicador.style.cssText = 'padding: 10px 14px; background: #fef8e6; border: 1px solid #c4a01a; border-radius: 6px; margin-bottom: 12px; font-size: 12.5px; display: flex; justify-content: space-between; align-items: center; gap: 8px; color: #8a6a20;';
+  indicador.innerHTML = `
+    <span>📖 <strong>Secuencia de ${cantidad} historias</strong> lista para guardar con esta publicación</span>
+    <button type="button" class="btn-ghost btn-sm" onclick="verHistoriasGuardadas()" style="font-size: 12px;">Ver historias</button>
+  `;
+  hookField.parentElement.parentElement.insertBefore(indicador, hookField.parentElement);
+}
+
+function verHistoriasGuardadas() {
+  const json = window._pendingHistoriasSecuencia;
+  if (!json) { showToast('No hay secuencia pendiente', 'error'); return; }
+  let historias = [];
+  try { historias = JSON.parse(json); } catch (e) { showToast('Error leyendo historias', 'error'); return; }
+
+  const tipoLabel = { hook: '🎯 Hook', desarrollo: '🔄 Desarrollo', giro: '⚡ Giro', cierre: '✨ Cierre' };
+  const html = historias.map((h, i) => `
+    <div class="escena-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <span class="escena-tiempo">📖 Historia ${i + 1}</span>
+        ${h.tipo ? `<span style="font-size: 11px; padding: 2px 8px; background: var(--crema); border-radius: 10px; color: #8a6a20; font-weight: 600;">${tipoLabel[h.tipo] || h.tipo}</span>` : ''}
+      </div>
+      ${h.texto_principal ? `<div class="slide-section"><span class="slide-section-label">💬 Texto principal</span><div style="font-weight: 600;">${esc(h.texto_principal)}</div></div>` : ''}
+      ${h.zocalo ? `<div class="slide-section"><span class="slide-section-label">📌 Zócalo / Titular</span><div>${esc(h.zocalo)}</div></div>` : ''}
+      ${h.visual_sugerido ? `<div class="slide-section"><span class="slide-section-label">📷 Visual sugerido</span><div style="font-style: italic; color: var(--gris-text-soft);">${esc(h.visual_sugerido)}</div></div>` : ''}
+      ${h.nota_narrativa ? `<div style="margin-top: 8px; padding: 6px 10px; background: #fef8e6; border-left: 3px solid #c4a01a; border-radius: 4px; font-size: 11.5px; color: #8a6a20;">💭 ${esc(h.nota_narrativa)}</div>` : ''}
+    </div>`).join('');
+
+  // Modal secundario sobre el modal del post — usamos el mismo modal pero conservando el state
+  window._preservarPendings = true;
+  $('modal').className = 'modal modal-lg';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>📖 Secuencia de ${historias.length} historias</h2>
+      <button class="btn-ghost" onclick="volverAlPostModal()">✕</button>
+    </div>
+    <div class="modal-body">${html}</div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="volverAlPostModal()">Volver a la publicación</button>
+    </div>`;
+  $('modalOverlay').classList.add('active');
+}
+
+function mostrarIndicadorAnuncioMeta(cantidadVariantes, fase) {
+  const hookField = $('f_hook');
+  if (!hookField) return;
+  const existing = document.getElementById('anuncio_indicador');
+  if (existing) existing.remove();
+  const faseLabels = { tofu: 'TOFU', mofu: 'MOFU', bofu: 'BOFU' };
+  const indicador = document.createElement('div');
+  indicador.id = 'anuncio_indicador';
+  indicador.style.cssText = 'padding: 10px 14px; background: #e3edff; border: 1px solid #1877f2; border-radius: 6px; margin-bottom: 12px; font-size: 12.5px; display: flex; justify-content: space-between; align-items: center; gap: 8px; color: #1877f2;';
+  indicador.innerHTML = `
+    <span>🎯 <strong>Anuncio Meta ${faseLabels[fase] || ''}</strong> · ${cantidadVariantes} variantes listas</span>
+    <button type="button" class="btn-ghost btn-sm" onclick="verAnuncioMetaGuardado()" style="font-size: 12px; color: #1877f2;">Ver variantes</button>
+  `;
+  hookField.parentElement.parentElement.insertBefore(indicador, hookField.parentElement);
+}
+
+function verAnuncioMetaGuardado() {
+  const json = window._pendingAnuncioMeta;
+  if (!json) { showToast('No hay anuncio pendiente', 'error'); return; }
+  let data;
+  try { data = JSON.parse(json); } catch (e) { showToast('Error leyendo anuncio', 'error'); return; }
+
+  const faseLabels = { tofu: '🔭 TOFU', mofu: '🎯 MOFU', bofu: '💰 BOFU' };
+  const seg = data.segmentacion_recomendada || {};
+  const estrategiaHtml = `
+    <div class="ad-section">
+      <div class="ad-section-title">📋 Estrategia general</div>
+      <div class="ad-section-body">${esc(data.estrategia_general || '')}</div>
+    </div>
+    <div class="ad-section">
+      <div class="ad-section-title">🎯 Segmentación recomendada</div>
+      <div class="ad-section-body">
+        <div class="ad-seg-grid">
+          ${seg.publico ? `<div class="ad-seg-item"><strong>Público:</strong> ${esc(seg.publico)}</div>` : ''}
+          ${seg.edades ? `<div class="ad-seg-item"><strong>Edades:</strong> ${esc(seg.edades)}</div>` : ''}
+          ${seg.ubicaciones ? `<div class="ad-seg-item"><strong>Ubicaciones:</strong> ${esc(seg.ubicaciones)}</div>` : ''}
+          ${seg.tipo_audiencia ? `<div class="ad-seg-item"><strong>Tipo de audiencia:</strong> ${esc(seg.tipo_audiencia)}</div>` : ''}
+          ${Array.isArray(seg.intereses) && seg.intereses.length > 0 ? `<div class="ad-seg-item"><strong>Intereses:</strong> ${seg.intereses.map(esc).join(' · ')}</div>` : ''}
+          ${Array.isArray(seg.comportamientos) && seg.comportamientos.length > 0 ? `<div class="ad-seg-item"><strong>Comportamientos:</strong> ${seg.comportamientos.map(esc).join(' · ')}</div>` : ''}
+          ${seg.exclusiones ? `<div class="ad-seg-item"><strong>Exclusiones:</strong> ${esc(seg.exclusiones)}</div>` : ''}
+        </div>
+      </div>
+    </div>
+  `;
+  const variantesHtml = (data.variantes || []).map((v, i) => renderVarianteAnuncioReadonly(v, i)).join('');
+  const recomHtml = data.recomendaciones_post_lanzamiento ? `
+    <div class="ad-section ad-section-recom">
+      <div class="ad-section-title">💡 Recomendaciones post-lanzamiento</div>
+      <div class="ad-section-body">${esc(data.recomendaciones_post_lanzamiento)}</div>
+    </div>` : '';
+
+  window._preservarPendings = true;
+  $('modal').className = 'modal modal-lg';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>${faseLabels[data.fase] || '🎯'} Anuncio Meta</h2>
+      <button class="btn-ghost" onclick="volverAlPostModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      ${estrategiaHtml}
+      <div style="margin-top: 16px; font-family: 'Fraunces', serif; font-size: 16px; font-weight: 700; color: var(--fucsia); margin-bottom: 8px;">Variantes para A/B testing</div>
+      ${variantesHtml}
+      ${recomHtml}
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="volverAlPostModal()">Volver a la publicación</button>
+    </div>`;
+  $('modalOverlay').classList.add('active');
+}
+
+function volverAlPostModal() {
+  // Reabrir el modal del post manteniendo los pendings
+  window._preservarPendings = true;
+  const id = window._postModalEditingId;
+  setTimeout(() => openPostModal(id), 50);
 }
 
 function verReelGuardado() {
@@ -11801,49 +11957,85 @@ function generarExcelPlanning(cliente, posts, desde, hasta, estilo, incluirInter
       // Copy / texto completo según el tipo
       let contenidoDetallado = '';
 
-      // Detectar y procesar contenido según formato
-      if (p.notas && typeof p.notas === 'string') {
-        if (p.notas.startsWith('CARRUSEL_SLIDES:')) {
-          try {
-            const slides = JSON.parse(p.notas.substring('CARRUSEL_SLIDES:'.length));
-            contenidoDetallado = slides.map((s, i) => {
-              const partes = [`SLIDE ${i + 1}:`];
-              if (s.titulo) partes.push('Título: ' + s.titulo);
-              if (s.texto) partes.push('Texto: ' + s.texto);
-              if (s.copy_pie) partes.push('Pie: ' + s.copy_pie);
-              if (s.visual && incluirInternas) partes.push('[Visual sugerido: ' + s.visual + ']');
-              return partes.join('\n');
-            }).join('\n\n');
-          } catch (e) { contenidoDetallado = '(error leyendo carrusel)'; }
-        } else if (p.notas.startsWith('REEL_GUION:')) {
-          try {
-            const escenas = JSON.parse(p.notas.substring('REEL_GUION:'.length));
-            contenidoDetallado = escenas.map((e, i) => {
-              const partes = [`ESCENA ${i + 1}` + (e.tiempo ? ` (${e.tiempo})` : '') + ':'];
-              if (e.tipo_plano && incluirInternas) partes.push('Plano: ' + e.tipo_plano);
-              if (e.voz || e.voz_audio || e.voz_en_off) partes.push('Voz/Audio: ' + (e.voz || e.voz_audio || e.voz_en_off));
-              if (e.texto_pantalla) partes.push('Texto en pantalla: ' + e.texto_pantalla);
-              if (e.accion || e.accion_visual) partes.push('Acción: ' + (e.accion || e.accion_visual));
-              return partes.join('\n');
-            }).join('\n\n');
-          } catch (e) { contenidoDetallado = '(error leyendo reel)'; }
-        } else if (p.notas.startsWith('HISTORIAS_SECUENCIA:')) {
-          try {
-            const historias = JSON.parse(p.notas.substring('HISTORIAS_SECUENCIA:'.length));
-            contenidoDetallado = historias.map((h, i) => {
-              const partes = [`HISTORIA ${i + 1}` + (h.tipo ? ` [${h.tipo}]` : '') + ':'];
-              if (h.texto_principal) partes.push('Texto: ' + h.texto_principal);
-              if (h.zocalo) partes.push('Zócalo: ' + h.zocalo);
-              if (h.visual_sugerido && incluirInternas) partes.push('[Visual: ' + h.visual_sugerido + ']');
-              return partes.join('\n');
-            }).join('\n\n');
-          } catch (e) { contenidoDetallado = '(error leyendo historias)'; }
+      // Helper: parsear contenido especial desde columna dedicada O desde notas
+      const tryParse = (raw) => { try { return JSON.parse(raw); } catch (e) { return null; } };
+
+      // Carruseles (columna dedicada o notas)
+      let slidesData = p.carrusel_slides ? tryParse(p.carrusel_slides) : null;
+      if (!slidesData && p.notas && p.notas.startsWith('CARRUSEL_SLIDES:')) {
+        slidesData = tryParse(p.notas.substring('CARRUSEL_SLIDES:'.length));
+      }
+      if (Array.isArray(slidesData)) {
+        contenidoDetallado = slidesData.map((s, i) => {
+          const partes = [`SLIDE ${i + 1}:`];
+          if (s.titulo) partes.push('Título: ' + s.titulo);
+          if (s.texto) partes.push('Texto: ' + s.texto);
+          if (s.copy_pie) partes.push('Pie: ' + s.copy_pie);
+          if (s.visual && incluirInternas) partes.push('[Visual sugerido: ' + s.visual + ']');
+          return partes.join('\n');
+        }).join('\n\n');
+      }
+
+      // Reels
+      if (!contenidoDetallado) {
+        let escenasData = p.reel_guion ? tryParse(p.reel_guion) : null;
+        if (!escenasData && p.notas && p.notas.startsWith('REEL_GUION:')) {
+          escenasData = tryParse(p.notas.substring('REEL_GUION:'.length));
+        }
+        if (Array.isArray(escenasData)) {
+          contenidoDetallado = escenasData.map((e, i) => {
+            const partes = [`ESCENA ${i + 1}` + (e.tiempo ? ` (${e.tiempo})` : '') + ':'];
+            if (e.tipo_plano && incluirInternas) partes.push('Plano: ' + e.tipo_plano);
+            if (e.voz || e.voz_audio || e.voz_en_off) partes.push('Voz/Audio: ' + (e.voz || e.voz_audio || e.voz_en_off));
+            if (e.texto_pantalla) partes.push('Texto en pantalla: ' + e.texto_pantalla);
+            if (e.accion || e.accion_visual) partes.push('Acción: ' + (e.accion || e.accion_visual));
+            return partes.join('\n');
+          }).join('\n\n');
+        }
+      }
+
+      // Historias
+      if (!contenidoDetallado) {
+        let histData = p.historias_secuencia ? tryParse(p.historias_secuencia) : null;
+        if (!histData && p.notas && p.notas.startsWith('HISTORIAS_SECUENCIA:')) {
+          histData = tryParse(p.notas.substring('HISTORIAS_SECUENCIA:'.length));
+        }
+        if (Array.isArray(histData)) {
+          contenidoDetallado = histData.map((h, i) => {
+            const partes = [`HISTORIA ${i + 1}` + (h.tipo ? ` [${h.tipo}]` : '') + ':'];
+            if (h.texto_principal) partes.push('Texto: ' + h.texto_principal);
+            if (h.zocalo) partes.push('Zócalo: ' + h.zocalo);
+            if (h.visual_sugerido && incluirInternas) partes.push('[Visual: ' + h.visual_sugerido + ']');
+            return partes.join('\n');
+          }).join('\n\n');
+        }
+      }
+
+      // Anuncio Meta
+      if (!contenidoDetallado) {
+        let anuncioData = p.anuncio_meta ? tryParse(p.anuncio_meta) : null;
+        if (!anuncioData && p.notas && p.notas.startsWith('ANUNCIO_META:')) {
+          anuncioData = tryParse(p.notas.substring('ANUNCIO_META:'.length));
+        }
+        if (anuncioData && Array.isArray(anuncioData.variantes)) {
+          const partes = [];
+          if (anuncioData.estrategia_general) partes.push('ESTRATEGIA: ' + anuncioData.estrategia_general);
+          anuncioData.variantes.forEach((v, i) => {
+            partes.push(`\n--- VARIANTE ${i + 1} ${v.formato_creativo ? '(' + v.formato_creativo + ')' : ''} ---`);
+            if (v.hipotesis && incluirInternas) partes.push('Hipótesis: ' + v.hipotesis);
+            if (v.hook) partes.push('Hook: ' + v.hook);
+            if (v.copy_principal) partes.push('Copy: ' + v.copy_principal);
+            if (v.titular) partes.push('Titular: ' + v.titular);
+            if (v.descripcion) partes.push('Descripción: ' + v.descripcion);
+            if (v.cta_boton) partes.push('CTA: ' + v.cta_boton);
+            if (v.concepto_visual) partes.push('Visual: ' + v.concepto_visual);
+          });
+          contenidoDetallado = partes.join('\n');
         }
       }
 
       // Si no hay contenido especial, usar el copy normal
       if (!contenidoDetallado && p.copy) contenidoDetallado = p.copy;
-      // Si tampoco hay copy, dejar la idea/descripción
       if (!contenidoDetallado && p.idea) contenidoDetallado = p.idea;
 
       fila['Contenido / Guión / Slides'] = contenidoDetallado;
