@@ -5017,7 +5017,7 @@ async function renderTabIdeas() {
 
 function renderIdeasList() {
   const cliente = state.clientes.find(c => c.id === state.currentClienteId);
-  const estrategiaActiva = state.estrategias.find(e => (e.estado || 'Activa') === 'Activa' && e.tipo === 'Principal');
+  const estrategiaActiva = state.estrategias.find(e => e.cliente_id === state.currentClienteId && (e.estado || 'Activa') === 'Activa' && e.tipo === 'Principal');
   const pilares = estrategiaActiva ? parseJsonSafe(estrategiaActiva.pilares_json) : [];
 
   // Aplicar filtros
@@ -5315,7 +5315,7 @@ function openIdeaModal(id = null) {
   const idea = id ? state.ideas.find(x => x.id === id) : {};
   const esNueva = !id;
   const cliente = state.clientes.find(c => c.id === state.currentClienteId);
-  const estrategiaActiva = state.estrategias.find(e => (e.estado || 'Activa') === 'Activa' && e.tipo === 'Principal');
+  const estrategiaActiva = state.estrategias.find(e => e.cliente_id === state.currentClienteId && (e.estado || 'Activa') === 'Activa' && e.tipo === 'Principal');
   const pilares = estrategiaActiva ? parseJsonSafe(estrategiaActiva.pilares_json) : [];
 
   const pilaresOptions = pilares.length > 0
@@ -5458,7 +5458,7 @@ async function deleteIdea(id) {
 function abrirGeneradorIdeas() {
   if (!checkApiKey()) return;
   const cliente = state.clientes.find(c => c.id === state.currentClienteId);
-  const estrategiaActiva = state.estrategias.find(e => (e.estado || 'Activa') === 'Activa' && e.tipo === 'Principal');
+  const estrategiaActiva = state.estrategias.find(e => e.cliente_id === state.currentClienteId && (e.estado || 'Activa') === 'Activa' && e.tipo === 'Principal');
   if (!estrategiaActiva) {
     showToast('Necesitás una estrategia Principal activa', 'error');
     return;
@@ -5843,7 +5843,7 @@ async function desarrollarIdea(ideaId) {
   if (!checkApiKey()) return;
   const idea = state.ideas.find(i => i.id === ideaId);
   if (!idea) return;
-  const estrategia = state.estrategias.find(e => (e.estado || 'Activa') === 'Activa' && e.tipo === 'Principal');
+  const estrategia = state.estrategias.find(e => e.cliente_id === idea.cliente_id && (e.estado || 'Activa') === 'Activa' && e.tipo === 'Principal');
 
   abrirModalGeneracion(
     'Desarrollar copy completo',
@@ -5915,6 +5915,12 @@ REGLAS DE COPYWRITING:
 - Usá español rioplatense (vos, no tú).
 - Respetá RIGUROSAMENTE el tono de voz definido.
 
+⚠️ REGLA INVIOLABLE — NO INVENTAR:
+- Si el campo "Desarrollo" o las "Notas" tienen un guión/ángulo específico, ESE es el punto de partida. NO inventes otra historia ni cambies el ángulo.
+- NO inventes productos, servicios, momentos, anécdotas o detalles que no estén explícitos en el brief del cliente o en la idea/notas.
+- Si los datos son insuficientes, escribí algo más general (sin inventar detalles concretos) antes que fabricar una historia.
+- Si el cliente es una marca de servicios (ej: agencia de marketing), NO inventes que vende productos físicos. Si es una marca de productos físicos, NO inventes servicios. Atenete a lo que dice el brief.
+
 FORMATO ESPECÍFICO: ${formatoReglaEspecifica}
 
 FORMATO DE SALIDA: devolvés SOLO un JSON válido (sin markdown, sin texto extra):
@@ -5938,10 +5944,10 @@ IDEA A DESARROLLAR:
 Título: ${titulo}
 Formato: ${formato || 'Post'}
 ${hook ? 'Hook base: ' + hook : ''}
-${idea ? 'Desarrollo: ' + idea : ''}
+${idea ? '\n⚠️ DESARROLLO / GUIÓN / ÁNGULO ESPECÍFICO QUE DEBÉS RESPETAR (esto es lo que la marca quiere comunicar — NO LO IGNORES, NO LO REEMPLACES POR OTRA HISTORIA):\n' + idea : ''}
 ${instrucciones ? '\nINSTRUCCIONES ADICIONALES: ' + instrucciones : ''}
 
-Desarrollá el copy completo.`;
+Desarrollá el copy completo, respetando el ángulo del desarrollo si se especificó arriba.`;
 
   try {
     const raw = await callClaude(systemPrompt, userPrompt, { maxTokens: 2000 });
@@ -6116,20 +6122,22 @@ async function generarCopyDesdeEditorPost() {
   const pilar = $('f_pilar') ? $('f_pilar').value.trim() : '';
   const formato = $('f_formato') ? $('f_formato').value : 'Post';
   const hook = $('f_hook') ? $('f_hook').value.trim() : '';
+  const notas = $('f_notas') ? $('f_notas').value.trim() : '';
+  const cta = $('f_cta') ? $('f_cta').value.trim() : '';
 
-  if (!titulo && !pilar && !hook) {
-    showToast('Completá al menos el título, pilar o hook para que la IA tenga contexto', 'error');
+  if (!titulo && !pilar && !hook && !notas) {
+    showToast('Completá al menos el título, pilar, hook o notas para que la IA tenga contexto', 'error');
     return;
   }
 
   // Cargar estrategia activa si no está
-  if (!state.estrategias || state.estrategias.length === 0) {
+  if (!state.estrategias || state.estrategias.length === 0 || !state.estrategias.some(e => e.cliente_id === state.currentClienteId)) {
     try {
       const { data } = await sheetRead('Estrategias');
-      state.estrategias = data.filter(e => e.cliente_id === state.currentClienteId);
+      state.estrategias = data; // cargar todas, no filtrar — así no se pisan entre clientes
     } catch (e) {}
   }
-  const estrategia = state.estrategias.find(e => (e.estado || 'Activa') === 'Activa' && e.tipo === 'Principal');
+  const estrategia = state.estrategias.find(e => e.cliente_id === state.currentClienteId && (e.estado || 'Activa') === 'Activa' && e.tipo === 'Principal');
 
   // Guardar el modal actual para reabrirlo después
   window._postModalEditorData = {
@@ -6153,9 +6161,15 @@ async function generarCopyDesdeEditorPost() {
     `Generando copy para "${titulo || pilar || hook}"...`
   );
 
+  // Construir el campo "idea" combinando notas + CTA si los hay
+  // Esto es CRÍTICO: las notas suelen tener el ángulo/guión del post que la IA debe respetar.
+  let ideaContexto = '';
+  if (notas) ideaContexto += notas;
+  if (cta) ideaContexto += (ideaContexto ? '\n\n' : '') + 'CTA deseado: ' + cta;
+
   await generarCopyIA({
     titulo, pilar, formato, hook,
-    idea: '',
+    idea: ideaContexto,
     estrategia,
     onAccept: async (copyData) => {
       // Volver al editor con los datos generados, preservando carrusel/reel si había
@@ -6698,7 +6712,17 @@ function openPostModal(id = null, defaultDate = null) {
         </div>
       </div>
       <div class="form-row">
-        <label class="form-label">Notas</label>
+        <label class="form-label">📹 Descripción visual / Guión</label>
+        <div class="form-help" style="font-size: 11.5px; margin-bottom: 4px; color: var(--gris-text-muted);">
+          Describí qué se va a ver: tomas, escenografía, referencias visuales, ideas de plano, transiciones, detalles. Si generaste el guión con IA, esto se suma al detalle automático.
+        </div>
+        <textarea class="form-textarea" id="f_descripcion_visual" rows="4" placeholder="Ej: Plano medio a cámara, fondo del taller con telas detrás. Cortes rápidos a manos cosiendo. Texto en pantalla con tipografía Caveat. Música suave de fondo, sin voz en off.">${esc(p.descripcion_visual || '')}</textarea>
+      </div>
+      <div class="form-row">
+        <label class="form-label">📝 Notas internas</label>
+        <div class="form-help" style="font-size: 11.5px; margin-bottom: 4px; color: var(--gris-text-muted);">
+          Recordatorios para vos, no se exporta al cliente.
+        </div>
         <textarea class="form-textarea" id="f_notas">${esc(p.notas || '')}</textarea>
       </div>
     </div>
@@ -8528,9 +8552,11 @@ async function generarCarruselDesdeEditor() {
   const pilar = $('f_pilar') ? $('f_pilar').value.trim() : '';
   const hook = $('f_hook') ? $('f_hook').value.trim() : '';
   const copy = $('f_copy') ? $('f_copy').value.trim() : '';
+  const notas = $('f_notas') ? $('f_notas').value.trim() : '';
+  const cta = $('f_cta') ? $('f_cta').value.trim() : '';
 
-  if (!titulo && !hook && !copy) {
-    showToast('Completá al menos el título, hook o copy para generar las slides', 'error');
+  if (!titulo && !hook && !copy && !notas) {
+    showToast('Completá al menos el título, hook, copy o notas para generar las slides', 'error');
     return;
   }
 
@@ -8551,13 +8577,13 @@ async function generarCarruselDesdeEditor() {
   };
 
   // Cargar estrategia si no está
-  if (!state.estrategias || state.estrategias.length === 0) {
+  if (!state.estrategias || state.estrategias.length === 0 || !state.estrategias.some(e => e.cliente_id === state.currentClienteId)) {
     try {
       const { data } = await sheetRead('Estrategias');
-      state.estrategias = data.filter(e => e.cliente_id === state.currentClienteId);
+      state.estrategias = data;
     } catch (e) {}
   }
-  const estrategia = state.estrategias.find(e => (e.estado || 'Activa') === 'Activa' && e.tipo === 'Principal');
+  const estrategia = state.estrategias.find(e => e.cliente_id === state.currentClienteId && (e.estado || 'Activa') === 'Activa' && e.tipo === 'Principal');
 
   abrirModalGeneracion('Generando estructura de carrusel', '🎠', `Generando slides para "${titulo || hook}"...`);
 
@@ -8619,6 +8645,10 @@ Título: ${titulo}
 ${pilar ? 'Pilar: ' + pilar : ''}
 ${hook ? 'Hook: ' + hook : ''}
 ${copy ? 'Copy del pie: ' + copy : ''}
+${notas ? '\n⚠️ NOTAS / GUIÓN / ÁNGULO ESPECÍFICO QUE DEBÉS RESPETAR (esto es lo que la marca quiere comunicar):\n' + notas : ''}
+${cta ? 'CTA deseado: ' + cta : ''}
+
+⚠️ MUY IMPORTANTE: si hay notas/guión específico arriba, ese es el ángulo central. NO inventes otra historia. NO inventes productos, servicios, momentos o detalles que no estén en las notas o en el brief del cliente. Si los datos son insuficientes, usá un tono más general antes que inventar.
 
 Generá la estructura del carrusel, slide por slide.`;
 
@@ -8775,9 +8805,11 @@ async function generarReelDesdeEditor() {
   const pilar = $('f_pilar') ? $('f_pilar').value.trim() : '';
   const hook = $('f_hook') ? $('f_hook').value.trim() : '';
   const copy = $('f_copy') ? $('f_copy').value.trim() : '';
+  const notas = $('f_notas') ? $('f_notas').value.trim() : '';
+  const cta = $('f_cta') ? $('f_cta').value.trim() : '';
 
-  if (!titulo && !hook && !copy) {
-    showToast('Completá al menos el título, hook o copy para generar el guión', 'error');
+  if (!titulo && !hook && !copy && !notas) {
+    showToast('Completá al menos el título, hook, copy o notas para generar el guión', 'error');
     return;
   }
 
@@ -8796,13 +8828,13 @@ async function generarReelDesdeEditor() {
     postId: window._postModalEditingId || null,
   };
 
-  if (!state.estrategias || state.estrategias.length === 0) {
+  if (!state.estrategias || state.estrategias.length === 0 || !state.estrategias.some(e => e.cliente_id === state.currentClienteId)) {
     try {
       const { data } = await sheetRead('Estrategias');
-      state.estrategias = data.filter(e => e.cliente_id === state.currentClienteId);
+      state.estrategias = data;
     } catch (e) {}
   }
-  const estrategia = state.estrategias.find(e => (e.estado || 'Activa') === 'Activa' && e.tipo === 'Principal');
+  const estrategia = state.estrategias.find(e => e.cliente_id === state.currentClienteId && (e.estado || 'Activa') === 'Activa' && e.tipo === 'Principal');
 
   abrirModalGeneracion('Generando guión de reel', '🎬', `Armando escenas para "${titulo || hook}"...`);
 
@@ -8846,6 +8878,10 @@ Título: ${titulo}
 ${pilar ? 'Pilar: ' + pilar : ''}
 ${hook ? 'Hook: ' + hook : ''}
 ${copy ? 'Contexto del copy: ' + copy : ''}
+${notas ? '\n⚠️ NOTAS / GUIÓN / ÁNGULO ESPECÍFICO QUE DEBÉS RESPETAR (esto es lo que la marca quiere comunicar):\n' + notas : ''}
+${cta ? 'CTA deseado: ' + cta : ''}
+
+⚠️ MUY IMPORTANTE: si hay notas/guión específico arriba, ese es el ángulo central. NO inventes otra historia. NO inventes productos, servicios, momentos o detalles que no estén en las notas o en el brief del cliente. Si los datos son insuficientes, usá un tono más general antes que inventar.
 
 Generá el guión completo, escena por escena.`;
 
@@ -9116,7 +9152,7 @@ async function regenerarReel() {
 async function abrirGeneradorCalendarioMensual() {
   if (!checkApiKey()) return;
   const cliente = state.clientes.find(c => c.id === state.currentClienteId);
-  const estrategiaActiva = state.estrategias.find(e => (e.estado || 'Activa') === 'Activa' && e.tipo === 'Principal');
+  const estrategiaActiva = state.estrategias.find(e => e.cliente_id === state.currentClienteId && (e.estado || 'Activa') === 'Activa' && e.tipo === 'Principal');
   if (!estrategiaActiva) {
     showToast('Necesitás una estrategia Principal activa para este cliente', 'error');
     return;
