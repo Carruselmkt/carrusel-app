@@ -6151,6 +6151,7 @@ async function generarCopyDesdeEditorPost() {
     link_diseno: $('f_link_diseno').value,
     link_multimedia: $('f_link_multimedia').value,
     estado: $('f_estado').value,
+    descripcion_visual: $('f_descripcion_visual') ? $('f_descripcion_visual').value : '',
     notas: $('f_notas').value,
     postId: window._postModalEditingId || null,
   };
@@ -6193,6 +6194,7 @@ async function generarCopyDesdeEditorPost() {
           if ($('f_estado') && saved.estado) $('f_estado').value = saved.estado;
           if ($('f_link_diseno') && saved.link_diseno) $('f_link_diseno').value = saved.link_diseno;
           if ($('f_link_multimedia') && saved.link_multimedia) $('f_link_multimedia').value = saved.link_multimedia;
+          if ($('f_descripcion_visual') && saved.descripcion_visual) $('f_descripcion_visual').value = saved.descripcion_visual;
           if ($('f_notas') && saved.notas) $('f_notas').value = saved.notas;
           showToast('Copy generado — revisá y guardá', 'success');
         }, 150);
@@ -6786,6 +6788,7 @@ async function savePost(id) {
     link_diseno: $('f_link_diseno').value.trim(),
     link_multimedia: $('f_link_multimedia').value.trim(),
     estado: $('f_estado').value,
+    descripcion_visual: $('f_descripcion_visual') ? $('f_descripcion_visual').value.trim() : '',
     notas: $('f_notas').value.trim(),
   };
 
@@ -8593,6 +8596,7 @@ async function generarCarruselDesdeEditor() {
     link_diseno: $('f_link_diseno').value,
     link_multimedia: $('f_link_multimedia').value,
     estado: $('f_estado').value,
+    descripcion_visual: $('f_descripcion_visual') ? $('f_descripcion_visual').value : '',
     notas: $('f_notas').value,
     postId: window._postModalEditingId || null,
   };
@@ -8765,6 +8769,7 @@ async function aceptarCarrusel() {
       if ($('f_cta') && saved.cta) $('f_cta').value = saved.cta;
       if ($('f_link_diseno') && saved.link_diseno) $('f_link_diseno').value = saved.link_diseno;
       if ($('f_link_multimedia') && saved.link_multimedia) $('f_link_multimedia').value = saved.link_multimedia;
+          if ($('f_descripcion_visual') && saved.descripcion_visual) $('f_descripcion_visual').value = saved.descripcion_visual;
       if ($('f_estado') && saved.estado) $('f_estado').value = saved.estado;
       if ($('f_notas') && saved.notas) $('f_notas').value = saved.notas;
       // Los slides ya están guardados en window._pendingCarruselSlides desde antes de closeModal
@@ -8845,6 +8850,7 @@ async function generarReelDesdeEditor() {
     link_diseno: $('f_link_diseno').value,
     link_multimedia: $('f_link_multimedia').value,
     estado: $('f_estado').value,
+    descripcion_visual: $('f_descripcion_visual') ? $('f_descripcion_visual').value : '',
     notas: $('f_notas').value,
     postId: window._postModalEditingId || null,
   };
@@ -8993,6 +8999,7 @@ async function aceptarReel() {
       if ($('f_cta') && saved.cta) $('f_cta').value = saved.cta;
       if ($('f_link_diseno') && saved.link_diseno) $('f_link_diseno').value = saved.link_diseno;
       if ($('f_link_multimedia') && saved.link_multimedia) $('f_link_multimedia').value = saved.link_multimedia;
+          if ($('f_descripcion_visual') && saved.descripcion_visual) $('f_descripcion_visual').value = saved.descripcion_visual;
       if ($('f_estado') && saved.estado) $('f_estado').value = saved.estado;
       if ($('f_notas') && saved.notas) $('f_notas').value = saved.notas;
       // El guión ya está guardado en window._pendingReelGuion desde antes de closeModal
@@ -12121,6 +12128,7 @@ function generarExcelPlanning(cliente, posts, desde, hasta, estilo, incluirInter
       fila['Contenido / Guión / Slides'] = contenidoDetallado;
       fila['CTA'] = p.cta || '';
       fila['Hashtags'] = p.hashtags || '';
+      fila['Descripción visual / Guión'] = p.descripcion_visual || '';
 
       if (incluirInternas) {
         fila['Notas internas'] = (p.notas && !p.notas.startsWith('CARRUSEL_SLIDES:') &&
@@ -12147,6 +12155,7 @@ function generarExcelPlanning(cliente, posts, desde, hasta, estilo, incluirInter
       lineas.forEach(l => { if (l.length > maxLen) maxLen = Math.min(l.length, 60); });
     });
     if (col === 'Contenido / Guión / Slides') return { wch: 60 };
+    if (col === 'Descripción visual / Guión') return { wch: 50 };
     if (col === 'Hook' || col === 'Título') return { wch: 35 };
     if (col === 'CTA' || col === 'Hashtags' || col === 'Notas internas') return { wch: 25 };
     return { wch: Math.max(headerLen + 2, Math.min(maxLen + 2, 25)) };
