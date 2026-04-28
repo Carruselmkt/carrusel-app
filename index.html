@@ -377,6 +377,42 @@
   .calendar-post.aprobada { border-left-color: var(--verde); background: #e6f4ef; }
   .calendar-post.publicada { border-left-color: #1d6b4e; background: #d4e9e0; }
 
+  /* ===== DRAG & DROP en calendario ===== */
+  .calendar-post[draggable="true"] { cursor: grab; }
+  .calendar-post[draggable="true"]:active { cursor: grabbing; }
+  .calendar-post.dragging { opacity: 0.4; }
+  .calendar-day { position: relative; }
+  .calendar-day.drag-active { background: #fafafa; }
+  .calendar-day.drag-over {
+    background: #fef0f7 !important;
+    box-shadow: inset 0 0 0 2px var(--fucsia);
+  }
+  .calendar-day-add {
+    position: absolute; top: 4px; right: 4px;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: rgba(186, 13, 102, 0.08); color: var(--fucsia);
+    font-size: 14px; font-weight: 700; line-height: 16px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; opacity: 0; transition: opacity 0.15s, background 0.15s;
+  }
+  .calendar-day:hover .calendar-day-add { opacity: 1; }
+  .calendar-day-add:hover { background: var(--fucsia); color: #fff; }
+
+  /* ===== Selector de ideas para un día ===== */
+  .selector-idea-card {
+    display: flex; align-items: center;
+    padding: 10px 12px;
+    background: #fff; border: 1px solid var(--gris-border);
+    border-radius: 8px; cursor: pointer;
+    transition: all 0.12s;
+  }
+  .selector-idea-card:hover {
+    border-color: var(--fucsia);
+    background: linear-gradient(135deg, #fef8fb 0%, #ffffff 100%);
+    box-shadow: 0 2px 6px rgba(186, 13, 102, 0.08);
+    transform: translateX(2px);
+  }
+
   /* ===== VISTA CARDS (tipo Kalend) ===== */
   .cal-view-toggle {
     display: inline-flex; gap: 2px;
@@ -6376,9 +6412,13 @@ async function renderTabCalendario() {
   $('tabContent').innerHTML = `<div class="loading"><div class="spinner"></div>Cargando calendario...</div>`;
 
   try {
-    const { data } = await sheetRead('Calendario');
-    const posts = data.filter(p => p.cliente_id === cliente.id);
+    const [calRes, ideasRes] = await Promise.all([
+      sheetRead('Calendario'),
+      sheetRead('Ideas'),
+    ]);
+    const posts = calRes.data.filter(p => p.cliente_id === cliente.id);
     state.calendario = posts;
+    state.ideas = ideasRes.data.filter(i => i.cliente_id === cliente.id);
 
     const year = state.calendarDate.getFullYear();
     const month = state.calendarDate.getMonth();
@@ -6454,13 +6494,27 @@ function renderCalendarioGrilla(posts, year, month) {
     const isToday = d.getTime() === today.getTime();
     const dayPosts = posts.filter(p => p.fecha_publicacion === dateStr);
     const postsHtml = dayPosts.map(p => `
-      <div class="calendar-post ${(p.estado || 'idea').toLowerCase()}" onclick="event.stopPropagation(); openPostModal('${esc(p.id)}')" title="${esc(p.titulo || p.hook || 'Sin título')}">
+      <div class="calendar-post ${(p.estado || 'idea').toLowerCase()}"
+        draggable="true"
+        ondragstart="onDragStartPost(event, '${esc(p.id)}')"
+        ondragend="onDragEndPost(event)"
+        onclick="event.stopPropagation(); openPostModal('${esc(p.id)}')"
+        title="${esc(p.titulo || p.hook || 'Sin título')} (arrastrá para mover de día)">
         ${esc(p.titulo || p.hook || '(sin título)')}
       </div>`).join('');
+    // Si la celda tiene posts, el clic en el espacio vacío también abre el selector de ideas;
+    // si no tiene posts, todo el cuadro abre el selector.
+    const tieneAlgo = dayPosts.length > 0;
     dayCells += `
-      <div class="calendar-day ${isOtherMonth ? 'other-month' : ''} ${isToday ? 'today' : ''}" onclick="openPostModal(null, '${dateStr}')">
+      <div class="calendar-day ${isOtherMonth ? 'other-month' : ''} ${isToday ? 'today' : ''}"
+        data-fecha="${dateStr}"
+        ondragover="onDragOverDay(event)"
+        ondragleave="onDragLeaveDay(event)"
+        ondrop="onDropDay(event, '${dateStr}')"
+        onclick="${tieneAlgo ? '' : `abrirSelectorIdeasParaDia('${dateStr}')`}">
         <div class="calendar-day-num">${d.getDate()}</div>
         ${postsHtml}
+        ${tieneAlgo ? `<div class="calendar-day-add" onclick="event.stopPropagation(); abrirSelectorIdeasParaDia('${dateStr}')" title="Agregar publicación">+</div>` : ''}
       </div>`;
   }
 
@@ -6490,6 +6544,210 @@ function toLocalISODate(d) {
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
+}
+
+// ============================================================================
+// DRAG & DROP: mover publicaciones entre días arrastrándolas
+// ============================================================================
+function onDragStartPost(ev, postId) {
+  ev.dataTransfer.setData('text/plain', postId);
+  ev.dataTransfer.effectAllowed = 'move';
+  ev.target.classList.add('dragging');
+  // Atenuar levemente el resto de las celdas mientras arrastrás
+  setTimeout(() => document.querySelectorAll('.calendar-day').forEach(c => c.classList.add('drag-active')), 0);
+}
+
+function onDragEndPost(ev) {
+  ev.target.classList.remove('dragging');
+  document.querySelectorAll('.calendar-day').forEach(c => {
+    c.classList.remove('drag-active');
+    c.classList.remove('drag-over');
+  });
+}
+
+function onDragOverDay(ev) {
+  ev.preventDefault();
+  ev.dataTransfer.dropEffect = 'move';
+  ev.currentTarget.classList.add('drag-over');
+}
+
+function onDragLeaveDay(ev) {
+  // currentTarget puede salir y entrar varias veces por el bubbling de hijos
+  if (!ev.currentTarget.contains(ev.relatedTarget)) {
+    ev.currentTarget.classList.remove('drag-over');
+  }
+}
+
+async function onDropDay(ev, fechaDestino) {
+  ev.preventDefault();
+  ev.currentTarget.classList.remove('drag-over');
+  const postId = ev.dataTransfer.getData('text/plain');
+  if (!postId) return;
+  const post = state.calendario.find(p => p.id === postId);
+  if (!post) return;
+  if (post.fecha_publicacion === fechaDestino) return; // mismo día, no hace falta nada
+
+  // Optimistic UI: actualizo en memoria y refresco antes de confirmar el guardado en sheets
+  const fechaOriginal = post.fecha_publicacion;
+  post.fecha_publicacion = fechaDestino;
+  renderTabCalendario();
+
+  try {
+    await sheetUpdate('Calendario', postId, { fecha_publicacion: fechaDestino });
+    showToast(`Movido a ${formatDateEs(fechaDestino)}`, 'success');
+  } catch (e) {
+    // Si falla, vuelvo atrás
+    post.fecha_publicacion = fechaOriginal;
+    renderTabCalendario();
+    showToast('Error al mover: ' + e.message, 'error');
+  }
+}
+
+// ============================================================================
+// SELECTOR DE IDEAS PARA UN DÍA: clic en día vacío → elegir idea sin agendar
+// ============================================================================
+function abrirSelectorIdeasParaDia(fecha) {
+  const ideasCliente = (state.ideas || []).filter(i => (i.estado || 'Sin usar') === 'Sin usar');
+
+  // Pilares disponibles para filtrar
+  const pilaresUnicos = ['Todos', ...new Set(ideasCliente.map(i => i.pilar).filter(Boolean))];
+  if (!state._selectorIdeasFiltro) state._selectorIdeasFiltro = 'Todos';
+
+  $('modal').className = 'modal modal-lg';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>📅 ${esc(formatDateEs(fecha))}</h2>
+      <button class="btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="color: var(--gris-text-soft); font-size: 13px; margin-bottom: 14px;">
+        Elegí una idea del banco para agendar este día, o creá una publicación nueva desde cero.
+      </p>
+
+      <div style="display: flex; gap: 8px; margin-bottom: 14px;">
+        <button class="btn btn-primary btn-sm" onclick="closeModal(); openPostModal(null, '${esc(fecha)}')" style="flex: 1;">
+          ✏️ Crear publicación nueva
+        </button>
+      </div>
+
+      ${ideasCliente.length === 0 ? `
+        <div style="text-align: center; padding: 28px 16px; background: var(--gris-bg); border-radius: 8px;">
+          <p style="color: var(--gris-text-soft); font-size: 13px; margin: 0;">
+            No hay ideas sin usar en el banco de este cliente.
+          </p>
+          <p style="color: var(--gris-text-muted); font-size: 12px; margin-top: 6px;">
+            Las ideas sin agendar aparecen acá. Generá ideas desde la pestaña "Banco de ideas".
+          </p>
+        </div>
+      ` : `
+        <div style="border-top: 1px solid var(--gris-border); padding-top: 12px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+            <strong style="font-size: 13px;">💡 Ideas sin usar (${ideasCliente.length})</strong>
+            ${pilaresUnicos.length > 1 ? `
+              <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                ${pilaresUnicos.map(pil => `
+                  <button class="idea-filter ${state._selectorIdeasFiltro === pil ? 'active' : ''}"
+                    onclick="filtrarSelectorIdeas('${esc(pil)}', '${esc(fecha)}')"
+                    style="font-size: 11px; padding: 3px 8px;">
+                    ${esc(pil)}
+                  </button>
+                `).join('')}
+              </div>
+            ` : ''}
+          </div>
+          <div id="selectorIdeasLista" style="max-height: 50vh; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
+            ${renderListaSelectorIdeas(ideasCliente, fecha)}
+          </div>
+        </div>
+      `}
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+    </div>`;
+  $('modalOverlay').classList.add('active');
+}
+
+function renderListaSelectorIdeas(ideasCliente, fecha) {
+  const filtro = state._selectorIdeasFiltro || 'Todos';
+  const ideasFiltradas = filtro === 'Todos' ? ideasCliente : ideasCliente.filter(i => i.pilar === filtro);
+
+  if (ideasFiltradas.length === 0) {
+    return `<p style="font-size: 12.5px; color: var(--gris-text-muted); padding: 12px;">No hay ideas con ese pilar.</p>`;
+  }
+
+  return ideasFiltradas.map(idea => {
+    const tieneCopy = idea.copy && idea.copy.trim();
+    const formato = idea.formato || 'Post';
+    const pilar = idea.pilar || '';
+    return `
+      <div class="selector-idea-card" onclick="agendarIdeaEnFecha('${esc(idea.id)}', '${esc(fecha)}')">
+        <div style="flex: 1; min-width: 0;">
+          <div style="font-size: 13px; font-weight: 600; color: #2a2a2a; line-height: 1.3;">
+            ${esc(idea.titulo || '(sin título)')}
+          </div>
+          ${idea.hook ? `<div style="font-size: 11.5px; color: var(--gris-text-soft); margin-top: 3px; font-style: italic;">"${esc(idea.hook)}"</div>` : ''}
+          <div style="display: flex; gap: 6px; margin-top: 5px; flex-wrap: wrap;">
+            <span style="font-size: 10px; padding: 1px 6px; background: var(--fucsia); color: #fff; border-radius: 3px; font-weight: 600;">${esc(formato)}</span>
+            ${pilar ? `<span style="font-size: 10px; padding: 1px 6px; background: var(--petroleo); color: #fff; border-radius: 3px; font-weight: 600;">${esc(pilar)}</span>` : ''}
+            ${!tieneCopy ? `<span style="font-size: 10px; padding: 1px 6px; background: #fff4e0; color: #8a6a20; border-radius: 3px; font-weight: 600;">sin copy</span>` : ''}
+          </div>
+        </div>
+        <div style="font-size: 18px; color: var(--fucsia); padding-left: 10px;">→</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function filtrarSelectorIdeas(pilar, fecha) {
+  state._selectorIdeasFiltro = pilar;
+  // Re-render solo del bloque de ideas + botones de filtro
+  abrirSelectorIdeasParaDia(fecha);
+}
+
+// Variante de confirmarAgendarIdea para usar desde el selector del día (sin pedir más datos)
+async function agendarIdeaEnFecha(ideaId, fecha) {
+  const idea = state.ideas.find(i => i.id === ideaId);
+  if (!idea) { showToast('Idea no encontrada', 'error'); return; }
+
+  const publicacion = {
+    id: genId('pub'),
+    cliente_id: state.currentClienteId,
+    fecha_publicacion: fecha,
+    hora: '',
+    red_social: 'Instagram',
+    formato: idea.formato || 'Post',
+    pilar: idea.pilar || '',
+    titulo: idea.titulo || '',
+    hook: idea.hook || '',
+    copy: idea.copy || '',
+    hashtags: idea.hashtags || '',
+    cta: idea.cta || '',
+    estado: 'Borrador',
+    idea_id: ideaId,
+  };
+
+  // Mismo traspaso de notas especiales (carrusel, reel, historias, anuncio)
+  if (idea.notas && typeof idea.notas === 'string') {
+    if (idea.notas.startsWith('CARRUSEL_SLIDES:')) {
+      publicacion.carrusel_slides = idea.notas.substring('CARRUSEL_SLIDES:'.length);
+    } else if (idea.notas.startsWith('REEL_GUION:')) {
+      publicacion.reel_guion = idea.notas.substring('REEL_GUION:'.length);
+    } else if (idea.notas.startsWith('HISTORIAS_SECUENCIA:')) {
+      publicacion.historias_secuencia = idea.notas.substring('HISTORIAS_SECUENCIA:'.length);
+    } else if (idea.notas.startsWith('ANUNCIO_META:')) {
+      publicacion.anuncio_meta = idea.notas.substring('ANUNCIO_META:'.length);
+    }
+  }
+
+  try {
+    await Promise.all([
+      sheetAppend('Calendario', publicacion),
+      sheetUpdate('Ideas', ideaId, { estado: 'Agendada' }),
+    ]);
+    closeModal();
+    showToast(`Agendada para ${formatDateEs(fecha)}`, 'success');
+    renderTabCalendario();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
 }
 
 // ============================================================================
