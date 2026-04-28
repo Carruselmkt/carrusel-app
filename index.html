@@ -5035,14 +5035,16 @@ async function renderTabIdeas() {
   $('tabContent').innerHTML = `<div class="loading"><div class="spinner"></div>Cargando banco de ideas...</div>`;
 
   try {
-    // Cargar ideas + briefs + estrategias en paralelo (los necesito para generar)
-    const [ideasRes, briefsRes, estrategiasRes] = await Promise.all([
-      sheetRead('Ideas'),
+    // Modelo unificado: las "ideas" viven ahora en la tabla Calendario.
+    // Una "idea" es un registro sin fecha_publicacion o con estado 'Idea'.
+    const [calRes, briefsRes, estrategiasRes] = await Promise.all([
+      sheetRead('Calendario'),
       sheetRead('Briefs'),
       sheetRead('Estrategias'),
     ]);
-    const ideas = ideasRes.data.filter(i => i.cliente_id === cliente.id);
+    const ideas = calRes.data.filter(i => i.cliente_id === cliente.id);
     state.ideas = ideas;
+    state.calendario = ideas; // mismo array, una sola fuente de verdad
     state.briefs = briefsRes.data;
     state.estrategias = estrategiasRes.data.filter(e => e.cliente_id === cliente.id);
 
@@ -5057,27 +5059,39 @@ function renderIdeasList() {
   const estrategiaActiva = state.estrategias.find(e => e.cliente_id === state.currentClienteId && (e.estado || 'Activa') === 'Activa' && e.tipo === 'Principal');
   const pilares = estrategiaActiva ? parseJsonSafe(estrategiaActiva.pilares_json) : [];
 
+  // En el modelo unificado: una idea está "sin usar" si no tiene fecha_publicacion.
+  // El estado 'Idea' o el campo estado vacío son equivalentes.
+  // Si tiene fecha y no está publicada → "Agendada".
+  // Helper:
+  const esIdeaSinAgendar = (i) => !i.fecha_publicacion;
+  const esAgendadaNoPublicada = (i) => !!i.fecha_publicacion && i.estado !== 'Publicada';
+  const esPublicada = (i) => i.estado === 'Publicada';
+
   // Aplicar filtros
   let ideasFiltradas = [...state.ideas];
   if (ideaFilters.pilar !== 'todos') ideasFiltradas = ideasFiltradas.filter(i => i.pilar === ideaFilters.pilar);
   if (ideaFilters.formato !== 'todos') ideasFiltradas = ideasFiltradas.filter(i => i.formato === ideaFilters.formato);
-  if (ideaFilters.estado !== 'todos') ideasFiltradas = ideasFiltradas.filter(i => (i.estado || 'Sin usar') === ideaFilters.estado);
+  if (ideaFilters.estado === 'Sin usar') ideasFiltradas = ideasFiltradas.filter(esIdeaSinAgendar);
+  else if (ideaFilters.estado === 'Agendada') ideasFiltradas = ideasFiltradas.filter(esAgendadaNoPublicada);
+  else if (ideaFilters.estado === 'Publicada') ideasFiltradas = ideasFiltradas.filter(esPublicada);
 
-  // Ordenar: sin usar primero, después por fecha
+  // Ordenar: sin agendar primero, después por fecha
   ideasFiltradas.sort((a, b) => {
-    const orden = { 'Sin usar': 0, 'Agendada': 1, 'Publicada': 2 };
-    const oA = orden[a.estado || 'Sin usar'] ?? 3;
-    const oB = orden[b.estado || 'Sin usar'] ?? 3;
+    const oA = esIdeaSinAgendar(a) ? 0 : esAgendadaNoPublicada(a) ? 1 : 2;
+    const oB = esIdeaSinAgendar(b) ? 0 : esAgendadaNoPublicada(b) ? 1 : 2;
     if (oA !== oB) return oA - oB;
-    return (b.fecha_creada || '').localeCompare(a.fecha_creada || '');
+    // Dentro del mismo grupo: por fecha de creación o publicación, más reciente primero
+    const fechaA = a.fecha_publicacion || a.fecha_creada || '';
+    const fechaB = b.fecha_publicacion || b.fecha_creada || '';
+    return fechaB.localeCompare(fechaA);
   });
 
   // Stats
   const stats = {
     total: state.ideas.length,
-    sinUsar: state.ideas.filter(i => (i.estado || 'Sin usar') === 'Sin usar').length,
-    agendadas: state.ideas.filter(i => i.estado === 'Agendada').length,
-    publicadas: state.ideas.filter(i => i.estado === 'Publicada').length,
+    sinUsar: state.ideas.filter(esIdeaSinAgendar).length,
+    agendadas: state.ideas.filter(esAgendadaNoPublicada).length,
+    publicadas: state.ideas.filter(esPublicada).length,
   };
 
   // Filtros de pilar dinámicos
@@ -5148,8 +5162,13 @@ function setIdeaFilter(tipo, valor) {
 }
 
 function renderIdeaCard(idea) {
-  const estado = idea.estado || 'Sin usar';
-  const estadoClase = estado.toLowerCase().replace(/ /g, '-');
+  // En el modelo unificado, el estado visual depende de si está agendada
+  const estaPublicada = idea.estado === 'Publicada';
+  const estaAgendada = !!idea.fecha_publicacion && !estaPublicada;
+  const sinAgendar = !idea.fecha_publicacion;
+
+  const estadoVisible = estaPublicada ? 'Publicada' : estaAgendada ? 'Agendada' : 'Sin usar';
+  const estadoClase = estadoVisible.toLowerCase().replace(/ /g, '-');
   const tieneCopyDesarrollado = idea.copy && idea.copy.trim();
 
   // Detectar si tiene carrusel, reel, secuencia de historias o anuncio Meta guardados en notas
@@ -5193,7 +5212,7 @@ function renderIdeaCard(idea) {
       ` : ''}
       <div class="idea-header">
         <div class="idea-title">${esc(idea.titulo || '(sin título)')}</div>
-        <span class="badge badge-${estado === 'Sin usar' ? 'idea' : estado === 'Agendada' ? 'revision' : 'publicada'}">${esc(estado)}</span>
+        <span class="badge badge-${estadoVisible === 'Sin usar' ? 'idea' : estadoVisible === 'Agendada' ? 'revision' : 'publicada'}">${esc(estadoVisible)}${estaAgendada && idea.fecha_publicacion ? ` · ${formatDateEs(idea.fecha_publicacion)}` : ''}</span>
       </div>
 
       <div class="idea-meta">
@@ -5208,7 +5227,7 @@ function renderIdeaCard(idea) {
       </div>
 
       ${idea.hook ? `<div class="idea-hook">"${esc(idea.hook)}"</div>` : ''}
-      ${idea.idea && idea.idea !== idea.titulo && !tieneCarrusel && !tieneReel && !tieneHistorias && !tieneAnuncioMeta ? `<div class="idea-descripcion">${esc(idea.idea)}</div>` : ''}
+      ${(idea.idea_text || idea.idea) && (idea.idea_text || idea.idea) !== idea.titulo && !tieneCarrusel && !tieneReel && !tieneHistorias && !tieneAnuncioMeta ? `<div class="idea-descripcion">${esc(idea.idea_text || idea.idea)}</div>` : ''}
 
       ${tieneCopyDesarrollado ? `
         <details style="margin-bottom: 10px;">
@@ -5241,14 +5260,36 @@ function renderIdeaCard(idea) {
       ` : ''}
 
       <div class="idea-actions">
-        ${estado !== 'Publicada' ? `
+        ${!estaPublicada ? `
           ${!tieneCopyDesarrollado && !tieneCarrusel && !tieneReel && !tieneHistorias && !tieneAnuncioMeta ? `<button class="gen-btn gen-btn-small" onclick="desarrollarIdea('${esc(idea.id)}')">✨ Desarrollar copy</button>` : ''}
-          ${estado !== 'Agendada' ? `<button class="btn btn-primary btn-sm" onclick="agendarIdea('${esc(idea.id)}')">📅 Agendar</button>` : ''}
+          ${sinAgendar ? `<button class="btn btn-primary btn-sm" onclick="agendarIdea('${esc(idea.id)}')">📅 Agendar</button>` : ''}
         ` : ''}
         <button class="btn btn-secondary btn-sm" onclick="openIdeaModal('${esc(idea.id)}')">✏️ Editar</button>
+        <button class="btn-ghost btn-sm" onclick="duplicarIdea('${esc(idea.id)}')" title="Crear una copia sin agendar para reutilizar">📋 Duplicar</button>
         <button class="btn-ghost btn-danger btn-sm" onclick="confirmDeleteIdea('${esc(idea.id)}', '${esc((idea.titulo || '').replace(/'/g, "\\'"))}')">🗑</button>
       </div>
     </div>`;
+}
+
+// Duplicar una idea: crea una copia "sin usar" para reutilizar en otra fecha sin pisar la original
+async function duplicarIdea(ideaId) {
+  const original = state.ideas.find(i => i.id === ideaId);
+  if (!original) { showToast('Idea no encontrada', 'error'); return; }
+
+  const copia = { ...original };
+  copia.id = genId('idea');
+  copia.fecha_publicacion = '';
+  copia.hora = '';
+  copia.estado = 'Idea';
+  copia.titulo = (original.titulo || '') + ' (copia)';
+  copia.fecha_creada = todayISO();
+  copia.idea_id = ''; // quitar referencia vieja si la hubiera
+
+  try {
+    await sheetAppend('Calendario', copia);
+    showToast('Idea duplicada', 'success');
+    renderTabIdeas();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
 }
 
 // Ver el carrusel guardado en una idea (solo lectura con opción de cerrar)
@@ -5392,7 +5433,7 @@ function openIdeaModal(id = null) {
       </div>
       <div class="form-row">
         <label class="form-label">Descripción / Idea</label>
-        <textarea class="form-textarea" id="f_idea" placeholder="Desarrollo de la idea, qué contar, ángulo...">${esc(idea.idea || '')}</textarea>
+        <textarea class="form-textarea" id="f_idea" placeholder="Desarrollo de la idea, qué contar, ángulo...">${esc(idea.idea_text || idea.idea || '')}</textarea>
       </div>
       ${idea.copy ? `
         <div class="form-row">
@@ -5413,10 +5454,13 @@ function openIdeaModal(id = null) {
       <div class="form-row">
         <label class="form-label">Estado</label>
         <select class="form-select" id="f_estado">
-          <option value="Sin usar" ${(idea.estado || 'Sin usar') === 'Sin usar' ? 'selected' : ''}>Sin usar</option>
-          <option value="Agendada" ${idea.estado === 'Agendada' ? 'selected' : ''}>Agendada</option>
+          <option value="Idea" ${(!idea.estado || idea.estado === 'Sin usar' || idea.estado === 'Idea') ? 'selected' : ''}>Idea (sin agendar)</option>
+          <option value="Borrador" ${idea.estado === 'Borrador' ? 'selected' : ''}>Borrador</option>
+          <option value="En revisión" ${idea.estado === 'En revisión' ? 'selected' : ''}>En revisión</option>
+          <option value="Aprobada" ${idea.estado === 'Aprobada' ? 'selected' : ''}>Aprobada</option>
           <option value="Publicada" ${idea.estado === 'Publicada' ? 'selected' : ''}>Publicada</option>
         </select>
+        ${idea.fecha_publicacion ? `<div style="font-size: 11.5px; color: var(--gris-text-muted); margin-top: 4px;">📅 Agendada para ${formatDateEs(idea.fecha_publicacion)}. Para mover de fecha, usá el calendario.</div>` : ''}
       </div>
       <div class="form-row">
         <label class="form-label">Notas</label>
@@ -5436,31 +5480,50 @@ async function saveIdea(id) {
   if (!titulo) { showToast('El título es obligatorio', 'error'); return; }
   const idea = id ? state.ideas.find(i => i.id === id) : {};
 
+  // En el modelo unificado, una idea es un registro de Calendario sin fecha_publicacion (o con estado 'Idea').
   const data = {
     cliente_id: state.currentClienteId,
     titulo,
     pilar: $('f_pilar').value,
     formato: $('f_formato').value,
     hook: $('f_hook').value.trim(),
-    idea: $('f_idea').value.trim(),
-    estado: $('f_estado').value,
     notas: $('f_notas').value.trim(),
   };
 
-  // Si existe copy y el modal lo mostró, también guardarlo
+  // Si el form tiene un campo "idea/descripción", lo guardo en notas (compatibilidad)
+  // Solo si notas no está siendo usado para CARRUSEL_SLIDES/REEL_GUION/etc.
+  if ($('f_idea')) {
+    const ideaText = $('f_idea').value.trim();
+    if (ideaText && !data.notas.match(/^(CARRUSEL_SLIDES|REEL_GUION|HISTORIAS_SECUENCIA|ANUNCIO_META):/)) {
+      data.idea_text = ideaText;
+    }
+  }
+
+  // Mapear estado: si es nueva o estaba como 'Sin usar', dejarla como 'Idea' (sin agendar).
+  // Si ya estaba agendada, respetar lo que viniera.
+  if ($('f_estado')) {
+    const valorEstado = $('f_estado').value;
+    // 'Sin usar' del modelo viejo → 'Idea' del nuevo
+    data.estado = valorEstado === 'Sin usar' ? 'Idea' : valorEstado;
+  } else {
+    data.estado = idea.estado || 'Idea';
+  }
+
+  // Copy / hashtags / cta si están en el form
   if ($('f_copy')) data.copy = $('f_copy').value.trim();
   if ($('f_hashtags')) data.hashtags = $('f_hashtags').value.trim();
   if ($('f_cta')) data.cta = $('f_cta').value.trim();
 
   try {
     if (id) {
-      await sheetUpdate('Ideas', id, data);
+      await sheetUpdate('Calendario', id, data);
       showToast('Idea actualizada', 'success');
     } else {
       data.id = genId('idea');
       data.fecha_creada = todayISO();
       data.origen = 'Manual';
-      await sheetAppend('Ideas', data);
+      data.fecha_publicacion = ''; // explícitamente sin fecha
+      await sheetAppend('Calendario', data);
       showToast('Idea creada', 'success');
     }
     closeModal();
@@ -5482,7 +5545,7 @@ function confirmDeleteIdea(id, titulo) {
 
 async function deleteIdea(id) {
   try {
-    await sheetDelete('Ideas', id);
+    await sheetDelete('Calendario', id);
     closeModal();
     showToast('Idea eliminada', 'success');
     renderTabIdeas();
@@ -5804,7 +5867,7 @@ function mostrarPreviewIdeas(ideas) {
           ${idea.formato ? `<span class="idea-chip formato">${esc(idea.formato)}</span>` : ''}
         </div>
         ${idea.hook ? `<div style="font-size: 12.5px; font-style: italic; color: var(--fucsia); margin-bottom: 4px;">"${esc(idea.hook)}"</div>` : ''}
-        ${idea.idea ? `<div style="font-size: 12.5px; color: var(--gris-text-soft);">${esc(idea.idea)}</div>` : ''}
+        ${(idea.idea_text || idea.idea) ? `<div style="font-size: 12.5px; color: var(--gris-text-soft);">${esc(idea.idea_text || idea.idea)}</div>` : ''}
       </div>
     </div>
   `).join('');
@@ -5850,7 +5913,7 @@ async function aceptarIdeasGeneradas() {
 
   try {
     for (const idea of seleccionadas) {
-      await sheetAppend('Ideas', {
+      await sheetAppend('Calendario', {
         id: genId('idea'),
         cliente_id: state.currentClienteId,
         fecha_creada: todayISO(),
@@ -5859,7 +5922,7 @@ async function aceptarIdeasGeneradas() {
         formato: idea.formato || '',
         hook: idea.hook || '',
         idea: idea.idea || '',
-        estado: 'Sin usar',
+        estado: 'Idea',
         origen: 'IA',
       });
     }
@@ -5898,7 +5961,7 @@ async function desarrollarIdea(ideaId) {
     onAccept: async (copyData) => {
       // Actualizar la idea existente con el copy
       try {
-        await sheetUpdate('Ideas', ideaId, {
+        await sheetUpdate('Calendario', ideaId, {
           copy: copyData.copy || '',
           hashtags: copyData.hashtags || '',
           cta: copyData.cta || '',
@@ -6107,41 +6170,16 @@ async function confirmarAgendarIdea(ideaId) {
   const fecha = $('f_agendar_fecha').value;
   if (!fecha) { showToast('Elegí una fecha', 'error'); return; }
 
-  const publicacion = {
-    id: genId('pub'),
-    cliente_id: state.currentClienteId,
+  // En el modelo unificado, agendar = actualizar el mismo registro con la fecha y otros datos
+  const updates = {
     fecha_publicacion: fecha,
     hora: $('f_agendar_hora').value,
     red_social: $('f_agendar_red').value,
-    formato: idea.formato || 'Post',
-    pilar: idea.pilar || '',
-    titulo: idea.titulo || '',
-    hook: idea.hook || '',
-    copy: idea.copy || '',
-    hashtags: idea.hashtags || '',
-    cta: idea.cta || '',
     estado: 'Borrador',
-    idea_id: ideaId,
   };
 
-  // Si la idea tiene carrusel, reel, historias o anuncio Meta guardado en notas, traspasarlo a la publicación
-  if (idea.notas && typeof idea.notas === 'string') {
-    if (idea.notas.startsWith('CARRUSEL_SLIDES:')) {
-      publicacion.carrusel_slides = idea.notas.substring('CARRUSEL_SLIDES:'.length);
-    } else if (idea.notas.startsWith('REEL_GUION:')) {
-      publicacion.reel_guion = idea.notas.substring('REEL_GUION:'.length);
-    } else if (idea.notas.startsWith('HISTORIAS_SECUENCIA:')) {
-      publicacion.historias_secuencia = idea.notas.substring('HISTORIAS_SECUENCIA:'.length);
-    } else if (idea.notas.startsWith('ANUNCIO_META:')) {
-      publicacion.anuncio_meta = idea.notas.substring('ANUNCIO_META:'.length);
-    }
-  }
-
   try {
-    await Promise.all([
-      sheetAppend('Calendario', publicacion),
-      sheetUpdate('Ideas', ideaId, { estado: 'Agendada' }),
-    ]);
+    await sheetUpdate('Calendario', ideaId, updates);
     closeModal();
     showToast(`Agendada para ${formatDateEs(fecha)}`, 'success');
     renderTabIdeas();
@@ -6412,13 +6450,14 @@ async function renderTabCalendario() {
   $('tabContent').innerHTML = `<div class="loading"><div class="spinner"></div>Cargando calendario...</div>`;
 
   try {
-    const [calRes, ideasRes] = await Promise.all([
-      sheetRead('Calendario'),
-      sheetRead('Ideas'),
-    ]);
-    const posts = calRes.data.filter(p => p.cliente_id === cliente.id);
-    state.calendario = posts;
-    state.ideas = ideasRes.data.filter(i => i.cliente_id === cliente.id);
+    // Modelo unificado: ideas y publicaciones son la misma tabla.
+    // Las "ideas" son registros sin fecha_publicacion / estado='Idea'.
+    const { data } = await sheetRead('Calendario');
+    const todos = data.filter(p => p.cliente_id === cliente.id);
+    // Para la grilla del calendario, solo nos interesan las que tienen fecha
+    const posts = todos.filter(p => p.fecha_publicacion);
+    state.calendario = todos;
+    state.ideas = todos; // mismo array
 
     const year = state.calendarDate.getFullYear();
     const month = state.calendarDate.getMonth();
@@ -6709,41 +6748,13 @@ async function agendarIdeaEnFecha(ideaId, fecha) {
   const idea = state.ideas.find(i => i.id === ideaId);
   if (!idea) { showToast('Idea no encontrada', 'error'); return; }
 
-  const publicacion = {
-    id: genId('pub'),
-    cliente_id: state.currentClienteId,
-    fecha_publicacion: fecha,
-    hora: '',
-    red_social: 'Instagram',
-    formato: idea.formato || 'Post',
-    pilar: idea.pilar || '',
-    titulo: idea.titulo || '',
-    hook: idea.hook || '',
-    copy: idea.copy || '',
-    hashtags: idea.hashtags || '',
-    cta: idea.cta || '',
-    estado: 'Borrador',
-    idea_id: ideaId,
-  };
-
-  // Mismo traspaso de notas especiales (carrusel, reel, historias, anuncio)
-  if (idea.notas && typeof idea.notas === 'string') {
-    if (idea.notas.startsWith('CARRUSEL_SLIDES:')) {
-      publicacion.carrusel_slides = idea.notas.substring('CARRUSEL_SLIDES:'.length);
-    } else if (idea.notas.startsWith('REEL_GUION:')) {
-      publicacion.reel_guion = idea.notas.substring('REEL_GUION:'.length);
-    } else if (idea.notas.startsWith('HISTORIAS_SECUENCIA:')) {
-      publicacion.historias_secuencia = idea.notas.substring('HISTORIAS_SECUENCIA:'.length);
-    } else if (idea.notas.startsWith('ANUNCIO_META:')) {
-      publicacion.anuncio_meta = idea.notas.substring('ANUNCIO_META:'.length);
-    }
-  }
-
+  // Modelo unificado: actualizar el registro existente con la fecha
   try {
-    await Promise.all([
-      sheetAppend('Calendario', publicacion),
-      sheetUpdate('Ideas', ideaId, { estado: 'Agendada' }),
-    ]);
+    await sheetUpdate('Calendario', ideaId, {
+      fecha_publicacion: fecha,
+      red_social: idea.red_social || 'Instagram',
+      estado: 'Borrador',
+    });
     closeModal();
     showToast(`Agendada para ${formatDateEs(fecha)}`, 'success');
     renderTabCalendario();
@@ -7721,12 +7732,12 @@ async function guardarStorytellingComoIdea() {
     hook: hook,
     idea: `Storytelling · Propósito: ${propositoLabels[ctx.proposito]} · ${piezas.length} piezas`,
     notas: notas,
-    estado: 'Sin usar',
+    estado: 'Idea',
     origen: 'IA',
   };
 
   try {
-    await sheetAppend('Ideas', idea);
+    await sheetAppend('Calendario', idea);
     closeModal();
     showToast(`✓ Storytelling guardado en el banco de ideas de ${cliente.nombre}`, 'success');
     // Si estoy en el cliente, recargar la solapa de ideas
@@ -8280,12 +8291,12 @@ async function guardarAnuncioMetaComoIdea() {
     hook: (variantesEditadas[0] && variantesEditadas[0].hook) || '',
     idea: `Anuncio Meta · ${faseLabels[ctx.fase]} · ${dataFinal.variantes.length} variantes · ${ctx.ubicaciones.join(', ')}`,
     notas: 'ANUNCIO_META:' + JSON.stringify({ ...dataFinal, fase: ctx.fase, objetivo: ctx.objetivo, producto: ctx.producto, oferta: ctx.oferta, ubicaciones: ctx.ubicaciones }),
-    estado: 'Sin usar',
+    estado: 'Idea',
     origen: 'IA',
   };
 
   try {
-    await sheetAppend('Ideas', idea);
+    await sheetAppend('Calendario', idea);
     closeModal();
     showToast(`✓ Anuncio (${dataFinal.variantes.length} variantes) guardado en el banco`, 'success');
     if (state.currentClienteId === ctx.clienteId && state.currentClienteTab === 'ideas') {
@@ -8564,7 +8575,7 @@ async function generarCopyLibre({ clienteId, titulo, pilar, hook, contexto, estr
     onAccept: async (copyData) => {
       // Guardar en el banco de ideas
       try {
-        await sheetAppend('Ideas', {
+        await sheetAppend('Calendario', {
           id: genId('idea'),
           cliente_id: clienteId,
           fecha_creada: todayISO(),
@@ -8576,7 +8587,7 @@ async function generarCopyLibre({ clienteId, titulo, pilar, hook, contexto, estr
           copy: copyData.copy || '',
           hashtags: copyData.hashtags || '',
           cta: copyData.cta || '',
-          estado: 'Sin usar',
+          estado: 'Idea',
           origen: 'IA',
         });
         closeModal();
@@ -8689,7 +8700,7 @@ async function aceptarCarruselLibre() {
   const slides = extractCarruselFromDOM();
   const ctx = window._carruselLibreCtx;
   try {
-    await sheetAppend('Ideas', {
+    await sheetAppend('Calendario', {
       id: genId('idea'),
       cliente_id: ctx.clienteId,
       fecha_creada: todayISO(),
@@ -8699,7 +8710,7 @@ async function aceptarCarruselLibre() {
       hook: ctx.hook || '',
       idea: ctx.contexto || `Carrusel de ${slides.length} slides`,
       notas: 'CARRUSEL_SLIDES:' + JSON.stringify(slides), // guardamos los slides en notas como workaround
-      estado: 'Sin usar',
+      estado: 'Idea',
       origen: 'IA',
     });
     closeModal();
@@ -8804,7 +8815,7 @@ async function aceptarReelLibre() {
   const escenas = extractReelFromDOM();
   const ctx = window._reelLibreCtx;
   try {
-    await sheetAppend('Ideas', {
+    await sheetAppend('Calendario', {
       id: genId('idea'),
       cliente_id: ctx.clienteId,
       fecha_creada: todayISO(),
@@ -8814,7 +8825,7 @@ async function aceptarReelLibre() {
       hook: ctx.hook || '',
       idea: ctx.contexto || `Reel de ${escenas.length} escenas`,
       notas: 'REEL_GUION:' + JSON.stringify(escenas),
-      estado: 'Sin usar',
+      estado: 'Idea',
       origen: 'IA',
     });
     closeModal();
@@ -12488,7 +12499,7 @@ function generarExcelIdeas(cliente, ideas, incluirInternas) {
       'Pilar': idea.pilar || '',
       'Formato': idea.formato || '',
       'Hook': idea.hook || '',
-      'Idea / Descripción': idea.idea || '',
+      'Idea / Descripción': idea.idea_text || idea.idea || '',
       'Estado': idea.estado || 'Sin usar',
     };
 
@@ -14673,6 +14684,17 @@ async function renderConfig() {
         <button class="btn btn-secondary" onclick="verificarHojas()" style="margin-top: 6px;">Verificar que todas las hojas existan</button>
         <div id="verifyResult" style="margin-top: 10px;"></div>
       </div>
+      <div class="config-item">
+        <div class="config-label">Migración: unificar Ideas y Calendario</div>
+        <div style="font-size: 12.5px; color: var(--gris-text-soft); margin-top: 4px; line-height: 1.5;">
+          A partir de esta versión, las ideas y las publicaciones del calendario son el mismo registro. Esta migración:<br>
+          1️⃣ Mueve todas las filas de la hoja <code>Ideas</code> a <code>Calendario</code> (las que no estaban agendadas quedan con estado <code>Idea</code>).<br>
+          2️⃣ En las publicaciones que ya estaban agendadas a partir de una idea, conserva los datos completos del calendario y descarta la copia duplicada del banco.<br>
+          <strong style="color: var(--rojo);">Hacela una sola vez.</strong> Es seguro hacer una copia de la planilla antes (Archivo → Hacer una copia) si querés tener respaldo.
+        </div>
+        <button class="btn btn-secondary" onclick="ejecutarMigracionIdeasCalendario()" style="margin-top: 10px;">🔄 Ejecutar migración (una sola vez)</button>
+        <div id="migracionResult" style="margin-top: 10px;"></div>
+      </div>
     </div>
     <div class="card" style="margin-top: 20px;">
       <div class="card-title">Conexión con Claude (API)</div>
@@ -14837,6 +14859,122 @@ async function verificarHojas() {
       </div>
       ${status}`;
   } catch (e) { result.innerHTML = `<div style="color: var(--rojo);">Error: ${esc(e.message)}</div>`; }
+}
+
+// ============================================================================
+// MIGRACIÓN: Unificar Ideas y Calendario en una sola tabla
+// ============================================================================
+async function ejecutarMigracionIdeasCalendario() {
+  const result = $('migracionResult');
+
+  // Confirmación primero
+  if (!confirm('¿Confirmás ejecutar la migración? Es seguro pero se recomienda hacer una copia de respaldo de la planilla antes.\n\nEsta acción:\n• Mueve todas las ideas a la hoja Calendario\n• Elimina las filas duplicadas (ideas que ya estaban agendadas)\n• Vacía la hoja Ideas\n\nNo se puede deshacer desde la app.')) return;
+
+  result.innerHTML = '<div class="loading"><div class="spinner"></div>Migrando...</div>';
+
+  try {
+    // 1. Leer ambas tablas
+    const [ideasRes, calRes] = await Promise.all([
+      sheetRead('Ideas'),
+      sheetRead('Calendario'),
+    ]);
+    const ideas = ideasRes.data;
+    const publicaciones = calRes.data;
+
+    // 2. Crear set de idea_id que ya están en calendario (estos son los duplicados)
+    const idsAgendados = new Set(
+      publicaciones.filter(p => p.idea_id).map(p => p.idea_id)
+    );
+
+    // 3. Filtrar ideas que NO están agendadas (las que sí están las descartamos porque ya viven en calendario)
+    const ideasParaMigrar = ideas.filter(i => !idsAgendados.has(i.id));
+
+    let migradas = 0;
+    let descartadas = ideas.length - ideasParaMigrar.length;
+    const errores = [];
+
+    // 4. Migrar las no agendadas a Calendario con estado 'Idea' y sin fecha
+    for (const idea of ideasParaMigrar) {
+      try {
+        const nuevaFila = {
+          id: idea.id, // mantengo el mismo ID para no romper referencias
+          cliente_id: idea.cliente_id || '',
+          fecha_publicacion: '', // sin fecha = es solo idea
+          hora: '',
+          red_social: '',
+          formato: idea.formato || 'Post',
+          pilar: idea.pilar || '',
+          titulo: idea.titulo || '',
+          hook: idea.hook || '',
+          copy: idea.copy || '',
+          hashtags: idea.hashtags || '',
+          cta: idea.cta || '',
+          estado: 'Idea',
+          descripcion_visual: '',
+          notas: idea.notas || '',
+          idea_text: idea.idea || '', // por si tenían descripción larga separada
+          fecha_creada: idea.fecha_creada || todayISO(),
+          origen: idea.origen || 'Migración',
+        };
+
+        // Si la idea tenía un tipo especial guardado en notas (carrusel/reel/etc), preservarlo
+        if (idea.notas && typeof idea.notas === 'string') {
+          if (idea.notas.startsWith('CARRUSEL_SLIDES:')) {
+            nuevaFila.carrusel_slides = idea.notas.substring('CARRUSEL_SLIDES:'.length);
+          } else if (idea.notas.startsWith('REEL_GUION:')) {
+            nuevaFila.reel_guion = idea.notas.substring('REEL_GUION:'.length);
+          } else if (idea.notas.startsWith('HISTORIAS_SECUENCIA:')) {
+            nuevaFila.historias_secuencia = idea.notas.substring('HISTORIAS_SECUENCIA:'.length);
+          } else if (idea.notas.startsWith('ANUNCIO_META:')) {
+            nuevaFila.anuncio_meta = idea.notas.substring('ANUNCIO_META:'.length);
+          }
+        }
+
+        await sheetAppend('Calendario', nuevaFila);
+        migradas++;
+      } catch (e) {
+        errores.push(`${idea.titulo || idea.id}: ${e.message}`);
+      }
+    }
+
+    // 5. Eliminar TODAS las filas de la hoja Ideas (las migradas + las duplicadas)
+    let eliminadas = 0;
+    for (const idea of ideas) {
+      try {
+        await sheetDelete('Calendario', idea.id);
+        eliminadas++;
+      } catch (e) {
+        errores.push(`No se pudo eliminar ${idea.titulo || idea.id}: ${e.message}`);
+      }
+    }
+
+    // 6. Reportar resultado
+    result.innerHTML = `
+      <div style="padding: 14px; background: ${errores.length === 0 ? '#e6f4ef' : '#fff4e0'}; border-radius: 8px; border: 1px solid ${errores.length === 0 ? 'var(--verde)' : 'var(--amarillo)'};">
+        <strong style="color: ${errores.length === 0 ? 'var(--verde)' : '#8a6a20'};">
+          ${errores.length === 0 ? '✓ Migración completada' : '⚠ Migración con avisos'}
+        </strong>
+        <div style="font-size: 13px; margin-top: 8px; line-height: 1.7;">
+          • ${migradas} ideas movidas a Calendario (con estado "Idea")<br>
+          • ${descartadas} ideas descartadas por estar duplicadas en Calendario<br>
+          • ${eliminadas} filas eliminadas de la hoja Ideas
+        </div>
+        ${errores.length > 0 ? `
+          <details style="margin-top: 10px;">
+            <summary style="cursor: pointer; font-size: 12.5px;">Ver ${errores.length} avisos</summary>
+            <div style="margin-top: 6px; font-size: 12px; color: var(--gris-text-soft); max-height: 150px; overflow-y: auto; padding: 8px; background: #fff; border-radius: 4px;">
+              ${errores.map(e => `<div>• ${esc(e)}</div>`).join('')}
+            </div>
+          </details>
+        ` : ''}
+        <div style="font-size: 12px; color: var(--gris-text-soft); margin-top: 10px;">
+          Recargá la página (Ctrl+F5) para ver todo unificado.
+        </div>
+      </div>
+    `;
+  } catch (e) {
+    result.innerHTML = `<div style="padding: 12px; background: #fef2f2; border-radius: 6px; color: var(--rojo);">Error: ${esc(e.message)}</div>`;
+  }
 }
 
 // ============================================================================
