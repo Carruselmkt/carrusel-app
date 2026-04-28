@@ -3316,17 +3316,6 @@ async function callClaude(systemPrompt, userPrompt, options = {}) {
     throw new Error('No hay API key configurada. Cargala en la hoja "Config" de tu planilla (fila con clave "anthropic_api_key").');
   }
 
-  // 🔍 LOG TEMPORAL DE DIAGNÓSTICO — para detectar contaminación de contexto entre clientes
-  console.group('🔍 [DEBUG] Llamada a IA');
-  console.log('Cliente actual (state.currentClienteId):', state.currentClienteId);
-  const clienteActual = state.clientes.find(c => c.id === state.currentClienteId);
-  console.log('Nombre del cliente actual:', clienteActual ? clienteActual.nombre : '(no encontrado)');
-  console.log('--- SYSTEM PROMPT ---');
-  console.log(systemPrompt);
-  console.log('--- USER PROMPT ---');
-  console.log(userPrompt);
-  console.groupEnd();
-
   const model = options.model || 'claude-sonnet-4-5';
   const maxTokens = options.maxTokens || 2048;
 
@@ -7024,7 +7013,11 @@ function abrirGeneradorStorytelling() {
     showToast('No hay clientes cargados', 'error');
     return;
   }
-  const opciones = state.clientes.map(c => `<option value="${esc(c.id)}">${esc(c.nombre)}</option>`).join('');
+  const clienteActualId = state.currentClienteId || '';
+  const opciones = state.clientes.map(c => {
+    const sel = c.id === clienteActualId ? ' selected' : '';
+    return `<option value="${esc(c.id)}"${sel}>${esc(c.nombre)}</option>`;
+  }).join('');
   $('modal').className = 'modal modal-lg';
   $('modal').innerHTML = `
     <div class="modal-header">
@@ -7550,7 +7543,11 @@ function abrirGeneradorAnuncioMeta() {
     showToast('No hay clientes cargados', 'error');
     return;
   }
-  const opciones = state.clientes.map(c => `<option value="${esc(c.id)}">${esc(c.nombre)}</option>`).join('');
+  const clienteActualId = state.currentClienteId || '';
+  const opciones = state.clientes.map(c => {
+    const sel = c.id === clienteActualId ? ' selected' : '';
+    return `<option value="${esc(c.id)}"${sel}>${esc(c.nombre)}</option>`;
+  }).join('');
 
   $('modal').className = 'modal modal-lg';
   $('modal').innerHTML = `
@@ -8168,7 +8165,14 @@ function abrirGeneradorLibre(tipo) {
   };
   const t = titulos[tipo];
 
-  const opciones = state.clientes.map(c => `<option value="${esc(c.id)}">${esc(c.nombre)}</option>`).join('');
+  // Preseleccionar el cliente actual si estamos dentro de uno; si no, dejar opción vacía
+  const clienteActualId = state.currentClienteId || '';
+  const opcionesArr = ['<option value="">— Elegí cliente —</option>'];
+  state.clientes.forEach(c => {
+    const sel = c.id === clienteActualId ? ' selected' : '';
+    opcionesArr.push(`<option value="${esc(c.id)}"${sel}>${esc(c.nombre)}</option>`);
+  });
+  const opciones = opcionesArr.join('');
 
   $('modal').className = 'modal modal-lg';
   $('modal').innerHTML = `
@@ -8217,6 +8221,12 @@ async function cargarPilaresClienteLibre() {
   const pilarSelect = $('libre_pilar');
   if (!pilarSelect) return;
   pilarSelect.innerHTML = '<option value="">—</option>';
+  if (!clienteId) {
+    // Si no hay cliente, limpiar referencias para evitar uso accidental
+    window._libreClienteId = null;
+    window._libreEstrategia = null;
+    return;
+  }
   try {
     // Cargar estrategias del cliente para extraer pilares
     const { data } = await sheetRead('Estrategias');
