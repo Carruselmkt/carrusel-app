@@ -211,6 +211,7 @@
     max-height: 90vh; overflow-y: auto; box-shadow: var(--sombra-lg);
   }
   .modal-lg { max-width: 720px; }
+  .modal-xl { max-width: 1100px; }
   .modal-header {
     padding: 22px 26px 14px; border-bottom: 1px solid var(--gris-border);
     display: flex; justify-content: space-between; align-items: center;
@@ -12945,6 +12946,9 @@ function renderMetricasList() {
     porCliente[m.cliente_id].push(m);
   });
 
+  // Estado por cliente del toggle "período / mes" (persiste mientras la página esté montada)
+  if (!state.metricasVistaPorCliente) state.metricasVistaPorCliente = {};
+
   const cards = clientesActivos.map(c => {
     const metricasCliente = (porCliente[c.id] || []).sort((a, b) =>
       (b.fecha_hasta || '').localeCompare(a.fecha_hasta || '')
@@ -12962,10 +12966,64 @@ function renderMetricasList() {
     }
 
     const ultima = metricasCliente[0];
+    // Default: si hay 2+ períodos del mes de la última carga, mostrar "Mes completo". Si no, "Período".
+    if (!state.metricasVistaPorCliente[c.id]) {
+      const periodosDelMesUltima = metricasDelMismoMes(metricasCliente, ultima.fecha_hasta);
+      state.metricasVistaPorCliente[c.id] = periodosDelMesUltima.length > 1 ? 'mes' : 'periodo';
+    }
     return renderMetricaCard(c, ultima, metricasCliente);
   }).join('');
 
   $('metricasContent').innerHTML = cards;
+}
+
+// Devuelve los períodos cuyo fecha_hasta cae en el mismo mes calendario que la fecha de referencia (YYYY-MM-DD)
+function metricasDelMismoMes(metricasCliente, fechaRefIso) {
+  if (!fechaRefIso) return [];
+  const ref = new Date(fechaRefIso);
+  const mes = ref.getMonth();
+  const anio = ref.getFullYear();
+  return metricasCliente.filter(m => {
+    if (!m.fecha_hasta) return false;
+    const h = new Date(m.fecha_hasta);
+    return h.getMonth() === mes && h.getFullYear() === anio;
+  });
+}
+
+// Suma campos numéricos de varias métricas. Para 'seguidores_fin' devuelve el del período más reciente.
+function consolidarMetricas(metricasArr) {
+  if (!metricasArr || metricasArr.length === 0) return {};
+  const camposSuma = [
+    'visualizaciones', 'cuentas_alcanzadas', 'interacciones',
+    'empezaron_seguir', 'dejaron_seguir', 'me_gusta', 'respuestas',
+    'veces_compartido', 'guardados', 'visitas_perfil',
+    'toques_enlace_externo', 'toques_direccion'
+  ];
+  const out = {};
+  camposSuma.forEach(k => {
+    out[k] = metricasArr.reduce((s, m) => s + (Number(m[k]) || 0), 0);
+  });
+  // seguidores_fin = el del período más reciente (es un saldo, no se suma)
+  const ordenadas = [...metricasArr].sort((a, b) => (b.fecha_hasta || '').localeCompare(a.fecha_hasta || ''));
+  out.seguidores_fin = Number(ordenadas[0].seguidores_fin) || 0;
+  // Tipos de contenido únicos consolidados
+  const tiposSet = new Set();
+  metricasArr.forEach(m => (parseJsonSafe(m.tipos_contenido) || []).forEach(t => tiposSet.add(t)));
+  out._tiposContenido = Array.from(tiposSet);
+  // Período total: del más antiguo al más reciente
+  const desdes = metricasArr.map(m => m.fecha_desde).filter(Boolean).sort();
+  const hastas = metricasArr.map(m => m.fecha_hasta).filter(Boolean).sort();
+  out._fechaDesde = desdes[0];
+  out._fechaHasta = hastas[hastas.length - 1];
+  out._cantidadPeriodos = metricasArr.length;
+  return out;
+}
+
+// Llamado por el toggle del card
+function cambiarVistaMetricas(clienteId, vista) {
+  if (!state.metricasVistaPorCliente) state.metricasVistaPorCliente = {};
+  state.metricasVistaPorCliente[clienteId] = vista;
+  renderMetricasList();
 }
 
 function renderMetricaCard(cliente, ultima, historial) {
@@ -12975,18 +13033,59 @@ function renderMetricaCard(cliente, ultima, historial) {
   );
   const kpis = estrategiaActiva ? normalizarKpis(parseJsonSafe(estrategiaActiva.kpis_sugeridos_json)) : [];
 
-  const tiposContenido = parseJsonSafe(ultima.tipos_contenido) || [];
-  const tiposLabel = tiposContenido.length > 0
-    ? tiposContenido.map(t => (TIPOS_CONTENIDO.find(x => x.v === t) || {}).l || t).join(' · ')
-    : 'sin especificar';
+  // Determinar vista actual y armar dataset consolidado si hace falta
+  const vista = (state.metricasVistaPorCliente && state.metricasVistaPorCliente[cliente.id]) || 'periodo';
+  const periodosMes = metricasDelMismoMes(historial, ultima.fecha_hasta);
+  const hayMultiPeriodos = periodosMes.length > 1;
+  const usarMes = vista === 'mes' && hayMultiPeriodos;
 
-  // KPIs del cliente vs métricas cargadas
+  // Datos a mostrar (vista período = última métrica; vista mes = consolidado del mes)
+  const datos = usarMes ? consolidarMetricas(periodosMes) : ultima;
+
+  // Etiqueta de período y formatos según vista
+  const nombresMesesLargos = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  let periodoLabel, tiposLabel;
+  if (usarMes) {
+    const refMes = new Date(ultima.fecha_hasta);
+    periodoLabel = `${nombresMesesLargos[refMes.getMonth()]} ${refMes.getFullYear()} · ${periodosMes.length} períodos cargados`;
+    const tipos = datos._tiposContenido || [];
+    tiposLabel = tipos.length > 0
+      ? tipos.map(t => (TIPOS_CONTENIDO.find(x => x.v === t) || {}).l || t).join(' · ')
+      : 'sin especificar';
+  } else {
+    periodoLabel = `${formatDateEs(ultima.fecha_desde)} → ${formatDateEs(ultima.fecha_hasta)}`;
+    const tipos = parseJsonSafe(ultima.tipos_contenido) || [];
+    tiposLabel = tipos.length > 0
+      ? tipos.map(t => (TIPOS_CONTENIDO.find(x => x.v === t) || {}).l || t).join(' · ')
+      : 'sin especificar';
+  }
+
+  // Toggle (solo lo mostramos si hay 2+ períodos del mes de la última carga)
+  const toggleHtml = hayMultiPeriodos ? `
+    <div style="display: inline-flex; background: var(--gris-bg); border-radius: 8px; padding: 3px; margin-bottom: 12px; font-size: 12px;">
+      <button onclick="cambiarVistaMetricas('${esc(cliente.id)}', 'periodo')"
+        style="padding: 5px 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;
+          background: ${vista === 'periodo' ? 'var(--fucsia)' : 'transparent'};
+          color: ${vista === 'periodo' ? '#fff' : 'var(--gris-text-soft)'};">
+        Este período
+      </button>
+      <button onclick="cambiarVistaMetricas('${esc(cliente.id)}', 'mes')"
+        style="padding: 5px 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;
+          background: ${vista === 'mes' ? 'var(--fucsia)' : 'transparent'};
+          color: ${vista === 'mes' ? '#fff' : 'var(--gris-text-soft)'};">
+        Mes completo
+      </button>
+    </div>
+  ` : '';
+
+  // KPIs
+  const tituloKpis = usarMes ? '🎯 Cumplimiento de KPIs del mes' : '🎯 Cumplimiento de KPIs del período';
   const kpisHtml = kpis.length > 0 ? `
     <div style="margin-top: 14px; background: linear-gradient(135deg, #fef8fb 0%, #fefbf7 100%); border: 1px solid var(--fucsia-light); border-radius: 8px; padding: 12px 14px;">
       <div style="font-size: 12px; font-weight: 700; color: var(--fucsia); text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 8px;">
-        🎯 Cumplimiento de KPIs del período
+        ${tituloKpis}
       </div>
-      ${kpis.map(kpi => renderKpiCumplimiento(kpi, ultima)).join('')}
+      ${kpis.map(kpi => renderKpiCumplimiento(kpi, datos)).join('')}
     </div>
   ` : `
     <div style="margin-top: 10px; padding: 8px 12px; background: var(--gris-bg); border-radius: 6px; font-size: 12px; color: var(--gris-text-muted);">
@@ -13008,7 +13107,7 @@ function renderMetricaCard(cliente, ultima, historial) {
         <div style="flex: 1; min-width: 0;">
           <h3 style="margin: 0 0 4px;">${esc(cliente.nombre)}</h3>
           <div style="font-size: 12.5px; color: var(--gris-text-soft);">
-            ${esc(ultima.red_social || 'Instagram')} · ${formatDateEs(ultima.fecha_desde)} → ${formatDateEs(ultima.fecha_hasta)}
+            ${esc(ultima.red_social || 'Instagram')} · ${esc(periodoLabel)}
           </div>
           <div style="font-size: 11.5px; color: var(--gris-text-muted); margin-top: 2px;">
             Formatos: ${esc(tiposLabel)}
@@ -13020,9 +13119,11 @@ function renderMetricaCard(cliente, ultima, historial) {
         </div>
       </div>
 
+      ${toggleHtml ? `<div style="margin-top: 10px;">${toggleHtml}</div>` : ''}
+
       <div class="metricas-kpis">
         ${metricasMostrar.map(m => {
-          const valor = Number(ultima[m.key]) || 0;
+          const valor = Number(datos[m.key]) || 0;
           return `
             <div class="metrica-mini">
               <div class="metrica-mini-label">${m.icon} ${m.label}</div>
@@ -13035,7 +13136,7 @@ function renderMetricaCard(cliente, ultima, historial) {
       ${kpisHtml}
 
       <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
-        <button class="btn-ghost btn-sm" onclick="openMetricasModal('${esc(ultima.id)}')" style="font-size: 12px;">✏️ Editar este período</button>
+        <button class="btn-ghost btn-sm" onclick="openMetricasModal('${esc(ultima.id)}')" style="font-size: 12px;">✏️ Editar último período</button>
       </div>
     </div>
   `;
@@ -13401,21 +13502,48 @@ function renderReportesList() {
     return;
   }
 
-  const reportesOrdenados = [...state.reportes].sort((a, b) => (b.fecha_generacion || '').localeCompare(a.fecha_generacion || ''));
+  // Agrupar reportes por cliente+mes+año (puede haber varias versiones)
+  const grupos = {};
+  state.reportes.forEach(r => {
+    const key = `${r.cliente_id}__${r.mes}__${r.anio}`;
+    if (!grupos[key]) grupos[key] = [];
+    grupos[key].push(r);
+  });
 
-  $('reportesContent').innerHTML = reportesOrdenados.map(r => {
+  // Ordenar versiones de cada grupo (más reciente primero) y los grupos por fecha del más reciente
+  const gruposOrdenados = Object.values(grupos).map(versiones => {
+    return versiones.sort((a, b) => (b.fecha_generacion || '').localeCompare(a.fecha_generacion || ''));
+  }).sort((a, b) => (b[0].fecha_generacion || '').localeCompare(a[0].fecha_generacion || ''));
+
+  $('reportesContent').innerHTML = gruposOrdenados.map(versiones => {
+    const r = versiones[0]; // versión más reciente
     const cliente = state.clientes.find(c => c.id === r.cliente_id);
     const mes = `${nombresMeses[Number(r.mes) - 1]} ${r.anio}`;
+    const tieneVersiones = versiones.length > 1;
+
+    // Badge versión + botón comparar (solo si hay 2+ versiones)
+    const versionBadge = tieneVersiones
+      ? `<span style="display: inline-block; background: var(--petroleo); color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 600; margin-left: 8px;">${versiones.length} versiones</span>`
+      : '';
+    const compararBtn = tieneVersiones
+      ? `<button class="btn btn-secondary btn-sm" onclick="abrirComparadorVersiones('${esc(r.cliente_id)}', ${r.mes}, ${r.anio})">⇄ Comparar</button>`
+      : '';
+    const historialBtn = tieneVersiones
+      ? `<button class="btn btn-secondary btn-sm" onclick="abrirHistorialVersiones('${esc(r.cliente_id)}', ${r.mes}, ${r.anio})">📚 Versiones</button>`
+      : '';
+
     return `
       <div class="reporte-card">
         <div class="reporte-header">
           <div>
-            <h3 style="margin: 0;">${esc(cliente ? cliente.nombre : '(cliente borrado)')} · ${mes}</h3>
+            <h3 style="margin: 0;">${esc(cliente ? cliente.nombre : '(cliente borrado)')} · ${mes}${versionBadge}</h3>
             <div style="font-size: 12px; color: var(--gris-text-muted); margin-top: 2px;">
-              Generado el ${esc(formatDateEs(r.fecha_generacion))}
+              Generado el ${esc(formatDateEs(r.fecha_generacion))}${tieneVersiones ? ' · mostrando versión más reciente' : ''}
             </div>
           </div>
           <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+            ${historialBtn}
+            ${compararBtn}
             <button class="btn btn-primary btn-sm" onclick="descargarReportePdf('${esc(r.id)}')" style="background: var(--fucsia);">📄 PDF</button>
             <button class="btn btn-secondary btn-sm" onclick="verReporteImprimible('${esc(r.id)}')">🖨️ Imprimible</button>
             <button class="btn btn-secondary btn-sm" onclick="copiarReporte('${esc(r.id)}')">📋 Copiar</button>
@@ -13427,6 +13555,151 @@ function renderReportesList() {
       </div>
     `;
   }).join('');
+}
+
+// Modal con todas las versiones de un reporte (cliente + mes)
+function abrirHistorialVersiones(clienteId, mes, anio) {
+  const cliente = state.clientes.find(c => c.id === clienteId);
+  const nombresMeses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const periodo = `${nombresMeses[mes - 1]} ${anio}`;
+  const versiones = state.reportes
+    .filter(r => r.cliente_id === clienteId && Number(r.mes) === mes && Number(r.anio) === anio)
+    .sort((a, b) => (b.fecha_generacion || '').localeCompare(a.fecha_generacion || ''));
+
+  $('modal').className = 'modal modal-lg';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>📚 Versiones del reporte: ${esc(cliente ? cliente.nombre : '?')} · ${esc(periodo)}</h2>
+      <button class="btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size: 12.5px; color: var(--gris-text-soft); margin-bottom: 12px;">
+        Cada vez que generaste un reporte de este mes y elegiste "guardar como versión nueva", quedó acá.
+      </p>
+      <table class="finanzas-tabla">
+        <thead><tr><th>Fecha generación</th><th>Estado</th><th>Tamaño</th><th></th></tr></thead>
+        <tbody>
+          ${versiones.map((v, idx) => `
+            <tr>
+              <td style="font-size: 13px;">
+                ${esc(formatDateEs(v.fecha_generacion))}
+                ${idx === 0 ? '<span style="font-size: 10px; padding: 1px 5px; background: var(--verde); color: #fff; border-radius: 3px; margin-left: 6px; font-weight: 700;">ACTUAL</span>' : ''}
+              </td>
+              <td style="font-size: 12px;">${esc(v.estado || 'Generado')}</td>
+              <td style="font-size: 12px; color: var(--gris-text-muted);">${(v.contenido_md || '').length} caracteres</td>
+              <td>
+                <button class="btn-ghost btn-sm" onclick="closeModal(); verReporteImprimible('${esc(v.id)}')" title="Ver">👁</button>
+                <button class="btn-ghost btn-sm" onclick="closeModal(); editarReporte('${esc(v.id)}')" title="Editar">✏️</button>
+                <button class="btn-ghost btn-sm btn-danger" onclick="deleteReporteVersion('${esc(v.id)}', '${esc(clienteId)}', ${mes}, ${anio})" title="Eliminar">🗑</button>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+    <div class="modal-footer">
+      ${versiones.length >= 2 ? `<button class="btn btn-primary" onclick="closeModal(); abrirComparadorVersiones('${esc(clienteId)}', ${mes}, ${anio})">⇄ Comparar versiones</button>` : ''}
+      <button class="btn btn-secondary" onclick="closeModal()">Cerrar</button>
+    </div>`;
+  $('modalOverlay').classList.add('active');
+}
+
+async function deleteReporteVersion(id, clienteId, mes, anio) {
+  if (!confirm('¿Eliminar esta versión del reporte?')) return;
+  try {
+    await sheetDelete('Reportes', id);
+    showToast('Versión eliminada', 'success');
+    // Recargar y reabrir el modal de historial (si quedan versiones)
+    const repRes = await sheetRead('Reportes');
+    state.reportes = repRes.data;
+    const quedan = state.reportes.filter(r => r.cliente_id === clienteId && Number(r.mes) === mes && Number(r.anio) === anio);
+    closeModal();
+    if (quedan.length > 0) {
+      abrirHistorialVersiones(clienteId, mes, anio);
+    } else {
+      renderReportes();
+    }
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+// Comparador lado a lado de dos versiones del mismo reporte
+function abrirComparadorVersiones(clienteId, mes, anio) {
+  const cliente = state.clientes.find(c => c.id === clienteId);
+  const nombresMeses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const periodo = `${nombresMeses[mes - 1]} ${anio}`;
+  const versiones = state.reportes
+    .filter(r => r.cliente_id === clienteId && Number(r.mes) === mes && Number(r.anio) === anio)
+    .sort((a, b) => (b.fecha_generacion || '').localeCompare(a.fecha_generacion || ''));
+
+  if (versiones.length < 2) {
+    showToast('Necesitás al menos 2 versiones para comparar', 'error');
+    return;
+  }
+
+  // Por defecto: comparar la más reciente con la anterior
+  state._comparadorIzq = versiones[0].id;
+  state._comparadorDer = versiones[1].id;
+
+  renderComparadorVersiones(clienteId, mes, anio, periodo, cliente, versiones);
+}
+
+function renderComparadorVersiones(clienteId, mes, anio, periodo, cliente, versiones) {
+  const izq = state.reportes.find(r => r.id === state._comparadorIzq) || versiones[0];
+  const der = state.reportes.find(r => r.id === state._comparadorDer) || versiones[1];
+
+  const opcionesSelect = (selectedId) => versiones.map(v => `
+    <option value="${esc(v.id)}" ${v.id === selectedId ? 'selected' : ''}>${esc(formatDateEs(v.fecha_generacion))}${v.id === versiones[0].id ? ' (actual)' : ''}</option>
+  `).join('');
+
+  $('modal').className = 'modal modal-xl';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>⇄ Comparar versiones: ${esc(cliente ? cliente.nombre : '?')} · ${esc(periodo)}</h2>
+      <button class="btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" style="padding: 0;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0; height: 70vh;">
+        <div style="border-right: 1px solid var(--gris-border); display: flex; flex-direction: column;">
+          <div style="padding: 10px 14px; background: var(--gris-bg); border-bottom: 1px solid var(--gris-border); display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 12px; font-weight: 600; color: var(--fucsia);">Versión A</span>
+            <select class="form-select" style="flex: 1; font-size: 12px; padding: 4px 8px; height: auto;" onchange="cambiarVersionComparador('izq', this.value, '${esc(clienteId)}', ${mes}, ${anio})">
+              ${opcionesSelect(izq.id)}
+            </select>
+          </div>
+          <div class="reporte-body" style="padding: 16px; overflow-y: auto; flex: 1; font-size: 13px;">
+            ${renderMarkdown(izq.contenido_md || '')}
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column;">
+          <div style="padding: 10px 14px; background: var(--gris-bg); border-bottom: 1px solid var(--gris-border); display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 12px; font-weight: 600; color: var(--petroleo);">Versión B</span>
+            <select class="form-select" style="flex: 1; font-size: 12px; padding: 4px 8px; height: auto;" onchange="cambiarVersionComparador('der', this.value, '${esc(clienteId)}', ${mes}, ${anio})">
+              ${opcionesSelect(der.id)}
+            </select>
+          </div>
+          <div class="reporte-body" style="padding: 16px; overflow-y: auto; flex: 1; font-size: 13px;">
+            ${renderMarkdown(der.contenido_md || '')}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cerrar</button>
+    </div>`;
+  $('modalOverlay').classList.add('active');
+}
+
+function cambiarVersionComparador(lado, versionId, clienteId, mes, anio) {
+  if (lado === 'izq') state._comparadorIzq = versionId;
+  else state._comparadorDer = versionId;
+
+  const cliente = state.clientes.find(c => c.id === clienteId);
+  const nombresMeses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const periodo = `${nombresMeses[mes - 1]} ${anio}`;
+  const versiones = state.reportes
+    .filter(r => r.cliente_id === clienteId && Number(r.mes) === mes && Number(r.anio) === anio)
+    .sort((a, b) => (b.fecha_generacion || '').localeCompare(a.fecha_generacion || ''));
+  renderComparadorVersiones(clienteId, mes, anio, periodo, cliente, versiones);
 }
 
 // Mini renderer de markdown (títulos, listas, bold)
@@ -13745,12 +14018,10 @@ Generá el reporte completo siguiendo la estructura, centrándote en el cumplimi
 
     const existente = state.reportes.find(r => r.cliente_id === clienteId && Number(r.mes) === mes && Number(r.anio) === anio);
     if (existente) {
-      await sheetUpdate('Reportes', existente.id, {
-        contenido_md: contenidoMd,
-        fecha_generacion: todayISO(),
-        estado: 'Generado',
-      });
-      showToast('Reporte actualizado', 'success');
+      // Hay un reporte previo del mismo mes: preguntar al usuario qué hacer
+      closeModal();
+      mostrarDialogoVersionado(clienteId, mes, anio, contenidoMd, existente);
+      return;
     } else {
       await sheetAppend('Reportes', {
         id: genId('rep'),
@@ -13767,6 +14038,81 @@ Generá el reporte completo siguiendo la estructura, centrándote en el cumplimi
     renderReportes();
   } catch (e) {
     mostrarErrorGeneracion(e.message);
+  }
+}
+
+// Cuando ya existe un reporte del mismo cliente+mes+año, preguntar al usuario
+function mostrarDialogoVersionado(clienteId, mes, anio, contenidoNuevo, existente) {
+  const cliente = state.clientes.find(c => c.id === clienteId);
+  const nombresMeses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const periodo = `${nombresMeses[mes - 1]} ${anio}`;
+
+  // Guardamos el contenido nuevo en una variable temporal accesible desde los onclick
+  state._reporteVersionPendiente = { clienteId, mes, anio, contenidoNuevo, existenteId: existente.id };
+
+  $('modal').className = 'modal';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>📋 Ya existe un reporte de ${esc(periodo)}</h2>
+      <button class="btn-ghost" onclick="cancelarVersionado()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="color: var(--gris-text-soft); font-size: 13.5px; line-height: 1.6;">
+        Generaste un nuevo reporte para <strong>${esc(cliente ? cliente.nombre : '')}</strong> · ${esc(periodo)}, pero ya tenés uno guardado de ese mes (generado el ${esc(formatDateEs(existente.fecha_generacion))}).
+      </p>
+      <p style="color: var(--gris-text-soft); font-size: 13.5px; margin-top: 12px;">
+        ¿Qué querés hacer?
+      </p>
+      <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 16px;">
+        <button class="btn btn-secondary" onclick="aplicarVersionado('reemplazar')" style="text-align: left; padding: 12px 14px; height: auto;">
+          <strong style="display: block; margin-bottom: 2px;">🔁 Reemplazar el anterior</strong>
+          <span style="font-size: 12px; color: var(--gris-text-soft); font-weight: 400;">El reporte viejo se pierde y queda solo el nuevo.</span>
+        </button>
+        <button class="btn btn-primary" onclick="aplicarVersionado('nueva')" style="text-align: left; padding: 12px 14px; height: auto;">
+          <strong style="display: block; margin-bottom: 2px;">📑 Guardar como versión nueva</strong>
+          <span style="font-size: 12px; color: rgba(255,255,255,0.85); font-weight: 400;">Se guardan los dos. Vas a poder compararlos en el historial.</span>
+        </button>
+        <button class="btn-ghost" onclick="cancelarVersionado()" style="margin-top: 4px;">Cancelar (descartar el reporte nuevo)</button>
+      </div>
+    </div>`;
+  $('modalOverlay').classList.add('active');
+}
+
+function cancelarVersionado() {
+  state._reporteVersionPendiente = null;
+  closeModal();
+}
+
+async function aplicarVersionado(modo) {
+  const pend = state._reporteVersionPendiente;
+  if (!pend) { closeModal(); return; }
+  state._reporteVersionPendiente = null;
+
+  try {
+    if (modo === 'reemplazar') {
+      await sheetUpdate('Reportes', pend.existenteId, {
+        contenido_md: pend.contenidoNuevo,
+        fecha_generacion: todayISO(),
+        estado: 'Generado',
+      });
+      showToast('Reporte reemplazado', 'success');
+    } else {
+      // nueva versión: append con mismo cliente+mes+anio
+      await sheetAppend('Reportes', {
+        id: genId('rep'),
+        cliente_id: pend.clienteId,
+        mes: pend.mes,
+        anio: pend.anio,
+        contenido_md: pend.contenidoNuevo,
+        fecha_generacion: todayISO(),
+        estado: 'Generado',
+      });
+      showToast('Versión nueva guardada', 'success');
+    }
+    closeModal();
+    renderReportes();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
   }
 }
 
