@@ -4947,11 +4947,14 @@ function toggleIdeaSelect(ideaId) {
 }
 
 function selectAllIdeasVisibles() {
-  // Selecciona todas las ideas visibles (con los filtros actuales aplicados)
+  // Selecciona todas las ideas visibles (con los filtros actuales aplicados).
+  // Modelo unificado: 'Sin usar' = sin fecha_publicacion; 'Agendada' = con fecha y no publicada; 'Publicada' = estado === 'Publicada'.
   let visibles = [...state.ideas];
   if (ideaFilters.pilar !== 'todos') visibles = visibles.filter(i => i.pilar === ideaFilters.pilar);
   if (ideaFilters.formato !== 'todos') visibles = visibles.filter(i => i.formato === ideaFilters.formato);
-  if (ideaFilters.estado !== 'todos') visibles = visibles.filter(i => (i.estado || 'Sin usar') === ideaFilters.estado);
+  if (ideaFilters.estado === 'Sin usar') visibles = visibles.filter(i => !i.fecha_publicacion);
+  else if (ideaFilters.estado === 'Agendada') visibles = visibles.filter(i => !!i.fecha_publicacion && i.estado !== 'Publicada');
+  else if (ideaFilters.estado === 'Publicada') visibles = visibles.filter(i => i.estado === 'Publicada');
   visibles.forEach(i => ideaSelectedIds.add(i.id));
   renderIdeasList();
   renderIdeaSelectBar();
@@ -6685,7 +6688,9 @@ async function onDropDay(ev, fechaDestino) {
 // SELECTOR DE IDEAS PARA UN DÍA: clic en día vacío → elegir idea sin agendar
 // ============================================================================
 function abrirSelectorIdeasParaDia(fecha) {
-  const ideasCliente = (state.ideas || []).filter(i => (i.estado || 'Sin usar') === 'Sin usar');
+  // Modelo unificado: una idea está "disponible para agendar" si NO tiene fecha_publicacion.
+  // Eso cubre: estado 'Idea' (nuevo), 'Sin usar' (legacy), o vacío. No mostramos las ya agendadas ni las publicadas.
+  const ideasCliente = (state.ideas || []).filter(i => !i.fecha_publicacion);
 
   // Pilares disponibles para filtrar
   const pilaresUnicos = ['Todos', ...new Set(ideasCliente.map(i => i.pilar).filter(Boolean))];
