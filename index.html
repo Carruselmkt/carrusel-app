@@ -5741,6 +5741,26 @@ async function ejecutarGeneradorIdeas(estrategiaId) {
     ? 'Mezclá formatos: mayoritariamente carruseles y reels (son lo que mejor funciona), algunos posts simples y stories.'
     : `TODAS las ideas deben ser en formato: ${formato}.`;
 
+  // Es lote 100% de Stories? activamos reglas específicas que reemplazan la lógica de feed
+  const esLoteStory = formato === 'Story' || formato === 'Historia' || formato === 'Historias';
+
+  // Anti-repetición: pasar las ideas existentes del cliente para que la IA no proponga
+  // las mismas pero "en otro formato". Tomamos título + hook de hasta las últimas 60 ideas/posts.
+  const ideasExistentes = (state.ideas || [])
+    .slice(-60)
+    .map(i => {
+      const t = (i.titulo || '').trim();
+      const h = (i.hook || '').trim();
+      const f = i.formato || '';
+      if (!t && !h) return null;
+      return `[${f}] ${t}${h ? ' — ' + h : ''}`;
+    })
+    .filter(Boolean);
+
+  const antiRepeticionContext = ideasExistentes.length > 0
+    ? `\n\n==========================================================\n🚫 IDEAS QUE YA EXISTEN EN EL BANCO DE ESTE CLIENTE\n==========================================================\nNO propongas ninguna idea que sea esencialmente la misma que alguna de estas (aunque cambie el formato). Si el ángulo, el tema central o el hook se parecen, descartala y proponé algo realmente distinto.\n\n${ideasExistentes.map(x => '• ' + x).join('\n')}\n\nVerificá CADA idea nueva contra esta lista antes de incluirla en el JSON. Si tenés dudas, descartala.`
+    : '';
+
   // Construir el bloque de ENFOQUE PRINCIPAL — el cambio más importante
   let enfoqueBloque = '';
   let reglaEnfoquePrompt = '';
@@ -5793,17 +5813,36 @@ TODAS las ${cantidad} ideas deben cumplir esta directiva. Si una idea no encaja,
 
   const detallesContext = detalles ? `\n\nDETALLES ADICIONALES DE LA ESTRATEGA:\n${detalles}` : '';
 
-  const systemPrompt = `Sos una estratega de contenido de Carrusel MKT, agencia argentina. Generás ideas de contenido para redes sociales que son ACCIONABLES, ESPECÍFICAS y conectan con el público.
-
-REGLAS FUNDAMENTALES:
-${enfoquePrincipal ? `\n⚠️ REGLA #1 — ENFOQUE OBLIGATORIO ⚠️\n${reglaEnfoquePrompt}\nEsta regla es inviolable. Antes de proponer cada idea, preguntate: "¿esta idea está 100% alineada con el enfoque principal?". Si no, descartala y proponé otra.\n` : ''}
+  // === Bloque de REGLAS FUNDAMENTALES ===
+  // Si todo el lote es Stories, las reglas son OTRAS — las stories no compiten con scroll,
+  // se ven dentro de la sesión, son íntimas, conversacionales y a menudo sin guion previo.
+  const reglasFundamentalesFeed = `
 - VARIEDAD DE TEMAS: cada idea del lote debe tocar un tema DIFERENTE dentro del enfoque. No generes 3 ideas distintas sobre el mismo tema (ej: no 3 ideas sobre implantes).
 - ESPECIFICIDAD: nada genérico. Nada de "5 tips sobre X" o "Hablemos de Y". Ir directo al ángulo concreto.
 - HOOK CRÍTICO: tiene que parar el scroll. Curiosidad, polémica, pregunta inesperada, dato sorprendente, confesión, historia.
 - CONEXIÓN CON DOLORES/DESEOS de los buyer personas. No contenido autorreferencial del cliente.
 - COMPACTAS: el campo "idea" debe ser un desarrollo de 2-3 líneas máximo (no slide por slide, eso es para el generador de carrusel). Explicar el ángulo y qué mensaje da.
 - Usá español rioplatense (vos, no tú).
-${formatoContext}
+${formatoContext}`;
+
+  const reglasFundamentalesStory = `
+⚠️ ESTE LOTE ES 100% DE HISTORIAS DE INSTAGRAM.
+Las stories NO funcionan como un post. No compiten con el scroll. La gente ya está dentro del feed de stories de la cuenta cuando las ve. Cambian las reglas:
+
+- NO uses la lógica de "hook que pare el scroll". En stories no se "scrollea": se ve o se saltea con un tap. El primer fotograma tiene que invitar a quedarse, no a frenar.
+- Las stories son ÍNTIMAS y CONVERSACIONALES. Hablás como en un audio a una amiga: directo, con voz propia, sin guion forzado, sin producción de comercial.
+- DISTRIBUCIÓN OBLIGATORIA del lote: ~70% historias de CONEXIÓN (cotidiano, opinión, detrás de escena, pregunta a la audiencia, momento del día, reflexión, "muestrame tu...", encuesta liviana), ~20% educativas/utilitarias (1 dato concreto, 1 tip aplicable hoy, sin convertirlo en mini-clase), ~10% de venta usando fórmulas PAS / BBB / SOS (máximo 1-2 tandas en todo el lote, NUNCA mezcladas con conexión en la misma idea).
+- VARIEDAD REAL: cada idea debe tener un ángulo y un MOMENTO distinto. Si una idea es "mostrar el escritorio mientras trabaja", la siguiente NO puede ser "mostrar el café mientras planifica". Variá: a veces es video, a veces texto sobre fondo, a veces encuesta, a veces caja de preguntas, a veces foto del momento, a veces voz directa a cámara, a veces captura de pantalla con un comentario.
+- COMPACTAS: el campo "idea" describe la story en 1-2 líneas concretas: qué se muestra/dice, qué interacción pide (tap, respuesta, encuesta, sticker). NO es un copy largo.
+- HOOK: la primera frase visible. Una idea o pregunta corta que invite a quedarse o tocar algo. NO es un titular de post.
+- TÍTULO: nombre interno corto para que la estratega ubique la story (ej: "Encuesta café o té", "Detrás del envío del lunes"). No es para mostrar al público.
+- Marcá EXPLÍCITAMENTE el tipo en el campo "idea": empezá con "Tipo: CONEXIÓN — ", "Tipo: EDUCATIVA — " o "Tipo: VENTA — ".
+- Usá español rioplatense (vos, no tú).`;
+
+  const systemPrompt = `Sos una estratega de contenido de Carrusel MKT, agencia argentina. Generás ideas de contenido para redes sociales que son ACCIONABLES, ESPECÍFICAS y conectan con el público.
+
+REGLAS FUNDAMENTALES:
+${enfoquePrincipal ? `\n⚠️ REGLA #1 — ENFOQUE OBLIGATORIO ⚠️\n${reglaEnfoquePrompt}\nEsta regla es inviolable. Antes de proponer cada idea, preguntate: "¿esta idea está 100% alineada con el enfoque principal?". Si no, descartala y proponé otra.\n` : ''}${esLoteStory ? reglasFundamentalesStory : reglasFundamentalesFeed}
 
 ==========================================================
 📚 GUÍA ESTRATÉGICA SOBRE HISTORIAS DE INSTAGRAM
@@ -5840,11 +5879,11 @@ Objetivo: ${estrategia.objetivo_principal}
 ${estrategia.momento_descripcion ? 'Contexto: ' + estrategia.momento_descripcion : ''}
 
 PILARES:
-${pilaresContext}${buyerContext}${tonoContext}${enfoqueBloque}${detallesContext}
+${pilaresContext}${buyerContext}${tonoContext}${enfoqueBloque}${detallesContext}${antiRepeticionContext}
 
 Generá EXACTAMENTE ${cantidad} ideas ${pilarElegido === 'todos' ? 'distribuidas proporcionalmente según los porcentajes de los pilares' : 'del pilar "' + pilarElegido + '"'}.
 
-${enfoquePrincipal ? `\n⚠️ ANTES DE ENTREGAR: revisá cada una de las ${cantidad} ideas. ¿Todas están 100% conectadas al enfoque principal? Si alguna no lo está, reemplazala.` : ''}`;
+${enfoquePrincipal ? `\n⚠️ ANTES DE ENTREGAR: revisá cada una de las ${cantidad} ideas. ¿Todas están 100% conectadas al enfoque principal? Si alguna no lo está, reemplazala.` : ''}${ideasExistentes.length > 0 ? `\n⚠️ ANTES DE ENTREGAR: revisá la lista de "ideas existentes en el banco" y verificá que ninguna de las ${cantidad} ideas nuevas se solape con esas. Si una idea nueva tiene el mismo ángulo, tema o mensaje que una existente (aunque cambie el formato), reemplazala por algo realmente distinto.` : ''}`;
 
   try {
     const raw = await callClaude(systemPrompt, userPrompt, { maxTokens: 4000 });
