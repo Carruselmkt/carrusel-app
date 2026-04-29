@@ -9113,10 +9113,45 @@ function mostrarIndicadorCarrusel(cantidad) {
 
 function verCarruselGuardado() {
   const json = window._pendingCarruselSlides;
-  if (!json) { showToast('No hay carrusel pendiente', 'error'); return; }
-  const slides = JSON.parse(json);
-  mostrarPreviewCarrusel(slides);
-  $('modal').querySelector('.modal-header h2').textContent = '🎠 Ver carrusel (editable)';
+  if (!json) { showToast('No hay carrusel guardado', 'error'); return; }
+  let slides;
+  try {
+    slides = JSON.parse(json);
+  } catch (e) {
+    showToast('El carrusel guardado tiene un formato inválido', 'error');
+    return;
+  }
+  if (!Array.isArray(slides) || slides.length === 0) {
+    showToast('El carrusel está vacío', 'error');
+    return;
+  }
+
+  const html = slides.map((s, i) => `
+    <div class="escena-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <span class="escena-tiempo">🎠 Slide ${i + 1}</span>
+        ${s.tipo ? `<span style="font-size: 11px; padding: 2px 8px; background: var(--crema); border-radius: 10px; color: #8a6a20; font-weight: 600;">${esc(s.tipo)}</span>` : ''}
+      </div>
+      ${s.titular ? `<div class="slide-section"><span class="slide-section-label">📌 Titular</span><div style="font-weight: 600;">${esc(s.titular)}</div></div>` : ''}
+      ${s.texto ? `<div class="slide-section"><span class="slide-section-label">📝 Texto</span><div>${esc(s.texto)}</div></div>` : ''}
+      ${s.visual ? `<div class="slide-section"><span class="slide-section-label">🎨 Visual sugerido</span><div style="font-style: italic; color: var(--gris-text-soft);">${esc(s.visual)}</div></div>` : ''}
+      ${s.cta ? `<div class="slide-section"><span class="slide-section-label">🎯 CTA</span><div style="font-weight: 600; color: var(--fucsia);">${esc(s.cta)}</div></div>` : ''}
+    </div>`).join('');
+
+  window._preservarPendings = true;
+  $('modal').className = 'modal modal-lg';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>🎠 Carrusel · ${slides.length} slides</h2>
+      <button class="btn-ghost" onclick="volverAlPostModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size: 12px; color: var(--gris-text-soft); margin-bottom: 12px;">Vista de solo lectura. Para editar el carrusel, usá el botón "Regenerar" desde el editor de la publicación.</p>
+      ${html}
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="volverAlPostModal()">Volver a la publicación</button>
+    </div>`;
   $('modalOverlay').classList.add('active');
 }
 
@@ -9466,10 +9501,44 @@ function volverAlPostModal() {
 
 function verReelGuardado() {
   const json = window._pendingReelGuion;
-  if (!json) { showToast('No hay guión pendiente', 'error'); return; }
-  const escenas = JSON.parse(json);
-  mostrarPreviewReel(escenas);
-  $('modal').querySelector('.modal-header h2').textContent = '🎬 Ver guión (editable)';
+  if (!json) { showToast('No hay guión guardado', 'error'); return; }
+  let escenas;
+  try {
+    escenas = JSON.parse(json);
+  } catch (e) {
+    showToast('El guión guardado tiene un formato inválido', 'error');
+    return;
+  }
+  if (!Array.isArray(escenas) || escenas.length === 0) {
+    showToast('El guión está vacío', 'error');
+    return;
+  }
+
+  const html = escenas.map((e, i) => `
+    <div class="escena-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <span class="escena-tiempo">⏱️ ${esc(e.tiempo || `Escena ${i + 1}`)}</span>
+      </div>
+      ${e.texto_pantalla ? `<div class="slide-section"><span class="slide-section-label">📝 Texto en pantalla</span><div style="font-weight: 600;">${esc(e.texto_pantalla)}</div></div>` : ''}
+      ${e.voz_audio ? `<div class="slide-section"><span class="slide-section-label">🎤 Voz / Audio</span><div>${esc(e.voz_audio)}</div></div>` : ''}
+      ${e.accion ? `<div class="slide-section"><span class="slide-section-label">🎬 Acción / Qué se ve</span><div style="font-style: italic; color: var(--gris-text-soft);">${esc(e.accion)}</div></div>` : ''}
+    </div>`).join('');
+
+  // Modal sobre el modal del post — preservamos los pendings al volver
+  window._preservarPendings = true;
+  $('modal').className = 'modal modal-lg';
+  $('modal').innerHTML = `
+    <div class="modal-header">
+      <h2>🎬 Guión del reel · ${escenas.length} escenas</h2>
+      <button class="btn-ghost" onclick="volverAlPostModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size: 12px; color: var(--gris-text-soft); margin-bottom: 12px;">Vista de solo lectura. Para editar el guión, usá el botón "Regenerar" desde el editor de la publicación.</p>
+      ${html}
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="volverAlPostModal()">Volver a la publicación</button>
+    </div>`;
   $('modalOverlay').classList.add('active');
 }
 
