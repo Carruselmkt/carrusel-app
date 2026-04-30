@@ -9126,17 +9126,20 @@ function verCarruselGuardado() {
     return;
   }
 
-  const html = slides.map((s, i) => `
-    <div class="escena-card">
+  const html = slides.map((s, i) => {
+    const tipo = s.tipo || 'Desarrollo';
+    const tipoLower = tipo.toLowerCase();
+    return `
+    <div class="slide-card ${tipoLower}">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-        <span class="escena-tiempo">🎠 Slide ${i + 1}</span>
-        ${s.tipo ? `<span style="font-size: 11px; padding: 2px 8px; background: var(--crema); border-radius: 10px; color: #8a6a20; font-weight: 600;">${esc(s.tipo)}</span>` : ''}
+        <span class="slide-number ${tipoLower}">Slide ${s.numero || (i + 1)}</span>
+        <span style="font-size: 11px; padding: 2px 8px; background: var(--crema); border-radius: 10px; color: #8a6a20; font-weight: 600;">${esc(tipo)}</span>
       </div>
-      ${s.titular ? `<div class="slide-section"><span class="slide-section-label">📌 Titular</span><div style="font-weight: 600;">${esc(s.titular)}</div></div>` : ''}
-      ${s.texto ? `<div class="slide-section"><span class="slide-section-label">📝 Texto</span><div>${esc(s.texto)}</div></div>` : ''}
+      ${s.texto_principal ? `<div class="slide-section"><span class="slide-section-label">Texto principal (lo grande)</span><div style="font-weight: 600;">${esc(s.texto_principal)}</div></div>` : ''}
+      ${s.texto_secundario ? `<div class="slide-section"><span class="slide-section-label">Texto secundario (detalle)</span><div>${esc(s.texto_secundario)}</div></div>` : ''}
       ${s.visual ? `<div class="slide-section"><span class="slide-section-label">🎨 Visual sugerido</span><div style="font-style: italic; color: var(--gris-text-soft);">${esc(s.visual)}</div></div>` : ''}
-      ${s.cta ? `<div class="slide-section"><span class="slide-section-label">🎯 CTA</span><div style="font-weight: 600; color: var(--fucsia);">${esc(s.cta)}</div></div>` : ''}
-    </div>`).join('');
+    </div>`;
+  }).join('');
 
   window._preservarPendings = true;
   $('modal').className = 'modal modal-lg';
