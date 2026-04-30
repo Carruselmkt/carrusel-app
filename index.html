@@ -6508,7 +6508,7 @@ async function renderTabCalendario() {
     // Estadísticas del mes visible
     const monthPosts = posts.filter(p => {
       if (!p.fecha_publicacion) return false;
-      const pd = new Date(p.fecha_publicacion);
+      const pd = new Date(p.fecha_publicacion + 'T00:00:00');
       return pd.getFullYear() === year && pd.getMonth() === month;
     });
     const stats = {
@@ -11767,7 +11767,9 @@ function renderDashboardContent(ingresos) {
   semanaEnd.setDate(hoy.getDate() + 7);
   const postsSemana = state.calendario.filter(p => {
     if (!p.fecha_publicacion) return false;
-    const f = new Date(p.fecha_publicacion);
+    // Parseamos como hora local agregando T00:00:00, sino JS interpreta YYYY-MM-DD como UTC
+    // y en Argentina (UTC-3) las fechas quedan corridas un día atrás.
+    const f = new Date(p.fecha_publicacion + 'T00:00:00');
     return f >= hoy && f <= semanaEnd;
   });
 
@@ -11950,7 +11952,7 @@ function generarSeccionAlertas() {
     const postsDelMes = state.calendario.filter(p => {
       if (p.cliente_id !== c.id) return false;
       if (!p.fecha_publicacion) return false;
-      const f = new Date(p.fecha_publicacion);
+      const f = new Date(p.fecha_publicacion + 'T00:00:00');
       return f.getMonth() + 1 === mesActual && f.getFullYear() === anioActual;
     });
     return postsDelMes.length === 0;
@@ -13365,12 +13367,12 @@ function renderMetricasList() {
 // Devuelve los períodos cuyo fecha_hasta cae en el mismo mes calendario que la fecha de referencia (YYYY-MM-DD)
 function metricasDelMismoMes(metricasCliente, fechaRefIso) {
   if (!fechaRefIso) return [];
-  const ref = new Date(fechaRefIso);
+  const ref = new Date(fechaRefIso + 'T00:00:00');
   const mes = ref.getMonth();
   const anio = ref.getFullYear();
   return metricasCliente.filter(m => {
     if (!m.fecha_hasta) return false;
-    const h = new Date(m.fecha_hasta);
+    const h = new Date(m.fecha_hasta + 'T00:00:00');
     return h.getMonth() === mes && h.getFullYear() === anio;
   });
 }
@@ -14195,8 +14197,8 @@ async function ejecutarGeneradorReporte() {
   const metricasDelMes = state.metricas.filter(m => {
     if (m.cliente_id !== clienteId) return false;
     if (!m.fecha_desde || !m.fecha_hasta) return false;
-    const d = new Date(m.fecha_desde);
-    const h = new Date(m.fecha_hasta);
+    const d = new Date(m.fecha_desde + 'T00:00:00');
+    const h = new Date(m.fecha_hasta + 'T00:00:00');
     // Si el período se solapa con el mes
     return (h >= mesInicio && d <= mesFin);
   });
@@ -14224,7 +14226,7 @@ async function ejecutarGeneradorReporte() {
     periodoDesde = desdes[0];
     periodoHasta = hastas[hastas.length - 1];
     if (periodoDesde && periodoHasta) {
-      diasTotal = Math.round((new Date(periodoHasta) - new Date(periodoDesde)) / (1000 * 60 * 60 * 24)) + 1;
+      diasTotal = Math.round((new Date(periodoHasta + 'T00:00:00') - new Date(periodoDesde + 'T00:00:00')) / (1000 * 60 * 60 * 24)) + 1;
     }
   }
 
@@ -14234,7 +14236,7 @@ async function ejecutarGeneradorReporte() {
   const metricasAnt = state.metricas.filter(m => {
     if (m.cliente_id !== clienteId) return false;
     if (!m.fecha_hasta) return false;
-    const h = new Date(m.fecha_hasta);
+    const h = new Date(m.fecha_hasta + 'T00:00:00');
     return (h >= mesAntInicio && h <= mesAntFin);
   });
   const sumMetAnt = (campo) => metricasAnt.reduce((s, m) => s + (Number(m[campo]) || 0), 0);
@@ -14243,7 +14245,7 @@ async function ejecutarGeneradorReporte() {
   const postsMes = state.calendario.filter(p => {
     if (p.cliente_id !== clienteId) return false;
     if (!p.fecha_publicacion) return false;
-    const f = new Date(p.fecha_publicacion);
+    const f = new Date(p.fecha_publicacion + 'T00:00:00');
     return f.getMonth() + 1 === mes && f.getFullYear() === anio;
   });
 
