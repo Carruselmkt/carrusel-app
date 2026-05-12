@@ -280,6 +280,25 @@
   }
   .brief-progress.complete { background: #e6f4ef; color: var(--verde); border-color: transparent; }
 
+  /* ===== Items dinámicos del brief (equipo, buyer personas, anécdotas) ===== */
+  .brief-dynamic-item {
+    background: #fafafa;
+    border: 1px solid var(--gris-border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+  }
+  .brief-dynamic-item:last-child { margin-bottom: 0; }
+  .brief-dynamic-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding-bottom: 10px; margin-bottom: 12px;
+    border-bottom: 1px dashed var(--gris-border);
+  }
+  .brief-dynamic-header strong { font-size: 14px; color: var(--gris-text); }
+  .brief-dynamic-fields .form-row { margin-bottom: 10px; }
+  .brief-dynamic-fields .form-row:last-child { margin-bottom: 0; }
+  .brief-dynamic-fields .form-textarea { min-height: 50px; }
+
   /* ===== AUTOGUARDADO: indicador ===== */
   .autosave-indicator {
     position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
@@ -2909,6 +2928,85 @@ const BRIEF_SECTIONS = [
       { k: 'alianzas_posibles', label: 'Empresas con las que podrían aliarse', type: 'textarea' },
     ]
   },
+  {
+    id: 'voz_marca',
+    icon: '🗣️',
+    title: 'Voz de marca',
+    fields: [
+      { k: 'tono_general', label: 'Tono general (cercano, profesional, formal, técnico, juvenil...)', type: 'textarea' },
+      { k: 'palabras_si', label: 'Palabras y expresiones que SÍ usa (separadas por coma)', type: 'textarea' },
+      { k: 'palabras_no', label: 'Palabras y expresiones que NO usa', type: 'textarea' },
+      { k: 'nivel_formalidad', label: 'Nivel de formalidad (muy informal / informal / mixto / formal / muy formal)', type: 'text' },
+      { k: 'uso_humor', label: 'Uso del humor (no usa / sutil / frecuente / es parte central)', type: 'text' },
+      { k: 'uso_emojis', label: 'Uso de emojis (no usa / con criterio / abundante — y cuáles)', type: 'text' },
+      { k: 'frases_tipo', label: 'Ejemplos de frases tipo de la marca (3-5 frases textuales)', type: 'textarea' },
+    ]
+  },
+  {
+    id: 'identidad_marca',
+    icon: '⭐',
+    title: 'USP y temáticas',
+    fields: [
+      { k: 'usp', label: 'USP — Qué nos hace únicos en UNA frase', type: 'textarea' },
+      { k: 'tematicas_si', label: 'Temáticas a explorar fuerte', type: 'textarea' },
+    ]
+  },
+];
+
+// Bloques dinámicos del brief (lista de items con varios campos cada uno).
+// Se guardan como JSON en la planilla, en una columna por bloque.
+const BRIEF_DYNAMIC_BLOCKS = [
+  {
+    id: 'equipo',
+    icon: '👥',
+    title: 'Equipo / Personas detrás de la marca',
+    columnKey: 'equipo_json',
+    maxItems: 5,
+    itemLabel: 'persona',
+    fields: [
+      { k: 'nombre', label: 'Nombre', type: 'text' },
+      { k: 'rol', label: 'Rol / cargo', type: 'text' },
+      { k: 'edad', label: 'Edad aproximada', type: 'text' },
+      { k: 'especialidad', label: 'Especialidad o área fuerte', type: 'text' },
+      { k: 'personalidad', label: 'Personalidad en una frase corta', type: 'text' },
+      { k: 'voz', label: 'Cómo es su voz hablando', type: 'textarea' },
+      { k: 'hobby', label: 'Hobby o dato curioso', type: 'text' },
+      { k: 'historia', label: 'Historia personal con el rubro (opcional)', type: 'textarea' },
+    ]
+  },
+  {
+    id: 'buyer_personas',
+    icon: '🧑‍🤝‍🧑',
+    title: 'Buyer personas (clientes ideales)',
+    columnKey: 'buyer_personas_json',
+    maxItems: 4,
+    itemLabel: 'buyer persona',
+    fields: [
+      { k: 'nombre', label: 'Nombre ficticio', type: 'text' },
+      { k: 'edad', label: 'Edad', type: 'text' },
+      { k: 'descripcion', label: 'Descripción rápida (cómo es visualmente, su rutina)', type: 'textarea' },
+      { k: 'situacion', label: 'Situación familiar/profesional', type: 'textarea' },
+      { k: 'miedos', label: 'Miedos relacionados con el rubro', type: 'textarea' },
+      { k: 'deseos', label: 'Deseos / lo que quiere lograr', type: 'textarea' },
+      { k: 'consume', label: 'Qué consume (apps, redes, programas, marcas)', type: 'textarea' },
+      { k: 'frase_tipica', label: 'Frase típica que diría', type: 'text' },
+      { k: 'como_encuentra', label: 'Cómo encontraría a la marca', type: 'textarea' },
+    ]
+  },
+  {
+    id: 'anecdotas',
+    icon: '💬',
+    title: 'Anécdotas y material real',
+    columnKey: 'anecdotas_json',
+    maxItems: 30,
+    itemLabel: 'anécdota',
+    fields: [
+      { k: 'titulo', label: 'Título corto de la anécdota', type: 'text' },
+      { k: 'protagonista', label: 'Quién la protagoniza', type: 'text' },
+      { k: 'etiqueta', label: 'Etiqueta (cómica / emotiva / técnica / aprendizaje)', type: 'text' },
+      { k: 'historia', label: 'La historia', type: 'textarea' },
+    ]
+  },
 ];
 
 async function renderTabBrief() {
@@ -2955,6 +3053,11 @@ async function renderTabBrief() {
         </div>`;
     }).join('');
 
+    // Bloques dinámicos (equipo, buyer personas, anécdotas)
+    const dynamicSectionsHtml = BRIEF_DYNAMIC_BLOCKS.map(block =>
+      renderBriefDynamicBlock(block, brief, cliente.id)
+    ).join('');
+
     const totalAll = BRIEF_SECTIONS.reduce((a, s) => a + s.fields.length, 0);
     const completedAll = BRIEF_SECTIONS.reduce((a, s) => a + s.fields.filter(f => brief[f.k] && brief[f.k].trim()).length, 0);
     const pct = Math.round((completedAll / totalAll) * 100);
@@ -2978,6 +3081,7 @@ async function renderTabBrief() {
         </div>
       </div>
       ${sectionsHtml}
+      ${dynamicSectionsHtml}
       ${fodaSection}`;
   } catch (e) {
     $('tabContent').innerHTML = `<div class="card" style="border-color: var(--rojo); background: #fef8f8;"><strong style="color: var(--rojo);">Error al cargar el brief</strong><p style="margin-top: 6px; font-size: 13px;">${esc(e.message)}</p></div>`;
@@ -3364,6 +3468,148 @@ function updateBriefProgress(clienteId, field, value) {
 }
 
 // ============================================================================
+// BLOQUES DINÁMICOS DEL BRIEF (Equipo, Buyer Personas, Anécdotas)
+// ============================================================================
+// Cada bloque se guarda como JSON en una columna del brief (equipo_json, buyer_personas_json, anecdotas_json).
+// La columna se crea automáticamente la primera vez que se guarda un item.
+
+function getBriefDynamicItems(brief, columnKey) {
+  if (!brief || !brief[columnKey]) return [];
+  try {
+    const arr = JSON.parse(brief[columnKey]);
+    return Array.isArray(arr) ? arr : [];
+  } catch { return []; }
+}
+
+function renderBriefDynamicBlock(block, brief, clienteId) {
+  const items = getBriefDynamicItems(brief, block.columnKey);
+  const isComplete = items.length > 0 && items.every(item =>
+    block.fields.filter(f => f.required !== false).every(f => item[f.k] && String(item[f.k]).trim())
+  );
+  const isPartial = items.length > 0 && !isComplete;
+
+  const itemsHtml = items.map((item, idx) => renderBriefDynamicItem(block, item, idx, clienteId)).join('');
+  const puedeAgregar = items.length < block.maxItems;
+
+  return `
+    <div class="brief-section ${items.length > 0 ? 'open' : ''}" data-dynamic-block="${block.id}">
+      <div class="brief-section-header" onclick="this.parentElement.classList.toggle('open')">
+        <span class="brief-section-icon">${block.icon}</span>
+        <span class="brief-section-title">${esc(block.title)}</span>
+        <span class="brief-progress ${isComplete ? 'complete' : ''}">${items.length} ${items.length === 1 ? block.itemLabel : block.itemLabel + 's'}</span>
+        <span class="brief-section-caret">▸</span>
+      </div>
+      <div class="brief-section-body">
+        <div id="dyn_items_${block.id}">${itemsHtml}</div>
+        ${puedeAgregar
+          ? `<button class="btn btn-secondary btn-sm" onclick="agregarItemDinamico('${esc(clienteId)}', '${esc(block.id)}')" style="margin-top: 12px;">+ Agregar ${esc(block.itemLabel)}</button>`
+          : `<p style="font-size: 12px; color: var(--gris-text-muted); margin-top: 10px;">Máximo de ${block.maxItems} ${block.itemLabel}s alcanzado.</p>`
+        }
+      </div>
+    </div>`;
+}
+
+function renderBriefDynamicItem(block, item, idx, clienteId) {
+  // Título del item: primer campo (suele ser "nombre" o "título")
+  const titulo = item[block.fields[0].k] || `${block.itemLabel.charAt(0).toUpperCase() + block.itemLabel.slice(1)} ${idx + 1}`;
+  const fieldsHtml = block.fields.map(f => {
+    const val = item[f.k] || '';
+    const inputId = `dyn_${block.id}_${idx}_${f.k}`;
+    const input = f.type === 'textarea'
+      ? `<textarea class="form-textarea" id="${inputId}" onblur="actualizarItemDinamico('${esc(clienteId)}', '${esc(block.id)}', ${idx}, '${esc(f.k)}', this.value)">${esc(val)}</textarea>`
+      : `<input type="text" class="form-input" id="${inputId}" value="${esc(val)}" onblur="actualizarItemDinamico('${esc(clienteId)}', '${esc(block.id)}', ${idx}, '${esc(f.k)}', this.value)">`;
+    return `
+      <div class="form-row">
+        <label class="form-label">${esc(f.label)}</label>
+        ${input}
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="brief-dynamic-item" data-idx="${idx}">
+      <div class="brief-dynamic-header">
+        <strong>${esc(titulo)}</strong>
+        <button class="btn-ghost btn-sm btn-danger" onclick="eliminarItemDinamico('${esc(clienteId)}', '${esc(block.id)}', ${idx})" title="Eliminar">🗑</button>
+      </div>
+      <div class="brief-dynamic-fields">${fieldsHtml}</div>
+    </div>`;
+}
+
+async function agregarItemDinamico(clienteId, blockId) {
+  const block = BRIEF_DYNAMIC_BLOCKS.find(b => b.id === blockId);
+  if (!block) return;
+  try {
+    const { data } = await sheetRead('Briefs');
+    let brief = data.find(b => b.cliente_id === clienteId);
+    const items = brief ? getBriefDynamicItems(brief, block.columnKey) : [];
+    if (items.length >= block.maxItems) {
+      showToast(`Ya alcanzaste el máximo de ${block.maxItems} ${block.itemLabel}s`, 'error');
+      return;
+    }
+    // Crear nuevo item vacío con todas las keys de los campos
+    const nuevoItem = {};
+    block.fields.forEach(f => { nuevoItem[f.k] = ''; });
+    items.push(nuevoItem);
+    const valorJson = JSON.stringify(items);
+
+    if (brief) {
+      await sheetUpdate('Briefs', brief.id, { [block.columnKey]: valorJson });
+    } else {
+      brief = { id: genId('bri'), cliente_id: clienteId, fecha_completado: todayISO(), [block.columnKey]: valorJson };
+      await sheetAppend('Briefs', brief);
+    }
+    showToast(`${block.itemLabel.charAt(0).toUpperCase() + block.itemLabel.slice(1)} agregado`, 'success');
+    renderTabBrief();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+async function eliminarItemDinamico(clienteId, blockId, idx) {
+  const block = BRIEF_DYNAMIC_BLOCKS.find(b => b.id === blockId);
+  if (!block) return;
+  if (!confirm(`¿Eliminar este ${block.itemLabel}?`)) return;
+  try {
+    const { data } = await sheetRead('Briefs');
+    const brief = data.find(b => b.cliente_id === clienteId);
+    if (!brief) return;
+    const items = getBriefDynamicItems(brief, block.columnKey);
+    items.splice(idx, 1);
+    await sheetUpdate('Briefs', brief.id, { [block.columnKey]: JSON.stringify(items) });
+    showToast('Eliminado', 'success');
+    renderTabBrief();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+// Autoguardado por campo del item dinámico (con debounce, igual que saveBriefField)
+async function actualizarItemDinamico(clienteId, blockId, idx, fieldKey, value) {
+  const block = BRIEF_DYNAMIC_BLOCKS.find(b => b.id === blockId);
+  if (!block) return;
+  const debounceKey = `dyn_${clienteId}_${blockId}_${idx}_${fieldKey}`;
+  clearTimeout(autosaveTimers[debounceKey]);
+  autosaveTimers[debounceKey] = setTimeout(async () => {
+    showAutosave('saving', 'Guardando...');
+    try {
+      const { data } = await sheetRead('Briefs');
+      const brief = data.find(b => b.cliente_id === clienteId);
+      if (!brief) return;
+      const items = getBriefDynamicItems(brief, block.columnKey);
+      if (!items[idx]) return;
+      if ((items[idx][fieldKey] || '') === value) { showAutosave('saved', 'Guardado'); return; }
+      items[idx][fieldKey] = value;
+      await sheetUpdate('Briefs', brief.id, { [block.columnKey]: JSON.stringify(items) });
+      showAutosave('saved', 'Guardado');
+      // Actualizar el título del item si cambió el primer campo
+      if (fieldKey === block.fields[0].k) {
+        const itemEl = document.querySelector(`[data-dynamic-block="${blockId}"] [data-idx="${idx}"] .brief-dynamic-header strong`);
+        if (itemEl) itemEl.textContent = value || `${block.itemLabel.charAt(0).toUpperCase() + block.itemLabel.slice(1)} ${idx + 1}`;
+      }
+    } catch (e) {
+      showAutosave('error', 'Error al guardar');
+      console.error(e);
+    }
+  }, 400);
+}
+
+// ============================================================================
 // API DE CLAUDE (Anthropic)
 // ============================================================================
 async function callClaude(systemPrompt, userPrompt, options = {}) {
@@ -3473,6 +3719,67 @@ function buildBriefContext(clienteId) {
   agregarSiExiste('COMPETENCIA LOCAL', brief.competencia_local);
   agregarSiExiste('COMPETENCIA NACIONAL/INTERNACIONAL', brief.competencia_nacional);
   agregarSiExiste('REFERENTES', brief.referentes);
+
+  // Voz de marca (bloque nuevo)
+  agregarSiExiste('TONO GENERAL', brief.tono_general);
+  agregarSiExiste('PALABRAS QUE SÍ USA', brief.palabras_si);
+  agregarSiExiste('PALABRAS QUE NO USA', brief.palabras_no);
+  agregarSiExiste('NIVEL DE FORMALIDAD', brief.nivel_formalidad);
+  agregarSiExiste('USO DEL HUMOR', brief.uso_humor);
+  agregarSiExiste('USO DE EMOJIS', brief.uso_emojis);
+  agregarSiExiste('FRASES TIPO DE LA MARCA', brief.frases_tipo);
+
+  // USP y temáticas
+  agregarSiExiste('USP — QUÉ NOS HACE ÚNICOS', brief.usp);
+  agregarSiExiste('TEMÁTICAS A EXPLORAR FUERTE', brief.tematicas_si);
+
+  // Bloques dinámicos: Equipo
+  const equipo = getBriefDynamicItems(brief, 'equipo_json');
+  if (equipo.length > 0) {
+    ctx += `\nEQUIPO / PERSONAS DETRÁS DE LA MARCA:\n`;
+    equipo.forEach((p, i) => {
+      ctx += `\n- Persona ${i + 1}: ${p.nombre || 'sin nombre'}`;
+      if (p.rol) ctx += ` | Rol: ${p.rol}`;
+      if (p.edad) ctx += ` | Edad: ${p.edad}`;
+      if (p.especialidad) ctx += `\n  Especialidad: ${p.especialidad}`;
+      if (p.personalidad) ctx += `\n  Personalidad: ${p.personalidad}`;
+      if (p.voz) ctx += `\n  Voz: ${p.voz}`;
+      if (p.hobby) ctx += `\n  Hobby/dato curioso: ${p.hobby}`;
+      if (p.historia) ctx += `\n  Historia: ${p.historia}`;
+      ctx += '\n';
+    });
+  }
+
+  // Bloques dinámicos: Buyer personas
+  const buyerPersonas = getBriefDynamicItems(brief, 'buyer_personas_json');
+  if (buyerPersonas.length > 0) {
+    ctx += `\nBUYER PERSONAS (CLIENTES IDEALES):\n`;
+    buyerPersonas.forEach((bp, i) => {
+      ctx += `\n- ${bp.nombre || 'Buyer persona ' + (i + 1)}${bp.edad ? ' (' + bp.edad + ')' : ''}`;
+      if (bp.descripcion) ctx += `\n  Descripción: ${bp.descripcion}`;
+      if (bp.situacion) ctx += `\n  Situación: ${bp.situacion}`;
+      if (bp.miedos) ctx += `\n  Miedos: ${bp.miedos}`;
+      if (bp.deseos) ctx += `\n  Deseos: ${bp.deseos}`;
+      if (bp.consume) ctx += `\n  Qué consume: ${bp.consume}`;
+      if (bp.frase_tipica) ctx += `\n  Frase típica: "${bp.frase_tipica}"`;
+      if (bp.como_encuentra) ctx += `\n  Cómo encontraría a la marca: ${bp.como_encuentra}`;
+      ctx += '\n';
+    });
+  }
+
+  // Bloques dinámicos: Anécdotas
+  const anecdotas = getBriefDynamicItems(brief, 'anecdotas_json');
+  if (anecdotas.length > 0) {
+    ctx += `\nANÉCDOTAS Y MATERIAL REAL DEL CLIENTE:\n`;
+    anecdotas.forEach((a, i) => {
+      ctx += `\n- "${a.titulo || 'Anécdota ' + (i + 1)}"`;
+      if (a.protagonista) ctx += ` [protagonista: ${a.protagonista}]`;
+      if (a.etiqueta) ctx += ` [${a.etiqueta}]`;
+      if (a.historia) ctx += `\n  ${a.historia}`;
+      ctx += '\n';
+    });
+    ctx += `\nNota: estas anécdotas son MATERIAL REAL del cliente. Cuando una idea necesite especificidad, usá estas anécdotas en lugar de inventar.\n`;
+  }
 
   // Inyectar FODA si está cargado
   ctx += buildFODAContext(clienteId);
