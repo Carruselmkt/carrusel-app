@@ -3617,7 +3617,7 @@ async function callClaude(systemPrompt, userPrompt, options = {}) {
     throw new Error('No hay API key configurada. Cargala en la hoja "Config" de tu planilla (fila con clave "anthropic_api_key").');
   }
 
-  const model = options.model || 'claude-sonnet-4-5';
+  const model = options.model || 'claude-sonnet-4-5-20251001';
   const maxTokens = options.maxTokens || 2048;
 
   try {
@@ -4334,7 +4334,7 @@ ${buildEstrategiaContext(estrategia)}
 Generá 2 o 3 buyer personas para esta estrategia.`;
 
   try {
-    const raw = await callClaude(systemPrompt, userPrompt, { maxTokens: 2500 });
+    const raw = await callClaude(systemPrompt, userPrompt, { maxTokens: 4000 });
     const personas = extractJson(raw);
 
     if (!Array.isArray(personas) || personas.length === 0) {
