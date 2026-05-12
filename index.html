@@ -3617,7 +3617,7 @@ async function callClaude(systemPrompt, userPrompt, options = {}) {
     throw new Error('No hay API key configurada. Cargala en la hoja "Config" de tu planilla (fila con clave "anthropic_api_key").');
   }
 
-  const model = options.model || 'claude-sonnet-4-5-20251001';
+  const model = options.model || 'claude-sonnet-4-6';
   const maxTokens = options.maxTokens || 2048;
 
   try {
