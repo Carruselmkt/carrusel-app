@@ -807,6 +807,13 @@
     font-size: 13px; color: var(--gris-text-soft);
     margin-bottom: 10px;
   }
+  /* Placeholders [entre corchetes] que la IA deja para que la estratega complete con datos reales */
+  .placeholder-idea {
+    display: inline; background: #fff4e0; color: #8a6a20;
+    padding: 1px 5px; border-radius: 3px;
+    font-weight: 600; font-style: normal;
+    border: 1px dashed #d4a857;
+  }
   .idea-actions {
     display: flex; gap: 6px; flex-wrap: wrap;
     padding-top: 8px; border-top: 1px solid var(--gris-border);
@@ -1984,6 +1991,17 @@ const gapiReady = new Promise(resolve => { gapiReadyResolve = resolve; });
 // ============================================================================
 function $(id) { return document.getElementById(id); }
 function esc(s) { if (s === undefined || s === null) return ''; return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;'); }
+
+// Versión de esc que resalta los placeholders [entre corchetes] que deja la IA
+// para que la estratega complete con datos reales. Se usa en hooks, descripciones de ideas, copys generados.
+function escWithPlaceholders(s) {
+  if (s === undefined || s === null) return '';
+  // Primero escapamos el HTML, después reemplazamos los corchetes ya escapados por spans con estilo
+  const escapado = esc(s);
+  // Buscamos los patrones [...] (que después del esc son &lt;...&gt; — no, esos son < > literales)
+  // Los corchetes [ ] no son entidades HTML, así que pasan derecho por esc.
+  return escapado.replace(/\[([^\[\]]+?)\]/g, '<span class="placeholder-idea" title="Completá con tu experiencia real">[$1]</span>');
+}
 
 function showToast(msg, type = '') {
   const t = $('toast');
@@ -5229,8 +5247,8 @@ function renderIdeaCard(idea) {
         ${tieneAnuncioMeta ? `<span class="idea-chip" style="background: #e3edff; color: #1877f2;">🎯 Anuncio ${anuncioFase} · ${variantesCount} var.</span>` : ''}
       </div>
 
-      ${idea.hook ? `<div class="idea-hook">"${esc(idea.hook)}"</div>` : ''}
-      ${(idea.idea_text || idea.idea) && (idea.idea_text || idea.idea) !== idea.titulo && !tieneCarrusel && !tieneReel && !tieneHistorias && !tieneAnuncioMeta ? `<div class="idea-descripcion">${esc(idea.idea_text || idea.idea)}</div>` : ''}
+      ${idea.hook ? `<div class="idea-hook">"${escWithPlaceholders(idea.hook)}"</div>` : ''}
+      ${(idea.idea_text || idea.idea) && (idea.idea_text || idea.idea) !== idea.titulo && !tieneCarrusel && !tieneReel && !tieneHistorias && !tieneAnuncioMeta ? `<div class="idea-descripcion">${escWithPlaceholders(idea.idea_text || idea.idea)}</div>` : ''}
 
       ${tieneCopyDesarrollado ? `
         <details style="margin-bottom: 10px;">
@@ -5601,8 +5619,10 @@ function abrirGeneradorIdeas() {
         <div>
           <label class="form-label">Cantidad</label>
           <select class="form-select" id="gen_cantidad">
+            <option value="3">3 ideas (ahorro)</option>
+            <option value="5" selected>5 ideas</option>
             <option value="10">10 ideas</option>
-            <option value="15" selected>15 ideas</option>
+            <option value="15">15 ideas</option>
             <option value="20">20 ideas</option>
             <option value="30">30 ideas</option>
           </select>
@@ -5817,35 +5837,102 @@ TODAS las ${cantidad} ideas deben cumplir esta directiva. Si una idea no encaja,
   const detallesContext = detalles ? `\n\nDETALLES ADICIONALES DE LA ESTRATEGA:\n${detalles}` : '';
 
   // === Bloque de REGLAS FUNDAMENTALES ===
-  // Si todo el lote es Stories, las reglas son OTRAS — las stories no compiten con scroll,
-  // se ven dentro de la sesión, son íntimas, conversacionales y a menudo sin guion previo.
+  // El generador tiene una vara MUCHO MÁS ALTA: cambia el rol, fuerza ángulos narrativos,
+  // bloquea fórmulas gastadas, exige placeholders en lugar de inventar datos.
+
+  // Lista de ángulos narrativos. La IA recibe los primeros N según cantidad pedida.
+  const ANGULOS_NARRATIVOS = [
+    'Confesión personal: algo que el cliente reconoce que hizo mal alguna vez, sin que sea un mea culpa de manual.',
+    'Dato contraintuitivo: un hecho del rubro que la mayoría cree al revés.',
+    'Detrás de escena del proceso: mostrar cómo se hace algo que el cliente final nunca ve.',
+    'Opinión polémica: una postura que va a generar debate. No insultos, postura clara.',
+    'Pregunta que nadie se hace: algo que todos asumen pero nadie cuestiona.',
+    'Comparación inesperada: comparar lo que hace el cliente con algo de otro rubro completamente distinto.',
+    'Anécdota específica: una historia real con detalles concretos (un cliente puntual, una situación específica, no genéricos). Usar placeholders \\[entre corchetes\\] para que la estratega complete con datos reales.',
+    'Lo que NO hago / NO ofrezco: anti-marketing. Qué cosas el cliente no hace y por qué.',
+    'Predicción del rubro: hacia dónde va esto, qué viene en 1-2 años.',
+    'Error caro que viste a otros cometer: sin dar nombres, una observación filosa del mercado.',
+    'Microhábito útil del oficio: algo chico pero específico que solo alguien que trabaja en esto sabe.',
+    'Reflexión personal sobre el trabajo: algo que pensaste haciendo algo concreto.',
+    'Pregunta directa a la audiencia: que les invite a contar algo propio.',
+    'Mito popular del rubro vs. realidad: desarmar algo que se da por hecho.',
+    'Momento de orgullo profesional: sin ser autobombo, qué te hizo decir "esto está bien hecho".',
+  ];
+
+  // Tomamos N ángulos según cantidad pedida. Si pide más que los ángulos disponibles, se repiten algunos (la IA debe variarlos).
+  const angulosParaUsar = [];
+  for (let i = 0; i < cantidad; i++) {
+    angulosParaUsar.push(ANGULOS_NARRATIVOS[i % ANGULOS_NARRATIVOS.length]);
+  }
+  const angulosBloque = angulosParaUsar.map((a, i) => `${i + 1}. ${a}`).join('\n');
+
   const reglasFundamentalesFeed = `
-- VARIEDAD DE TEMAS: cada idea del lote debe tocar un tema DIFERENTE dentro del enfoque. No generes 3 ideas distintas sobre el mismo tema (ej: no 3 ideas sobre implantes).
-- ESPECIFICIDAD: nada genérico. Nada de "5 tips sobre X" o "Hablemos de Y". Ir directo al ángulo concreto.
-- HOOK CRÍTICO: tiene que parar el scroll. Curiosidad, polémica, pregunta inesperada, dato sorprendente, confesión, historia.
-- CONEXIÓN CON DOLORES/DESEOS de los buyer personas. No contenido autorreferencial del cliente.
-- COMPACTAS: el campo "idea" debe ser un desarrollo de 2-3 líneas máximo (no slide por slide, eso es para el generador de carrusel). Explicar el ángulo y qué mensaje da.
-- Usá español rioplatense (vos, no tú).
+TU ROL:
+Sos la estratega senior de Carrusel MKT. Pensás como una persona que lleva 10 años en redes sociales y se aburrió de ver el mismo contenido reciclado mil veces. Tu trabajo es proponer ideas que paren en seco a alguien que YA VIO TODO el contenido de este rubro.
+
+LA PREGUNTA FILTRO (aplicala a CADA idea antes de devolverla):
+"¿Esto lo escribiría una persona real con conocimiento profundo, o suena a guion de coach de Instagram?"
+Si suena a coach, descartala. Si suena a plantilla, descartala. Si funcionaría tal cual para cualquier otra marca del mismo rubro, descartala.
+
+ÁNGULOS NARRATIVOS OBLIGATORIOS:
+Tenés que proponer EXACTAMENTE ${cantidad} ideas, una por cada uno de estos ángulos, EN ESTE ORDEN:
+
+${angulosBloque}
+
+REGLAS DE ESTILO:
+- HOOK: tiene que parar el scroll. Curiosidad, polémica, pregunta inesperada, dato sorprendente, confesión, historia. NO genérico.
+- CONEXIÓN: tocar dolores o deseos reales de los buyer personas, no contenido autorreferencial del cliente.
+- COMPACTAS: el campo "idea" es un desarrollo de 2-3 líneas máximo. Explicar el ángulo y qué mensaje da.
+- ESPAÑOL RIOPLATENSE: vos, no tú.
+
+📛 FÓRMULAS PROHIBIDAS (descarte automático si aparecen):
+- "X tips para…" / "X claves para…" / "X errores que…" / "X cosas que aprendí…"
+- "Lo que nadie te dice sobre…"
+- "La verdad sobre…"
+- "Si querés X, hacé Y"
+- Cualquier hook que empiece con "¿Sabías que…?"
+- Cualquier idea aplicable a cualquier marca del rubro sin cambiar nada
+
+📛 ESPECIFICIDAD CON PLACEHOLDERS (regla crítica):
+Para ideas que dependen de la experiencia REAL del cliente o de la estratega (anécdotas, casos puntuales, cifras concretas), NO inventes datos. Usá placeholders entre corchetes para que la estratega complete después con su experiencia real.
+
+Ejemplos:
+✅ "Por qué dejé de planificar a 30 días para mis clientes. Contar **\\[el cliente puntual que te hizo cambiar de método\\]** y **\\[el resultado concreto después del cambio\\]**."
+✅ "La frase que me cambió la manera de cobrar. Detallar **\\[la situación exacta y quién la dijo\\]** y qué hacés diferente desde entonces."
+❌ "El cliente que me pagó $47.500 por una campaña me hizo darme cuenta de que…" ← INVENTADO, no usar.
+
+Los placeholders se escriben SIEMPRE así: \\[descripción de lo que la estratega tiene que completar\\]. Con corchetes literales. NO escribas datos inventados.
+
 ${formatoContext}`;
 
   const reglasFundamentalesStory = `
 ⚠️ ESTE LOTE ES 100% DE HISTORIAS DE INSTAGRAM.
 Las stories NO funcionan como un post. No compiten con el scroll. La gente ya está dentro del feed de stories de la cuenta cuando las ve. Cambian las reglas:
 
+TU ROL:
+Sos la estratega senior de Carrusel MKT. Tu vara: las stories tienen que sonar a una persona real, en su momento, no a una producción. Si suena a guion de comercial, descartala.
+
 - NO uses la lógica de "hook que pare el scroll". En stories no se "scrollea": se ve o se saltea con un tap. El primer fotograma tiene que invitar a quedarse, no a frenar.
-- Las stories son ÍNTIMAS y CONVERSACIONALES. Hablás como en un audio a una amiga: directo, con voz propia, sin guion forzado, sin producción de comercial.
-- DISTRIBUCIÓN OBLIGATORIA del lote: ~70% historias de CONEXIÓN (cotidiano, opinión, detrás de escena, pregunta a la audiencia, momento del día, reflexión, "muestrame tu...", encuesta liviana), ~20% educativas/utilitarias (1 dato concreto, 1 tip aplicable hoy, sin convertirlo en mini-clase), ~10% de venta usando fórmulas PAS / BBB / SOS (máximo 1-2 tandas en todo el lote, NUNCA mezcladas con conexión en la misma idea).
-- VARIEDAD REAL: cada idea debe tener un ángulo y un MOMENTO distinto. Si una idea es "mostrar el escritorio mientras trabaja", la siguiente NO puede ser "mostrar el café mientras planifica". Variá: a veces es video, a veces texto sobre fondo, a veces encuesta, a veces caja de preguntas, a veces foto del momento, a veces voz directa a cámara, a veces captura de pantalla con un comentario.
-- COMPACTAS: el campo "idea" describe la story en 1-2 líneas concretas: qué se muestra/dice, qué interacción pide (tap, respuesta, encuesta, sticker). NO es un copy largo.
-- HOOK: la primera frase visible. Una idea o pregunta corta que invite a quedarse o tocar algo. NO es un titular de post.
-- TÍTULO: nombre interno corto para que la estratega ubique la story (ej: "Encuesta café o té", "Detrás del envío del lunes"). No es para mostrar al público.
+- Las stories son ÍNTIMAS y CONVERSACIONALES. Hablás como en un audio a una amiga: directo, con voz propia, sin guion forzado.
+- DISTRIBUCIÓN OBLIGATORIA del lote: ~70% historias de CONEXIÓN (cotidiano, opinión, detrás de escena, pregunta a la audiencia, momento del día, reflexión, encuesta liviana), ~20% educativas/utilitarias (1 dato concreto, 1 tip aplicable hoy, sin convertirlo en mini-clase), ~10% de venta usando fórmulas PAS / BBB / SOS (máximo 1-2 tandas en todo el lote, NUNCA mezcladas con conexión en la misma idea).
+- VARIEDAD REAL: cada idea debe tener un ángulo y un MOMENTO distinto. Variá: a veces es video, a veces texto sobre fondo, a veces encuesta, a veces caja de preguntas, a veces foto del momento, a veces voz directa a cámara, a veces captura de pantalla con un comentario.
+- COMPACTAS: el campo "idea" describe la story en 1-2 líneas concretas: qué se muestra/dice, qué interacción pide (tap, respuesta, encuesta, sticker).
+- HOOK: la primera frase visible. Una idea o pregunta corta que invite a quedarse o tocar algo.
+- TÍTULO: nombre interno corto para que la estratega ubique la story (ej: "Encuesta café o té"). No es para mostrar al público.
 - Marcá EXPLÍCITAMENTE el tipo en el campo "idea": empezá con "Tipo: CONEXIÓN — ", "Tipo: EDUCATIVA — " o "Tipo: VENTA — ".
-- Usá español rioplatense (vos, no tú).`;
 
-  const systemPrompt = `Sos una estratega de contenido de Carrusel MKT, agencia argentina. Generás ideas de contenido para redes sociales que son ACCIONABLES, ESPECÍFICAS y conectan con el público.
+📛 PLACEHOLDERS (regla crítica para stories también):
+Para historias que dependen de momentos reales (anécdotas del día, situaciones puntuales con clientes, productos específicos), NO inventes detalles. Usá placeholders entre corchetes:
+✅ "Tipo: CONEXIÓN — Mostrar **\\[la herramienta que estás usando ahora mismo\\]** con voz directa a cámara contando por qué la elegiste."
+❌ "Mostrar mi escritorio con mi café latte de Starbucks…" ← INVENTADO, no usar.
 
-REGLAS FUNDAMENTALES:
-${enfoquePrincipal ? `\n⚠️ REGLA #1 — ENFOQUE OBLIGATORIO ⚠️\n${reglaEnfoquePrompt}\nEsta regla es inviolable. Antes de proponer cada idea, preguntate: "¿esta idea está 100% alineada con el enfoque principal?". Si no, descartala y proponé otra.\n` : ''}${esLoteStory ? reglasFundamentalesStory : reglasFundamentalesFeed}
+📛 FÓRMULAS PROHIBIDAS también acá: nada de "X tips", "Lo que nadie te dice", "La verdad sobre".
+
+- ESPAÑOL RIOPLATENSE: vos, no tú.`;
+
+  const systemPrompt = `${esLoteStory ? reglasFundamentalesStory : reglasFundamentalesFeed}
+
+${enfoquePrincipal ? `\n⚠️ REGLA #1 — ENFOQUE OBLIGATORIO ⚠️\n${reglaEnfoquePrompt}\nEsta regla es inviolable. Antes de proponer cada idea, preguntate: "¿esta idea está 100% alineada con el enfoque principal?". Si no, descartala y proponé otra.\n` : ''}
 
 ==========================================================
 📚 GUÍA ESTRATÉGICA SOBRE HISTORIAS DE INSTAGRAM
@@ -5859,6 +5946,15 @@ REGLAS ADICIONALES PARA HISTORIAS:
 - Por cada historia de venta que propongas, asegurate de proponer al menos una de conexión cercana en el calendario, para mantener el balance.
 - Adaptá los ejemplos al rubro real del cliente: si es servicios profesionales, usá "paciente/cliente"; si es producto físico, usá "compradora"; si es educación/cursos, usá "alumna"; etc.
 - En el copy de venta, usá EXPLÍCITAMENTE las fórmulas (PAS / BBB / SOS) y mencionalas en el desarrollo.
+
+🔎 AUTOEVALUACIÓN OBLIGATORIA ANTES DE ENTREGAR:
+Antes de devolver el JSON, leé cada una de las ${cantidad} ideas que generaste y respondé mentalmente para cada una:
+1. ¿Esto podría aparecer tal cual en la cuenta de cualquier otra estratega/agencia/freelance? Si SÍ, descartala.
+2. ¿Tiene un ángulo narrativo claro? Si NO, descartala.
+3. ¿Suena a persona real o a plantilla? Si suena a plantilla, descartala.
+4. ¿Está respetando los placeholders \\[entre corchetes\\] para datos que no podés saber? Si inventaste números o nombres específicos, sacalos y poné placeholder.
+
+Si alguna idea no pasa el filtro, reemplazala antes de devolver el JSON.
 
 FORMATO DE SALIDA: devolvés SOLO un JSON válido (sin markdown, sin texto adicional):
 
@@ -11746,7 +11842,7 @@ function formatDateEsLarga(d) {
 }
 
 function renderDashboardContent(ingresos) {
-  const hoy = new Date();
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
   const mesActual = hoy.getMonth() + 1;
   const anioActual = hoy.getFullYear();
 
