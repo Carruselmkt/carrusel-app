@@ -1968,8 +1968,9 @@
 const CONFIG = {
   CLIENT_ID: '720522210798-hvq1d1c0lkg8mvm524sv1835dul2v26g.apps.googleusercontent.com',
   SPREADSHEET_ID: '1sbCRUoEh6qshKyAXi7PZDhHYEEKdlbYgq4MUe93AqdI',
-  SCOPES: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email',
+  SCOPES: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email',
   DISCOVERY_DOC: 'https://sheets.googleapis.com/$discovery/rest?version=v4',
+  DISCOVERY_DOC_DRIVE: 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
 };
 
 let state = {
@@ -2414,7 +2415,7 @@ async function loadApiKey() {
 function initGapi() {
   gapi.load('client', async () => {
     try {
-      await gapi.client.init({ discoveryDocs: [CONFIG.DISCOVERY_DOC] });
+      await gapi.client.init({ discoveryDocs: [CONFIG.DISCOVERY_DOC, CONFIG.DISCOVERY_DOC_DRIVE] });
       gapiReadyResolve(); // señal: gapi.client ya está listo
     } catch (e) {
       console.error('Error iniciando gapi client:', e);
@@ -2530,6 +2531,290 @@ async function upsertByClienteId(sheetName, clienteId, dataObj) {
     const newObj = { id: genId(sheetName.substr(0,3).toLowerCase()), cliente_id: clienteId, ...dataObj };
     await sheetAppend(sheetName, newObj);
     return newObj;
+  }
+}
+
+// ============================================================================
+// GOOGLE DRIVE — Adjuntar archivos a ideas/publicaciones
+// ============================================================================
+// Usamos scope drive.file: la app SOLO puede tocar archivos que ella misma crea.
+// No tiene acceso al resto del Drive del usuario.
+
+const DRIVE_ROOT_FOLDER_NAME = 'Carrusel App';
+const DRIVE_MAX_BYTES = 100 * 1024 * 1024; // 100 MB (límite suave con aviso)
+
+// Cache de IDs de carpetas para no andar buscando cada vez en cada subida
+const driveFolderCache = { root: null, byCliente: {} };
+
+// Busca una carpeta por nombre y opcional parentId. Devuelve el id si existe, null si no.
+async function driveBuscarCarpeta(nombre, parentId = null) {
+  // Escapamos comillas en el nombre para la query
+  const nombreEscaped = nombre.replace(/'/g, "\\'");
+  let q = `name='${nombreEscaped}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+  if (parentId) q += ` and '${parentId}' in parents`;
+  const res = await gapi.client.drive.files.list({
+    q,
+    fields: 'files(id, name)',
+    spaces: 'drive',
+    pageSize: 5
+  });
+  const files = (res.result && res.result.files) || [];
+  return files.length > 0 ? files[0].id : null;
+}
+
+// Crea una carpeta y devuelve su id.
+async function driveCrearCarpeta(nombre, parentId = null) {
+  const metadata = {
+    name: nombre,
+    mimeType: 'application/vnd.google-apps.folder'
+  };
+  if (parentId) metadata.parents = [parentId];
+  const res = await gapi.client.drive.files.create({
+    resource: metadata,
+    fields: 'id, name'
+  });
+  return res.result.id;
+}
+
+// Obtiene la carpeta raíz "Carrusel App". La crea si no existe.
+async function driveGetOrCreateRoot() {
+  if (driveFolderCache.root) return driveFolderCache.root;
+  let id = await driveBuscarCarpeta(DRIVE_ROOT_FOLDER_NAME);
+  if (!id) id = await driveCrearCarpeta(DRIVE_ROOT_FOLDER_NAME);
+  driveFolderCache.root = id;
+  return id;
+}
+
+// Obtiene la carpeta de un cliente específico. La crea si no existe.
+async function driveGetOrCreateClienteFolder(clienteId) {
+  if (driveFolderCache.byCliente[clienteId]) return driveFolderCache.byCliente[clienteId];
+  const cliente = state.clientes.find(c => c.id === clienteId);
+  if (!cliente) throw new Error('Cliente no encontrado');
+  const rootId = await driveGetOrCreateRoot();
+  const nombreCliente = cliente.nombre || `Cliente-${clienteId}`;
+  let folderId = await driveBuscarCarpeta(nombreCliente, rootId);
+  if (!folderId) folderId = await driveCrearCarpeta(nombreCliente, rootId);
+  driveFolderCache.byCliente[clienteId] = folderId;
+  return folderId;
+}
+
+// Sube un File del navegador a la carpeta del cliente. Devuelve los metadatos del archivo creado.
+// Usa multipart upload directamente con fetch porque gapi.client.drive.files.create no soporta binarios fácil.
+async function driveSubirArchivo(file, clienteId, onProgress = null) {
+  const folderId = await driveGetOrCreateClienteFolder(clienteId);
+  const token = gapi.client.getToken();
+  if (!token || !token.access_token) throw new Error('No hay sesión activa con Google. Recargá la página.');
+
+  const metadata = {
+    name: file.name,
+    parents: [folderId]
+  };
+
+  const boundary = '-------carrusel_app_' + Date.now();
+  const delimiter = `\r\n--${boundary}\r\n`;
+  const closeDelim = `\r\n--${boundary}--`;
+
+  // Construimos el cuerpo multipart manualmente
+  const metadataPart = `${delimiter}Content-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}`;
+  const filePart = `${delimiter}Content-Type: ${file.type || 'application/octet-stream'}\r\n\r\n`;
+
+  // Leemos el archivo como ArrayBuffer
+  const fileBuffer = await file.arrayBuffer();
+
+  // Concatenamos todo en un Blob
+  const body = new Blob([
+    metadataPart,
+    filePart,
+    fileBuffer,
+    closeDelim
+  ], { type: `multipart/related; boundary=${boundary}` });
+
+  // Usamos XMLHttpRequest para tener progreso (fetch no expone progreso de subida)
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink,size,mimeType');
+    xhr.setRequestHeader('Authorization', `Bearer ${token.access_token}`);
+    xhr.setRequestHeader('Content-Type', `multipart/related; boundary=${boundary}`);
+    if (onProgress) {
+      xhr.upload.addEventListener('progress', e => {
+        if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+      });
+    }
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try { resolve(JSON.parse(xhr.responseText)); }
+        catch (e) { reject(new Error('Respuesta inválida del servidor')); }
+      } else {
+        reject(new Error(`Error de subida: ${xhr.status} ${xhr.statusText} — ${xhr.responseText}`));
+      }
+    };
+    xhr.onerror = () => reject(new Error('Error de red al subir el archivo'));
+    xhr.send(body);
+  });
+}
+
+// Borra un archivo de Drive por id. No falla si ya no existe.
+async function driveBorrarArchivo(fileId) {
+  try {
+    await gapi.client.drive.files.delete({ fileId });
+    return true;
+  } catch (e) {
+    console.warn('No se pudo borrar archivo de Drive:', fileId, e);
+    return false;
+  }
+}
+
+// Decide qué thumbnail/ícono mostrar para un archivo según su mimeType
+function driveIconoArchivo(mimeType) {
+  if (!mimeType) return '📎';
+  if (mimeType.startsWith('image/')) return '🖼️';
+  if (mimeType.startsWith('video/')) return '🎥';
+  if (mimeType.startsWith('audio/')) return '🎵';
+  if (mimeType.includes('pdf')) return '📄';
+  return '📎';
+}
+
+// Formatea bytes a "X KB" o "X MB"
+function driveFormatSize(bytes) {
+  bytes = Number(bytes) || 0;
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+// Parsea el JSON de archivos adjuntos (string) en un array seguro
+function parseArchivosDrive(json) {
+  if (!json) return [];
+  try {
+    const arr = JSON.parse(json);
+    return Array.isArray(arr) ? arr : [];
+  } catch { return []; }
+}
+
+// Renderiza la lista visual de archivos adjuntos en el editor
+function renderArchivosDrive(json, postId) {
+  const archivos = parseArchivosDrive(json);
+  if (archivos.length === 0) {
+    return `<div style="font-size: 12px; color: var(--gris-text-muted); padding: 8px 12px; background: var(--gris-bg); border-radius: 6px;">Sin archivos adjuntos todavía.</div>`;
+  }
+  return archivos.map((a, idx) => `
+    <div style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--gris-bg); border-radius: 6px; margin-bottom: 6px;">
+      <span style="font-size: 22px;">${driveIconoArchivo(a.mimeType)}</span>
+      <div style="flex: 1; min-width: 0;">
+        <div style="font-size: 13px; color: var(--gris-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${esc(a.name || 'sin nombre')}</div>
+        <div style="font-size: 11px; color: var(--gris-text-soft);">${driveFormatSize(a.size)} · ${esc(a.mimeType || '')}</div>
+      </div>
+      <a href="${esc(a.webViewLink || '#')}" target="_blank" class="btn btn-ghost btn-sm" title="Ver en Drive">👁️</a>
+      <button class="btn btn-ghost btn-sm btn-danger" onclick="quitarArchivoDriveDelPost('${esc(postId)}', ${idx})" title="Quitar y borrar de Drive">🗑</button>
+    </div>
+  `).join('');
+}
+
+// Subida de archivos desde el editor de post
+async function subirArchivosDriveDesdeEditor(postId) {
+  const fileInput = document.getElementById('f_archivo_drive');
+  const progressEl = document.getElementById('upload_progress_drive');
+  if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+    showToast('Elegí al menos un archivo', 'error');
+    return;
+  }
+  const files = Array.from(fileInput.files);
+
+  // Validar tamaño con aviso suave a 100 MB
+  const pesados = files.filter(f => f.size > DRIVE_MAX_BYTES);
+  if (pesados.length > 0) {
+    const mb = pesados.map(f => `${f.name} (${driveFormatSize(f.size)})`).join(', ');
+    const sigo = confirm(`Estos archivos pasan los 100 MB: ${mb}. La subida puede tardar bastante. ¿Subir igualmente?`);
+    if (!sigo) return;
+  }
+
+  try {
+    // Obtenemos los archivos existentes del post (si ya hay)
+    let archivosActuales = [];
+    if (postId) {
+      const { data } = await sheetRead('Calendario');
+      const post = data.find(p => p.id === postId);
+      if (post) archivosActuales = parseArchivosDrive(post.archivos_drive_json);
+    }
+
+    let exitos = 0;
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      progressEl.textContent = `Subiendo ${i + 1}/${files.length}: ${file.name} (0%)`;
+      try {
+        const meta = await driveSubirArchivo(file, state.currentClienteId, pct => {
+          progressEl.textContent = `Subiendo ${i + 1}/${files.length}: ${file.name} (${pct}%)`;
+        });
+        archivosActuales.push({
+          id: meta.id,
+          name: meta.name,
+          webViewLink: meta.webViewLink,
+          mimeType: meta.mimeType,
+          size: Number(meta.size) || file.size,
+          uploadedAt: new Date().toISOString()
+        });
+        exitos++;
+      } catch (e) {
+        console.error('Error subiendo', file.name, e);
+        showToast(`Error subiendo ${file.name}: ${e.message}`, 'error');
+      }
+    }
+
+    progressEl.textContent = '';
+
+    if (exitos === 0) return;
+
+    // Persistimos los archivos en el post (si ya existe) o esperamos al guardar
+    if (postId) {
+      await sheetUpdate('Calendario', postId, { archivos_drive_json: JSON.stringify(archivosActuales) });
+      // Actualizar caché local
+      const idx = state.calendario.findIndex(p => p.id === postId);
+      if (idx !== -1) state.calendario[idx].archivos_drive_json = JSON.stringify(archivosActuales);
+      // Refrescar la vista
+      document.getElementById('archivos_drive_list').innerHTML = renderArchivosDrive(JSON.stringify(archivosActuales), postId);
+    } else {
+      // Si es un post nuevo aún sin id, guardamos los archivos en memoria temporal
+      window._pendingArchivosDrive = archivosActuales;
+      document.getElementById('archivos_drive_list').innerHTML = renderArchivosDrive(JSON.stringify(archivosActuales), '');
+    }
+
+    // Limpiar el input
+    fileInput.value = '';
+    showToast(`${exitos} archivo${exitos > 1 ? 's' : ''} subido${exitos > 1 ? 's' : ''} a Drive`, 'success');
+  } catch (e) {
+    progressEl.textContent = '';
+    showToast('Error al subir: ' + e.message, 'error');
+  }
+}
+
+// Quita un archivo de un post: lo borra de Drive y de la planilla
+async function quitarArchivoDriveDelPost(postId, idx) {
+  if (!confirm('¿Quitar este archivo? También se va a borrar de Drive.')) return;
+  try {
+    let archivos = [];
+    if (postId) {
+      const { data } = await sheetRead('Calendario');
+      const post = data.find(p => p.id === postId);
+      if (!post) return;
+      archivos = parseArchivosDrive(post.archivos_drive_json);
+    } else if (window._pendingArchivosDrive) {
+      archivos = window._pendingArchivosDrive;
+    }
+    const archivo = archivos[idx];
+    if (!archivo) return;
+    if (archivo.id) await driveBorrarArchivo(archivo.id);
+    archivos.splice(idx, 1);
+    if (postId) {
+      await sheetUpdate('Calendario', postId, { archivos_drive_json: JSON.stringify(archivos) });
+      const ci = state.calendario.findIndex(p => p.id === postId);
+      if (ci !== -1) state.calendario[ci].archivos_drive_json = JSON.stringify(archivos);
+    } else {
+      window._pendingArchivosDrive = archivos;
+    }
+    document.getElementById('archivos_drive_list').innerHTML = renderArchivosDrive(JSON.stringify(archivos), postId);
+    showToast('Archivo eliminado', 'success');
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
   }
 }
 
@@ -7524,6 +7809,8 @@ function openPostModal(id = null, defaultDate = null) {
   const esNuevo = !id;
   const fecha = p.fecha_publicacion || defaultDate || todayISO();
   window._postModalEditingId = id;
+  // Reset de archivos Drive pendientes (solo aplica a posts nuevos sin id)
+  window._pendingArchivosDrive = null;
   // Cargar si tiene carrusel/reel/historias/anuncio previos al editor
   if (p.carrusel_slides) window._pendingCarruselSlides = p.carrusel_slides;
   if (p.reel_guion) window._pendingReelGuion = p.reel_guion;
@@ -7642,6 +7929,20 @@ function openPostModal(id = null, defaultDate = null) {
         </div>
         <textarea class="form-textarea" id="f_notas">${esc(p.notas || '')}</textarea>
       </div>
+
+      <!-- Archivos adjuntos en Drive -->
+      <div class="form-row">
+        <label class="form-label">📎 Archivos adjuntos (Drive)</label>
+        <div class="form-help" style="font-size: 11.5px; margin-bottom: 6px; color: var(--gris-text-muted);">
+          Subí fotos, videos o cualquier material relacionado con esta publicación. Los archivos se guardan en tu Drive (carpeta "Carrusel App / ${esc((state.clientes.find(c => c.id === state.currentClienteId) || {}).nombre || 'Cliente')}").
+        </div>
+        <div id="archivos_drive_list">${renderArchivosDrive(p.archivos_drive_json, p.id)}</div>
+        <div style="display: flex; gap: 8px; align-items: center; margin-top: 8px;">
+          <input type="file" id="f_archivo_drive" multiple style="font-size: 12px;" accept="image/*,video/*,audio/*,application/pdf">
+          <button class="btn btn-secondary btn-sm" onclick="subirArchivosDriveDesdeEditor('${id || ''}')">⬆️ Subir</button>
+          <span id="upload_progress_drive" style="font-size: 12px; color: var(--gris-text-soft);"></span>
+        </div>
+      </div>
     </div>
     <div class="modal-footer" style="justify-content: space-between;">
       <div>
@@ -7719,6 +8020,11 @@ async function savePost(id) {
   if (window._pendingHistoriasSecuencia) {
     data.historias_secuencia = window._pendingHistoriasSecuencia;
   }
+  // Si hay archivos Drive pendientes (subidos antes de tener id), incluirlos
+  if (window._pendingArchivosDrive && Array.isArray(window._pendingArchivosDrive) && window._pendingArchivosDrive.length > 0) {
+    data.archivos_drive_json = JSON.stringify(window._pendingArchivosDrive);
+    window._pendingArchivosDrive = null;
+  }
   // Si hay anuncio Meta pendiente, incluirlo
   if (window._pendingAnuncioMeta) {
     data.anuncio_meta = window._pendingAnuncioMeta;
@@ -7758,6 +8064,14 @@ function confirmDeletePost(id) {
 
 async function deletePost(id) {
   try {
+    // Antes de borrar el post, borrar todos sus archivos adjuntos de Drive
+    const post = state.calendario.find(p => p.id === id);
+    if (post && post.archivos_drive_json) {
+      const archivos = parseArchivosDrive(post.archivos_drive_json);
+      for (const a of archivos) {
+        if (a.id) await driveBorrarArchivo(a.id);
+      }
+    }
     await sheetDelete('Calendario', id);
     closeModal();
     showToast('Eliminada', 'success');
