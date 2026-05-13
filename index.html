@@ -2113,6 +2113,29 @@ function fmtFechaCorta(iso) {
   } catch { return iso; }
 }
 
+// Dado un mes (YYYY-MM) y un cliente, devuelve TODAS las estrategias del cliente que
+// tienen al menos un día de solapamiento con ese mes. Útil para detectar mes con cambio
+// de estrategia y avisar al usuario.
+function getEstrategiasEnMes(clienteId, mesYYYYMM) {
+  if (!mesYYYYMM || mesYYYYMM.length < 7) return [];
+  const [y, m] = mesYYYYMM.split('-');
+  const inicioMes = `${y}-${m}-01`;
+  // Último día del mes
+  const ultimo = new Date(parseInt(y), parseInt(m), 0).getDate();
+  const finMes = `${y}-${m}-${String(ultimo).padStart(2, '0')}`;
+  return getEstrategiasCliente(clienteId, true).filter(e => {
+    // Una estrategia se solapa con el mes si:
+    // - su fecha_inicio es <= finMes, Y
+    // - su fecha_fin es >= inicioMes (o no tiene fecha_fin = vigente sin tope)
+    const ini = e.fecha_inicio || '';
+    const fin = e.fecha_fin || '';
+    if (!ini && !fin) return false; // sin fechas: no la consideramos para solapamiento
+    if (ini && ini > finMes) return false;
+    if (fin && fin < inicioMes) return false;
+    return true;
+  });
+}
+
 function renderSelectorEstrategia(clienteId, selectedId, selectId = 'gen_estrategia_id') {
   // Renderiza un <select> con todas las estrategias del cliente agrupadas por categoría.
   // Si solo hay una, devuelve un input hidden con su id (sin selector visible).
@@ -10195,7 +10218,7 @@ async function abrirGeneradorCalendarioMensual() {
       <div class="form-row-grid">
         <div>
           <label class="form-label">Mes a generar</label>
-          <input type="month" class="form-input" id="mes_target" value="${defaultMes}">
+          <input type="month" class="form-input" id="mes_target" value="${defaultMes}" onchange="actualizarAvisoSolapamientoCalendario()">
         </div>
         <div>
           <label class="form-label">Cantidad de publicaciones</label>
@@ -10208,6 +10231,8 @@ async function abrirGeneradorCalendarioMensual() {
           </select>
         </div>
       </div>
+
+      <div id="aviso_solapamiento_cal"></div>
 
       ${campanasActivas.length > 0 ? `
         <div class="form-row">
@@ -10271,6 +10296,9 @@ async function abrirGeneradorCalendarioMensual() {
     </div>`;
   $('modalOverlay').classList.add('active');
 
+  // Mostrar aviso de solapamiento si corresponde (al abrir el modal)
+  actualizarAvisoSolapamientoCalendario();
+
   // Si el selector existe (más de una estrategia), escuchamos cambios para refrescar el modal
   const selectorEst = document.getElementById('cal_estrategia_id');
   if (selectorEst && selectorEst.tagName === 'SELECT') {
@@ -10280,6 +10308,35 @@ async function abrirGeneradorCalendarioMensual() {
       window._forzarEstrategiaIdCal = null;
     });
   }
+}
+
+// Muestra/oculta un aviso amarillo cuando el mes seleccionado tiene MÁS DE UNA estrategia
+// solapada. Le explica al usuario que solo se va a usar la elegida para todo el mes.
+function actualizarAvisoSolapamientoCalendario() {
+  const cont = document.getElementById('aviso_solapamiento_cal');
+  const mesInput = document.getElementById('mes_target');
+  const selEst = document.getElementById('cal_estrategia_id');
+  if (!cont || !mesInput) return;
+  const mes = mesInput.value;
+  if (!mes) { cont.innerHTML = ''; return; }
+  const ests = getEstrategiasEnMes(state.currentClienteId, mes);
+  if (ests.length <= 1) { cont.innerHTML = ''; return; }
+  // Hay solapamiento — armar el aviso
+  const idElegida = selEst ? selEst.value : '';
+  const elegida = ests.find(e => e.id === idElegida);
+  const listaHtml = ests.map(e => {
+    const esLaElegida = e.id === idElegida;
+    const fechas = `${fmtFechaCorta(e.fecha_inicio)}${e.fecha_fin ? ' → ' + fmtFechaCorta(e.fecha_fin) : ''}`;
+    return `<li style="margin: 2px 0;">${esLaElegida ? '<strong>' : ''}${esc(e.nombre)} <span style="color: var(--gris-text-soft);">(${fechas})</span>${esLaElegida ? ' ← se va a usar para todo el mes</strong>' : ''}</li>`;
+  }).join('');
+  cont.innerHTML = `
+    <div style="padding: 12px 14px; background: #fff8e6; border: 1px solid #f4d8a8; border-radius: 8px; margin-bottom: 14px; font-size: 13px;">
+      <div style="font-weight: 600; color: #8a6a20; margin-bottom: 6px;">⚠️ En este mes hay ${ests.length} estrategias vigentes en distintos días</div>
+      <ul style="margin: 6px 0 8px 18px; padding: 0; color: var(--gris-text);">${listaHtml}</ul>
+      <div style="color: var(--gris-text-soft); font-size: 12px;">
+        El calendario se va a armar usando ÚNICAMENTE la estrategia que elegiste arriba (para todo el mes). Si querés que las primeras semanas usen una estrategia y las siguientes otra, generá el calendario en dos tandas con períodos personalizados (función pendiente) o ajustá fechas a mano después.
+      </div>
+    </div>`;
 }
 
 async function ejecutarGeneradorCalendarioMensual(estrategiaId) {
