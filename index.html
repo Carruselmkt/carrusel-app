@@ -6060,7 +6060,16 @@ async function ejecutarGeneradorIdeas(estrategiaId) {
       })();
 
   const buyerContext = buyerPersonas.length > 0
-    ? '\n\nBUYER PERSONAS:\n' + buyerPersonas.map(bp => `- ${bp.nombre}: dolores: ${bp.dolores || '-'}; deseos: ${bp.deseos || '-'}`).join('\n')
+    ? '\n\n==========================================================\n👥 BUYER PERSONAS (público real al que apuntamos)\n==========================================================\nLas ideas deben apuntar a ESTOS perfiles específicos. No genérico, no "público general". Cada idea debe responder a un dolor, deseo, miedo, objeción o hábito concreto de UNO de estos perfiles.\n\n' + buyerPersonas.map((bp, i) => {
+        let bloque = `--- BUYER PERSONA ${i + 1}: ${bp.nombre || 'sin nombre'} ---`;
+        if (bp.demografia) bloque += `\n📊 Demografía: ${bp.demografia}`;
+        if (bp.contexto) bloque += `\n🎯 Contexto/vida: ${bp.contexto}`;
+        if (bp.dolores) bloque += `\n😟 Dolores: ${bp.dolores}`;
+        if (bp.deseos) bloque += `\n🎯 Deseos: ${bp.deseos}`;
+        if (bp.objeciones) bloque += `\n🚫 Objeciones (lo que les frena): ${bp.objeciones}`;
+        if (bp.consume_info_en) bloque += `\n📱 Consume info en: ${bp.consume_info_en}`;
+        return bloque;
+      }).join('\n\n')
     : '';
 
   const tonoContext = (tonoVoz && Object.keys(tonoVoz).length > 0)
@@ -6101,7 +6110,10 @@ async function ejecutarGeneradorIdeas(estrategiaId) {
 🎯 ENFOQUE PRINCIPAL OBLIGATORIO DEL LOTE
 ========================================
 TODAS las ${cantidad} ideas deben servir a este momento: ${enfoquePrincipal.descripcion}
-${enfoquePrincipal.contexto ? 'Contexto específico: ' + enfoquePrincipal.contexto : ''}
+${enfoquePrincipal.contexto ? `\n📋 CONTEXTO ESPECÍFICO DE ESTE CLIENTE EN ESTE MOMENTO (leelo con atención y úsalo para anclar las ideas):\n${enfoquePrincipal.contexto}\n` : ''}
+
+🚨 REGLA CRÍTICA SOBRE EL MATERIAL DISPONIBLE:
+Si el contexto de arriba menciona material que el cliente YA TIENE filmado o fotografiado (ej: "tengo fotos de X", "video de Y", "material disponible hoy"), AL MENOS 2 de las ${cantidad} ideas DEBEN usar ese material específico. No pedir filmar/sacar fotos nuevas si ya hay material que se puede aprovechar. Indicar EXPLÍCITAMENTE en la idea cuál material existente se usa.
 
 Esto significa:
 - Cada idea debe estar pensada PARA este momento, no para cualquier momento.
@@ -6114,7 +6126,7 @@ Esto significa:
 
 NO mezcles ideas "genéricas del rubro" que servirían en cualquier momento. TODAS tienen que estar pensadas para ${enfoquePrincipal.descripcion}.
 `;
-      reglaEnfoquePrompt = `OBLIGATORIO: Las ${cantidad} ideas deben estar CADA UNA conectada al momento "${enfoquePrincipal.descripcion}". No ideas genéricas. Si la idea también funcionaría fuera de este momento, repensala.`;
+      reglaEnfoquePrompt = `OBLIGATORIO: Las ${cantidad} ideas deben estar CADA UNA conectada al momento "${enfoquePrincipal.descripcion}". No ideas genéricas. Si la idea también funcionaría fuera de este momento, repensala. Y si el contexto menciona material ya disponible, USARLO en al menos 2 ideas.`;
     } else if (enfoquePrincipal.tipo === 'campana') {
       enfoqueBloque = `
 ========================================
@@ -6256,10 +6268,13 @@ REGLAS ADICIONALES PARA HISTORIAS:
 
 🔎 AUTOEVALUACIÓN OBLIGATORIA ANTES DE ENTREGAR:
 Antes de devolver el JSON, leé cada una de las ${cantidad} ideas que generaste y respondé mentalmente para cada una:
-1. ¿Esto podría aparecer tal cual en la cuenta de cualquier otra estratega/agencia/freelance? Si SÍ, descartala.
-2. ¿Tiene un ángulo narrativo claro? Si NO, descartala.
-3. ¿Suena a persona real o a plantilla? Si suena a plantilla, descartala.
-4. ¿Está respetando los placeholders \\[entre corchetes\\] para datos que no podés saber? Si inventaste números o nombres específicos, sacalos y poné placeholder.
+1. ⚠️ PRUEBA DE ESPECIFICIDAD: ¿Esta idea es ÚNICA de este cliente, o se puede aplicar tal cual a cualquier marca del mismo rubro cambiando 2 palabras? Si es aplicable a cualquier otro, DESCARTALA y proponé otra que use detalles concretos del brief/estrategia.
+2. ¿Esto podría aparecer tal cual en la cuenta de cualquier otra estratega/agencia/freelance? Si SÍ, descartala.
+3. ¿Tiene un ángulo narrativo claro? Si NO, descartala.
+4. ¿Suena a persona real o a plantilla? Si suena a plantilla, descartala.
+5. ¿Está respetando los placeholders \\[entre corchetes\\] para datos que no podés saber? Si inventaste números, nombres específicos, situaciones que NO están en el brief, sacalos y poné placeholder \\[entre corchetes\\] para que la estratega complete.
+6. ¿Está conectada a UN buyer persona específico (no al "público general")? Cada idea debería responder a un dolor, deseo u objeción concreta de Natalia, Rodrigo o el buyer persona que corresponda.
+7. ⚠️ MATERIAL DISPONIBLE: si el contexto del cliente menciona material ya filmado/fotografiado, ¿al menos 2 de las ideas lo aprovechan? Si todas piden producir contenido nuevo, repensá.
 
 Si alguna idea no pasa el filtro, reemplazala antes de devolver el JSON.
 
