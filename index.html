@@ -2059,6 +2059,110 @@ function todayISO() {
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }
+
+// ============================================================================
+// HELPERS DE ESTRATEGIAS POR CLIENTE
+// ============================================================================
+// Categorizan estrategias en: vigente (activa ahora), futura, histórica, sin fechas.
+// Útil para selectores en generadores de IA.
+
+function getEstrategiasCliente(clienteId, soloPrincipales = true) {
+  return (state.estrategias || []).filter(e => {
+    if (e.cliente_id !== clienteId) return false;
+    if (soloPrincipales && e.tipo !== 'Principal') return false;
+    return true;
+  });
+}
+
+function categorizarEstrategia(e) {
+  // Devuelve: 'vigente', 'futura', 'historica' o 'sin_fecha'
+  // Si estado es explícitamente "Cerrada", es histórica sí o sí.
+  if (e.estado && e.estado !== 'Activa') return 'historica';
+  const hoy = todayISO();
+  const inicio = e.fecha_inicio || '';
+  const fin = e.fecha_fin || '';
+  if (!inicio && !fin) return 'sin_fecha';
+  if (inicio && inicio > hoy) return 'futura';
+  if (fin && fin < hoy) return 'historica';
+  return 'vigente';
+}
+
+function getEstrategiaDefault(clienteId) {
+  // Devuelve la estrategia "default" para generadores: la vigente si la hay,
+  // si no, la próxima futura, si no, la última histórica.
+  const ests = getEstrategiasCliente(clienteId, true);
+  if (ests.length === 0) return null;
+  const vigentes = ests.filter(e => categorizarEstrategia(e) === 'vigente');
+  if (vigentes.length > 0) return vigentes[0];
+  const futuras = ests.filter(e => categorizarEstrategia(e) === 'futura')
+    .sort((a, b) => (a.fecha_inicio || '').localeCompare(b.fecha_inicio || ''));
+  if (futuras.length > 0) return futuras[0];
+  const sinFecha = ests.filter(e => categorizarEstrategia(e) === 'sin_fecha');
+  if (sinFecha.length > 0) return sinFecha[0];
+  // Última histórica como último recurso
+  return ests.slice().sort((a, b) => (b.fecha_fin || '').localeCompare(a.fecha_fin || ''))[0];
+}
+
+function fmtFechaCorta(iso) {
+  // "2026-05-18" -> "18 may"
+  if (!iso) return '';
+  try {
+    const d = new Date(iso + 'T00:00:00');
+    const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    return `${d.getDate()} ${meses[d.getMonth()]}`;
+  } catch { return iso; }
+}
+
+function renderSelectorEstrategia(clienteId, selectedId, selectId = 'gen_estrategia_id') {
+  // Renderiza un <select> con todas las estrategias del cliente agrupadas por categoría.
+  // Si solo hay una, devuelve un input hidden con su id (sin selector visible).
+  const ests = getEstrategiasCliente(clienteId, true);
+  if (ests.length === 0) return '';
+  if (ests.length === 1) {
+    return `<input type="hidden" id="${selectId}" value="${esc(ests[0].id)}">`;
+  }
+
+  const vigentes = ests.filter(e => categorizarEstrategia(e) === 'vigente');
+  const futuras = ests.filter(e => categorizarEstrategia(e) === 'futura')
+    .sort((a, b) => (a.fecha_inicio || '').localeCompare(b.fecha_inicio || ''));
+  const sinFecha = ests.filter(e => categorizarEstrategia(e) === 'sin_fecha');
+  const historicas = ests.filter(e => categorizarEstrategia(e) === 'historica')
+    .sort((a, b) => (b.fecha_fin || '').localeCompare(a.fecha_fin || ''));
+
+  const def = selectedId || (getEstrategiaDefault(clienteId) || {}).id;
+  const opt = (e, prefix) => {
+    const sel = e.id === def ? ' selected' : '';
+    const fechas = e.fecha_inicio || e.fecha_fin
+      ? ` (${fmtFechaCorta(e.fecha_inicio)}${e.fecha_fin ? ' → ' + fmtFechaCorta(e.fecha_fin) : ''})`
+      : '';
+    return `<option value="${esc(e.id)}"${sel}>${prefix} ${esc(e.nombre || 'Sin nombre')}${fechas}</option>`;
+  };
+
+  let html = `<select class="form-select" id="${selectId}">`;
+  if (vigentes.length > 0) {
+    html += `<optgroup label="✅ Activas ahora">`;
+    vigentes.forEach(e => { html += opt(e, '✅'); });
+    html += `</optgroup>`;
+  }
+  if (futuras.length > 0) {
+    html += `<optgroup label="📅 Futuras (todavía no arrancan)">`;
+    futuras.forEach(e => { html += opt(e, '📅'); });
+    html += `</optgroup>`;
+  }
+  if (sinFecha.length > 0) {
+    html += `<optgroup label="📋 Sin fecha definida">`;
+    sinFecha.forEach(e => { html += opt(e, '📋'); });
+    html += `</optgroup>`;
+  }
+  if (historicas.length > 0) {
+    html += `<optgroup label="📦 Históricas (ya terminadas)">`;
+    historicas.forEach(e => { html += opt(e, '📦'); });
+    html += `</optgroup>`;
+  }
+  html += `</select>`;
+  return html;
+}
+
 function genId(prefix = 'id') { return prefix + '_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5); }
 
 // ============================================================================
@@ -5384,7 +5488,9 @@ async function renderTabIdeas() {
 
 function renderIdeasList() {
   const cliente = state.clientes.find(c => c.id === state.currentClienteId);
-  const estrategiaActiva = state.estrategias.find(e => e.cliente_id === state.currentClienteId && (e.estado || 'Activa') === 'Activa' && e.tipo === 'Principal');
+  // Tomamos cualquier estrategia Principal disponible (vigente, futura, histórica, sin fecha)
+  // para mostrar los botones de generación. La selección puntual de cuál usar se hace en el modal.
+  const estrategiaActiva = getEstrategiaDefault(state.currentClienteId);
   const pilares = estrategiaActiva ? parseJsonSafe(estrategiaActiva.pilares_json) : [];
 
   // En el modelo unificado: una idea está "sin usar" si no tiene fecha_publicacion.
@@ -5886,12 +5992,19 @@ async function deleteIdea(id) {
 function abrirGeneradorIdeas() {
   if (!checkApiKey()) return;
   const cliente = state.clientes.find(c => c.id === state.currentClienteId);
-  const estrategiaActiva = state.estrategias.find(e => e.cliente_id === state.currentClienteId && (e.estado || 'Activa') === 'Activa' && e.tipo === 'Principal');
-  if (!estrategiaActiva) {
-    showToast('Necesitás una estrategia Principal activa', 'error');
+  // Tomamos TODAS las estrategias Principal del cliente (vigentes, futuras, históricas, sin fecha)
+  const estrategiasCliente = getEstrategiasCliente(state.currentClienteId, true);
+  if (estrategiasCliente.length === 0) {
+    showToast('Necesitás al menos una estrategia Principal para este cliente', 'error');
     return;
   }
-  const pilares = parseJsonSafe(estrategiaActiva.pilares_json);
+  const estrategiaDefault = (window._forzarEstrategiaId && estrategiasCliente.find(e => e.id === window._forzarEstrategiaId))
+    || getEstrategiaDefault(state.currentClienteId);
+  if (!estrategiaDefault) {
+    showToast('No se pudo determinar una estrategia para usar', 'error');
+    return;
+  }
+  const pilares = parseJsonSafe(estrategiaDefault.pilares_json);
   if (pilares.length === 0) {
     showToast('La estrategia no tiene pilares definidos. Generalos primero.', 'error');
     return;
@@ -5901,8 +6014,18 @@ function abrirGeneradorIdeas() {
   const campanasActivas = state.estrategias.filter(e =>
     (e.estado || 'Activa') === 'Activa' && e.tipo === 'Campana'
   );
-  const faseLabel = FASES_MOMENTO.find(f => f.v === estrategiaActiva.momento_fase);
-  const faseNombre = faseLabel ? faseLabel.label : estrategiaActiva.momento_fase;
+  const faseLabel = FASES_MOMENTO.find(f => f.v === estrategiaDefault.momento_fase);
+  const faseNombre = faseLabel ? faseLabel.label : estrategiaDefault.momento_fase;
+
+  // Bloque de selector de estrategia (solo si hay más de una)
+  // El onchange recarga el modal con la estrategia elegida para refrescar pilares y fase
+  const selectorEstrategiaHtml = estrategiasCliente.length > 1
+    ? `<div class="form-row" style="margin-bottom: 16px; padding: 12px; background: #fffaf2; border: 1px solid #f4d8a8; border-radius: 8px;">
+        <label class="form-label" style="font-weight: 600;">🎯 Estrategia a usar</label>
+        ${renderSelectorEstrategia(state.currentClienteId, estrategiaDefault.id, 'gen_estrategia_id')}
+        <p style="font-size: 11.5px; color: var(--gris-text-soft); margin-top: 6px;">El contenido va a girar alrededor de los pilares, buyer personas, momento y notas de esta estrategia.</p>
+      </div>`
+    : `<input type="hidden" id="gen_estrategia_id" value="${esc(estrategiaDefault.id)}">`;
 
   $('modal').className = 'modal modal-lg';
   $('modal').innerHTML = `
@@ -5914,6 +6037,8 @@ function abrirGeneradorIdeas() {
       <p style="color: var(--gris-text-soft); font-size: 13px; margin-bottom: 16px;">
         La IA va a proponer ideas para ${esc(cliente.nombre)} usando el brief, estrategia, buyer personas y pilares definidos.
       </p>
+
+      ${selectorEstrategiaHtml}
 
       <div class="form-row-grid">
         <div>
@@ -5983,9 +6108,25 @@ function abrirGeneradorIdeas() {
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="ejecutarGeneradorIdeas('${estrategiaActiva.id}')">✨ Generar</button>
+      <button class="btn btn-primary" onclick="ejecutarGeneradorIdeas(document.getElementById('gen_estrategia_id').value)">✨ Generar</button>
     </div>`;
   $('modalOverlay').classList.add('active');
+
+  // Si el selector de estrategia existe (más de una estrategia), engancharle un listener
+  // que re-abra el modal con la estrategia elegida (para refrescar pilares y label de fase).
+  const selectorEst = document.getElementById('gen_estrategia_id');
+  if (selectorEst && selectorEst.tagName === 'SELECT') {
+    selectorEst.addEventListener('change', () => {
+      abrirGeneradorIdeasConEstrategia(selectorEst.value);
+    });
+  }
+}
+
+// Variante que abre el generador forzando una estrategia específica como default
+function abrirGeneradorIdeasConEstrategia(estrategiaId) {
+  window._forzarEstrategiaId = estrategiaId;
+  abrirGeneradorIdeas();
+  window._forzarEstrategiaId = null;
 }
 
 function cambiarTipoEnfoque() {
@@ -6084,8 +6225,10 @@ async function ejecutarGeneradorIdeas(estrategiaId) {
   const esLoteStory = formato === 'Story' || formato === 'Historia' || formato === 'Historias';
 
   // Anti-repetición: pasar las ideas existentes del cliente para que la IA no proponga
-  // las mismas pero "en otro formato". Tomamos título + hook de hasta las últimas 60 ideas/posts.
-  const ideasExistentes = (state.ideas || [])
+  // las mismas pero "en otro formato". Tomamos título + hook de hasta las últimas 60 ideas/posts
+  // del cliente actual (cualquier estado: Idea, Borrador, Aprobada, Publicada, etc.).
+  const ideasExistentes = (state.calendario || [])
+    .filter(i => i.cliente_id === state.currentClienteId)
     .slice(-60)
     .map(i => {
       const t = (i.titulo || '').trim();
@@ -6204,6 +6347,14 @@ REGLAS DE ESTILO:
 - COMPACTAS: el campo "idea" es un desarrollo de 2-3 líneas máximo. Explicar el ángulo y qué mensaje da.
 - ESPAÑOL RIOPLATENSE: vos, no tú.
 
+📛 VARIEDAD DE REGISTRO EMOCIONAL (regla crítica para que el lote no se sienta monótono):
+Un error común al generar varias ideas seguidas es que todas suenan al mismo registro: "explicar la postura de marca". Eso aburre. El lote debe mezclar registros distintos:
+- Algunas ideas: cotidianas, livianas, conversacionales ("che, ¿les pasó que…?", "ayer me pasó esto")
+- Algunas ideas: reflexivas o emotivas (no autobombo, conexión humana real)
+- Algunas ideas: posturas claras, opiniones, datos contraintuitivos (más "filosas")
+- Algunas ideas: observaciones del rubro o curiosidades (más livianas, info-entretenimiento)
+NUNCA todas con tono "consultor que explica el posicionamiento estratégico de la marca". Eso suena a presentación de agencia, no a contenido de Instagram. El texto del campo "idea" debe sonar como una persona pensando, no como un brief de comunicación.
+
 📛 FÓRMULAS PROHIBIDAS (descarte automático si aparecen):
 - "X tips para…" / "X claves para…" / "X errores que…" / "X cosas que aprendí…"
 - "Lo que nadie te dice sobre…"
@@ -6221,6 +6372,15 @@ Ejemplos:
 ❌ "El cliente que me pagó $47.500 por una campaña me hizo darme cuenta de que…" ← INVENTADO, no usar.
 
 Los placeholders se escriben SIEMPRE así: \\[descripción de lo que la estratega tiene que completar\\]. Con corchetes literales. NO escribas datos inventados.
+
+📛 NOMBRES DE PERSONAS DEL EQUIPO (regla específica):
+Si el brief tiene cargado un bloque "EQUIPO" con personas listadas (con nombre, rol y personalidad), PODÉS usar esos nombres en las ideas. Pero si solo tenés los nombres "a secas" (sin saber bien quién es cuál, qué hace cada una, qué personalidad tiene), NO los uses en frases que les atribuyen acciones o sentimientos específicos. En su lugar usá placeholders como:
+✅ "Que cuente \\[la profesional que se anime más a cámara\\]..."
+✅ "\\[la que tomó esta decisión específica\\] explica por qué..."
+❌ "Sol cuenta con humor que..." (a menos que sepas que Sol es la del humor)
+❌ "Meli, Gabi y Sol comparten..." (si no sabés quién es quién, usá "las tres" o "una de las tres")
+
+Si las personas SÍ están cargadas en el brief con detalle (personalidad, voz, rol específico), entonces sí podés atribuir acciones a cada una de manera específica.
 
 ${formatoContext}`;
 
@@ -9984,12 +10144,18 @@ async function regenerarReel() {
 async function abrirGeneradorCalendarioMensual() {
   if (!checkApiKey()) return;
   const cliente = state.clientes.find(c => c.id === state.currentClienteId);
-  const estrategiaActiva = state.estrategias.find(e => e.cliente_id === state.currentClienteId && (e.estado || 'Activa') === 'Activa' && e.tipo === 'Principal');
-  if (!estrategiaActiva) {
-    showToast('Necesitás una estrategia Principal activa para este cliente', 'error');
+  const estrategiasCliente = getEstrategiasCliente(state.currentClienteId, true);
+  if (estrategiasCliente.length === 0) {
+    showToast('Necesitás al menos una estrategia Principal para este cliente', 'error');
     return;
   }
-  const pilares = parseJsonSafe(estrategiaActiva.pilares_json);
+  const estrategiaDefault = (window._forzarEstrategiaIdCal && estrategiasCliente.find(e => e.id === window._forzarEstrategiaIdCal))
+    || getEstrategiaDefault(state.currentClienteId);
+  if (!estrategiaDefault) {
+    showToast('No se pudo determinar una estrategia para usar', 'error');
+    return;
+  }
+  const pilares = parseJsonSafe(estrategiaDefault.pilares_json);
   if (pilares.length === 0) {
     showToast('La estrategia no tiene pilares. Generalos primero.', 'error');
     return;
@@ -10006,6 +10172,15 @@ async function abrirGeneradorCalendarioMensual() {
 
   const frecuenciaCliente = cliente.frecuencia_posts || '8';
 
+  // Bloque de selector de estrategia (solo si hay más de una)
+  const selectorEstrategiaHtml = estrategiasCliente.length > 1
+    ? `<div class="form-row" style="margin-bottom: 16px; padding: 12px; background: #fffaf2; border: 1px solid #f4d8a8; border-radius: 8px;">
+        <label class="form-label" style="font-weight: 600;">🎯 Estrategia a usar</label>
+        ${renderSelectorEstrategia(state.currentClienteId, estrategiaDefault.id, 'cal_estrategia_id')}
+        <p style="font-size: 11.5px; color: var(--gris-text-soft); margin-top: 6px;">El calendario va a girar alrededor de los pilares, buyer personas y momento de esta estrategia.</p>
+      </div>`
+    : `<input type="hidden" id="cal_estrategia_id" value="${esc(estrategiaDefault.id)}">`;
+
   $('modal').className = 'modal modal-lg';
   $('modal').innerHTML = `
     <div class="modal-header">
@@ -10016,6 +10191,7 @@ async function abrirGeneradorCalendarioMensual() {
       <p style="color: var(--gris-text-soft); font-size: 13px; margin-bottom: 16px;">
         La IA va a armar el calendario completo para ${esc(cliente.nombre)} respetando pilares, porcentajes y frecuencia.
       </p>
+      ${selectorEstrategiaHtml}
       <div class="form-row-grid">
         <div>
           <label class="form-label">Mes a generar</label>
@@ -10091,9 +10267,19 @@ async function abrirGeneradorCalendarioMensual() {
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="ejecutarGeneradorCalendarioMensual('${estrategiaActiva.id}')">✨ Generar calendario</button>
+      <button class="btn btn-primary" onclick="ejecutarGeneradorCalendarioMensual(document.getElementById('cal_estrategia_id').value)">✨ Generar calendario</button>
     </div>`;
   $('modalOverlay').classList.add('active');
+
+  // Si el selector existe (más de una estrategia), escuchamos cambios para refrescar el modal
+  const selectorEst = document.getElementById('cal_estrategia_id');
+  if (selectorEst && selectorEst.tagName === 'SELECT') {
+    selectorEst.addEventListener('change', () => {
+      window._forzarEstrategiaIdCal = selectorEst.value;
+      abrirGeneradorCalendarioMensual();
+      window._forzarEstrategiaIdCal = null;
+    });
+  }
 }
 
 async function ejecutarGeneradorCalendarioMensual(estrategiaId) {
