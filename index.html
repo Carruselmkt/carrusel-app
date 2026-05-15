@@ -4465,6 +4465,23 @@ function parseJsonSafe(str) {
   } catch (e) { return []; }
 }
 
+// Devuelve el bloque de buyer personas formateado para inyectar en prompts.
+// Incluye todos los campos disponibles (demografía, contexto, dolores, deseos, objeciones, consume).
+// Esto reemplaza el formato viejo "- nombre: dolores: X; deseos: Y" que perdía mucha info.
+function buildBuyerPersonasContext(buyerPersonas) {
+  if (!buyerPersonas || buyerPersonas.length === 0) return '';
+  return '\n\n==========================================================\n👥 BUYER PERSONAS (público real al que apuntamos)\n==========================================================\nEl contenido debe responder a un dolor, deseo, miedo u objeción concreta de UNO de estos perfiles. No al "público general".\n\n' + buyerPersonas.map((bp, i) => {
+    let bloque = `--- BUYER PERSONA ${i + 1}: ${bp.nombre || 'sin nombre'} ---`;
+    if (bp.demografia) bloque += `\n📊 Demografía: ${bp.demografia}`;
+    if (bp.contexto) bloque += `\n🎯 Contexto/vida: ${bp.contexto}`;
+    if (bp.dolores) bloque += `\n😟 Dolores: ${bp.dolores}`;
+    if (bp.deseos) bloque += `\n🎯 Deseos: ${bp.deseos}`;
+    if (bp.objeciones) bloque += `\n🚫 Objeciones (lo que les frena): ${bp.objeciones}`;
+    if (bp.consume_info_en) bloque += `\n📱 Consume info en: ${bp.consume_info_en}`;
+    return bloque;
+  }).join('\n\n');
+}
+
 function toggleEstrategia(id) {
   const card = document.querySelector(`[data-estrategia-id="${id}"]`);
   if (card) card.classList.toggle('open');
@@ -6869,9 +6886,12 @@ async function aceptarIdeasGeneradas() {
 // ============================================================================
 async function desarrollarIdea(ideaId) {
   if (!checkApiKey()) return;
-  const idea = state.ideas.find(i => i.id === ideaId);
+  // Las ideas viven en state.calendario (modelo unificado).
+  const idea = state.calendario.find(i => i.id === ideaId);
   if (!idea) return;
-  const estrategia = state.estrategias.find(e => e.cliente_id === idea.cliente_id && (e.estado || 'Activa') === 'Activa' && e.tipo === 'Principal');
+  // Usamos la estrategia default del cliente: vigente, futura más cercana, o histórica.
+  // Ya no filtramos solo por estado === 'Activa' porque eso ignora fechas y deja afuera estrategias futuras.
+  const estrategia = getEstrategiaDefault(idea.cliente_id);
 
   abrirModalGeneracion(
     'Desarrollar copy completo',
@@ -6884,7 +6904,7 @@ async function desarrollarIdea(ideaId) {
     pilar: idea.pilar,
     formato: idea.formato,
     hook: idea.hook,
-    idea: idea.idea,
+    idea: idea.idea_text || idea.idea,
     estrategia: estrategia,
     onAccept: async (copyData) => {
       // Actualizar la idea existente con el copy
@@ -6913,7 +6933,7 @@ async function generarCopyIA({ titulo, pilar, formato, hook, idea, estrategia, o
   const pilarInfo = pilares.find(p => p.nombre === pilar);
 
   const buyerContext = buyerPersonas.length > 0
-    ? '\n\nBUYER PERSONAS:\n' + buyerPersonas.map(bp => `- ${bp.nombre}: dolores: ${bp.dolores || '-'}; deseos: ${bp.deseos || '-'}`).join('\n')
+    ? buildBuyerPersonasContext(buyerPersonas)
     : '';
 
   const tonoContext = (tonoVoz && Object.keys(tonoVoz).length > 0)
@@ -6931,31 +6951,72 @@ async function generarCopyIA({ titulo, pilar, formato, hook, idea, estrategia, o
   };
   const formatoReglaEspecifica = formatoReglas[formato] || 'Caption general.';
 
-  const systemPrompt = `Sos una copywriter de Carrusel MKT, agencia argentina. Especialista en contenido para redes sociales que genera engagement real.
+  const systemPrompt = `TU ROL:
+Sos la copywriter senior de Carrusel MKT. Pensás como una persona que lleva 10 años en redes sociales y se aburrió de ver el mismo copy reciclado mil veces. Tu trabajo es escribir copy que pare en seco a alguien que ya vio TODO el contenido de este rubro.
+
+LA PREGUNTA FILTRO (aplicala al copy antes de devolverlo):
+"¿Esto lo escribiría una persona real con conocimiento profundo, o suena a guion de coach de Instagram?"
+Si suena a coach, reescribilo. Si suena a plantilla, reescribilo. Si funcionaría tal cual para cualquier otra marca del rubro, no sirve.
 
 REGLAS DE COPYWRITING:
-- El hook DEBE parar el scroll. Usá recursos: pregunta inesperada, dato sorprendente, confesión, historia personal, contradicción, número específico, promesa concreta.
-- El copy debe tener VOZ. Nada de textos genéricos que podrían aplicarse a cualquier marca.
-- Usá oraciones CORTAS mezcladas con algunas más largas. Ritmo.
-- Espacios en blanco: hacé saltos de línea. No bloques densos.
-- Siempre hay un CTA claro al final, adaptado al momento del cliente.
-- Hashtags: entre 8 y 15, mezclá de alta y baja cantidad de publicaciones para maximizar alcance. Prioritariamente en español, locales si aplica.
-- Usá español rioplatense (vos, no tú).
-- Respetá RIGUROSAMENTE el tono de voz definido.
+- El hook DEBE parar el scroll. Pregunta inesperada, dato sorprendente, confesión, contradicción, número específico, promesa concreta. NO genérico.
+- El copy debe tener VOZ. Nada de textos genéricos que podrían aplicarse a cualquier marca del rubro.
+- Oraciones CORTAS mezcladas con algunas más largas. Ritmo.
+- Saltos de línea reales (\\n). NO bloques densos. El espacio en blanco es oxígeno visual.
+- CTA específico al final, adaptado al momento del cliente. Nada de "¡Contactanos ya!" — algo natural y contextual.
+- Hashtags: entre 8 y 15, mezclá masivos y nicho, en español, locales si aplica.
+- ESPAÑOL RIOPLATENSE: vos, no tú.
+- Respetá RIGUROSAMENTE el tono de voz definido más abajo.
+
+📛 VARIEDAD DE REGISTRO EMOCIONAL:
+Un copy aburrido suena a "vendedora profesional explicando la propuesta de valor". El buen copy tiene momentos: una pausa, una pregunta inesperada, una confesión, un cambio de ritmo. Si el copy entero es "explicar postura de marca", no funciona. Mezclá registros incluso dentro del mismo copy.
+
+📛 FÓRMULAS PROHIBIDAS (descarte automático):
+- "¿Sabías que...?", "Lo que nadie te dice", "La verdad sobre", "5 tips para...", "X claves para...", "Si querés X, hacé Y"
+- "Estimado cliente", "Nos complace informarle"
+- "Potenciar sinergias", "sin humo", "sin vueltas"
+
+📛 ESPECIFICIDAD CON PLACEHOLDERS (regla crítica):
+Para datos que dependen de la experiencia REAL del cliente (anécdotas, casos puntuales, cifras, nombres), NO inventes. Si el brief o la idea NO los traen, usá placeholders entre corchetes para que la estratega complete después.
+
+Ejemplos:
+✅ "Cuando \\[la situación puntual que motivó este post\\], muchos van a sentirse identificados."
+✅ "Esta semana \\[describir momento concreto\\], pensamos en quienes van a sentarse acá."
+❌ "El paciente Juan, de 38 años, vino con dolor de muela..." ← INVENTADO, no usar.
+
+Los placeholders se escriben SIEMPRE así: \\[descripción de lo que la estratega debe completar\\]. NO inventes datos concretos.
+
+📛 NOMBRES DE PERSONAS DEL EQUIPO:
+Si el brief tiene el bloque "EQUIPO" con personas detalladas (nombre + rol + personalidad + voz), podés atribuirles acciones específicas. Si solo tenés nombres "a secas", NO inventes acciones por persona. Usá:
+✅ "\\[la profesional que se anime más a cámara\\] cuenta..."
+✅ "Las tres pensaron..."
+❌ "Sol cuenta con humor que..." (a menos que el brief diga que Sol es la del humor)
 
 ⚠️ REGLA INVIOLABLE — NO INVENTAR:
 - Si el campo "Desarrollo" o las "Notas" tienen un guión/ángulo específico, ESE es el punto de partida. NO inventes otra historia ni cambies el ángulo.
-- NO inventes productos, servicios, momentos, anécdotas o detalles que no estén explícitos en el brief del cliente o en la idea/notas.
-- Si los datos son insuficientes, escribí algo más general (sin inventar detalles concretos) antes que fabricar una historia.
-- Si el cliente es una marca de servicios (ej: agencia de marketing), NO inventes que vende productos físicos. Si es una marca de productos físicos, NO inventes servicios. Atenete a lo que dice el brief.
+- NO inventes productos, servicios, momentos, anécdotas o detalles que no estén explícitos en el brief o en la idea.
+- Si el cliente es una marca de servicios, NO inventes productos físicos. Si vende productos, NO inventes servicios.
+- Si los datos son insuficientes, usá placeholders \\[entre corchetes\\] antes que inventar.
+
+📛 MATERIAL DISPONIBLE:
+Si el brief o las notas mencionan material que el cliente YA TIENE filmado/fotografiado (ej: "foto de las tres sentadas en el piso"), el copy puede hacer referencia a ese material concreto.
 
 FORMATO ESPECÍFICO: ${formatoReglaEspecifica}
+
+🔎 AUTOEVALUACIÓN OBLIGATORIA ANTES DE ENTREGAR:
+Antes de devolver el JSON, leé el copy y respondé mentalmente:
+1. ⚠️ PRUEBA DE ESPECIFICIDAD: ¿Este copy es ÚNICO de este cliente, o se puede aplicar tal cual a cualquier marca del rubro cambiando 2 palabras? Si es genérico, reescribilo.
+2. ¿El hook para el scroll o es una frase manida?
+3. ¿Suena a persona real o a plantilla?
+4. ¿Inventé datos (nombres, cifras, anécdotas) que no estaban en el brief? Si sí, sacalos y usá placeholders.
+5. ¿El copy tiene variedad de registro o es monocorde?
+6. ¿Está conectado a UN buyer persona específico o le habla al "público general"?
 
 FORMATO DE SALIDA: devolvés SOLO un JSON válido (sin markdown, sin texto extra):
 
 {
   "hook": "Primera línea que para el scroll",
-  "copy": "Copy completo del post, con saltos de línea reales \\n entre párrafos",
+  "copy": "Copy completo del post, con saltos de línea reales \\\\n entre párrafos",
   "hashtags": "#hashtag1 #hashtag2 #hashtag3 ...",
   "cta": "Llamado a la acción específico (ej: 'Agendá tu turno en el link de la bio')"
 }`;
@@ -9566,7 +9627,7 @@ async function generarCarruselLibre({ clienteId, titulo, pilar, hook, contexto, 
   const buyerPersonas = estrategia ? parseJsonSafe(estrategia.buyer_personas_json) : [];
 
   const buyerContext = buyerPersonas.length > 0
-    ? '\n\nBUYER PERSONAS:\n' + buyerPersonas.map(bp => `- ${bp.nombre}: dolores: ${bp.dolores || '-'}; deseos: ${bp.deseos || '-'}`).join('\n')
+    ? buildBuyerPersonasContext(buyerPersonas)
     : '';
   const tonoContext = (tonoVoz && Object.keys(tonoVoz).length > 0)
     ? `\n\nTONO DE VOZ:\n${tonoVoz.tono || ''}\nPalabras SÍ: ${tonoVoz.si || ''}\nPalabras NO: ${tonoVoz.no || ''}\nEmojis: ${tonoVoz.emojis || ''}`
@@ -9845,7 +9906,7 @@ async function generarCarruselDesdeEditor() {
   const buyerPersonas = estrategia ? parseJsonSafe(estrategia.buyer_personas_json) : [];
 
   const buyerContext = buyerPersonas.length > 0
-    ? '\n\nBUYER PERSONAS:\n' + buyerPersonas.map(bp => `- ${bp.nombre}: dolores: ${bp.dolores || '-'}; deseos: ${bp.deseos || '-'}`).join('\n')
+    ? buildBuyerPersonasContext(buyerPersonas)
     : '';
   const tonoContext = (tonoVoz && Object.keys(tonoVoz).length > 0)
     ? `\n\nTONO DE VOZ:\n${tonoVoz.tono || ''}\nPalabras SÍ: ${tonoVoz.si || ''}\nPalabras NO: ${tonoVoz.no || ''}\nEmojis: ${tonoVoz.emojis || ''}`
